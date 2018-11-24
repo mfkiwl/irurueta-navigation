@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RangingRadioSourceEstimator3D.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor.radiosource</a> &gt; <span class="el_source">RangingRadioSourceEstimator3D.java</span></div><h1>RangingRadioSourceEstimator3D.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor.radiosource;
+
+import com.irurueta.algebra.Matrix;
+import com.irurueta.geometry.Accuracy3D;
+import com.irurueta.geometry.InhomogeneousPoint3D;
+import com.irurueta.geometry.Point3D;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.indoor.*;
+import com.irurueta.navigation.trilateration.LinearLeastSquaresTrilateration3DSolver;
+import com.irurueta.navigation.trilateration.NonLinearLeastSquaresTrilateration3DSolver;
+
+import java.util.List;
+
+/**
+ * Estimates position of a radio source (e.g. WiFi access point or bluetooth beacon)
+ * by using ranging measurements.
+ * Ranging measurements can be obtained by protocols such as ieee 802.11mc (WiFi RTT) which
+ * measures travel time of signal and converts the result into distances by taking into
+ * account the speed of light as the propagation speed.
+ *
+ * @param &lt;S&gt; a {@link RadioSource} type.
+ */
+@SuppressWarnings({&quot;WeakerAccess&quot;, &quot;Duplicates&quot;})
+public class RangingRadioSourceEstimator3D&lt;S extends RadioSource&gt; extends
+        RangingRadioSourceEstimator&lt;S, Point3D&gt; {
+
+    /**
+     * Constructor.
+     */
+    public RangingRadioSourceEstimator3D() {
+<span class="fc" id="L46">        super();</span>
+<span class="fc" id="L47">    }</span>
+
+    /**
+     * Constructor.
+     * Sets radio signal ranging readings belonging to the same radio source.
+     * @param readings radio signal ranging readings belonging to the same radio source.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RangingRadioSourceEstimator3D(
+            List&lt;? extends RangingReadingLocated&lt;S, Point3D&gt;&gt; readings)
+            throws IllegalArgumentException {
+<span class="fc" id="L58">        super(readings);</span>
+<span class="fc" id="L59">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public RangingRadioSourceEstimator3D(
+            RangingRadioSourceEstimatorListener&lt;S, Point3D&gt; listener) {
+<span class="fc" id="L67">        super(listener);</span>
+<span class="fc" id="L68">    }</span>
+
+    /**
+     * Constructor.
+     * Sets radio signal readings belonging to the same radio source.
+     * @param readings radio signal readings belonging to the same radio source.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RangingRadioSourceEstimator3D(
+            List&lt;? extends RangingReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            RangingRadioSourceEstimatorListener&lt;S, Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L81">        super(readings, listener);</span>
+<span class="fc" id="L82">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation or radio
+     *                        source position.
+     */
+    public RangingRadioSourceEstimator3D(Point3D initialPosition) {
+<span class="fc" id="L90">        super(initialPosition);</span>
+<span class="fc" id="L91">    }</span>
+
+    /**
+     * Constructor.
+     * Sets radio signal readings belonging to the same radio source.
+     * @param readings radio signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RangingRadioSourceEstimator3D(
+            List&lt;? extends RangingReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            Point3D initialPosition) throws IllegalArgumentException {
+<span class="fc" id="L104">        super(readings, initialPosition);</span>
+<span class="fc" id="L105">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public RangingRadioSourceEstimator3D(Point3D initialPosition,
+            RangingRadioSourceEstimatorListener&lt;S, Point3D&gt; listener) {
+<span class="fc" id="L115">        super(initialPosition, listener);</span>
+<span class="fc" id="L116">    }</span>
+
+    /**
+     * Constructor.
+     * Sets radio signal ranging readings belonging to the same radio source.
+     * @param readings radio signal ranging readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio source
+     *                        position.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RangingRadioSourceEstimator3D(
+            List&lt;? extends RangingReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            Point3D initialPosition,
+            RangingRadioSourceEstimatorListener&lt;S, Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L132">        super(readings, initialPosition, listener);</span>
+<span class="fc" id="L133">    }</span>
+
+    /**
+     * Gets minimum required number of readings to estimate position of radio source,
+     * which is 4 readings.
+     * @return minimum required number of readings.
+     */
+    @Override
+    public int getMinReadings() {
+<span class="fc" id="L142">        return Point3D.POINT3D_INHOMOGENEOUS_COORDINATES_LENGTH + 1;</span>
+    }
+
+    /**
+     * Gets number of dimensions of position points.
+     * This is always 3.
+     * @return number of dimensions of position points.
+     */
+    @Override
+    public int getNumberOfDimensions() {
+<span class="fc" id="L152">        return Point3D.POINT3D_INHOMOGENEOUS_COORDINATES_LENGTH;</span>
+    }
+
+    /**
+     * Gets estimated radio source 3D position.
+     * @return estimated radio source 3D position.
+     */
+    @Override
+    public Point3D getEstimatedPosition() {
+<span class="fc bfc" id="L161" title="All 2 branches covered.">        if (mEstimatedPositionCoordinates == null) {</span>
+<span class="fc" id="L162">            return null;</span>
+        }
+
+<span class="fc" id="L165">        InhomogeneousPoint3D result = new InhomogeneousPoint3D();</span>
+<span class="fc" id="L166">        getEstimatedPosition(result);</span>
+<span class="fc" id="L167">        return result;</span>
+    }
+
+    /**
+     * Gets estimated located radio source.
+     * @return estimated located radio source or null.
+     */
+    @Override
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public RadioSourceLocated&lt;Point3D&gt; getEstimatedRadioSource() {
+<span class="fc" id="L177">        List&lt;? extends RangingReadingLocated&lt;S, Point3D&gt;&gt; readings = getReadings();</span>
+<span class="pc bpc" id="L178" title="1 of 4 branches missed.">        if (readings == null || readings.isEmpty()) {</span>
+<span class="fc" id="L179">            return null;</span>
+        }
+<span class="fc" id="L181">        S source = readings.get(0).getSource();</span>
+
+<span class="fc" id="L183">        Point3D estimatedPosition = getEstimatedPosition();</span>
+<span class="fc bfc" id="L184" title="All 2 branches covered.">        if (estimatedPosition == null) {</span>
+<span class="fc" id="L185">            return null;</span>
+        }
+
+<span class="fc" id="L188">        Matrix estimatedPositionCovariance = getEstimatedPositionCovariance();</span>
+
+<span class="fc bfc" id="L190" title="All 2 branches covered.">        if (source instanceof WifiAccessPoint) {</span>
+<span class="fc" id="L191">            WifiAccessPoint accessPoint = (WifiAccessPoint)source;</span>
+<span class="fc" id="L192">            return new WifiAccessPointLocated3D(accessPoint.getBssid(),</span>
+<span class="fc" id="L193">                    accessPoint.getFrequency(), accessPoint.getSsid(),</span>
+                    estimatedPosition, estimatedPositionCovariance);
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">        } else if (source instanceof Beacon) {</span>
+<span class="fc" id="L196">            Beacon beacon = (Beacon)source;</span>
+<span class="fc" id="L197">            return new BeaconLocated3D(beacon.getIdentifiers(),</span>
+<span class="fc" id="L198">                    beacon.getTransmittedPower(), beacon.getFrequency(),</span>
+<span class="fc" id="L199">                    beacon.getBluetoothAddress(), beacon.getBeaconTypeCode(),</span>
+<span class="fc" id="L200">                    beacon.getManufacturer(), beacon.getServiceUuid(),</span>
+<span class="fc" id="L201">                    beacon.getBluetoothName(), estimatedPosition,</span>
+                    estimatedPositionCovariance);
+        } else {
+<span class="nc" id="L204">            return null;</span>
+        }
+    }
+
+    /**
+     * Builds an instance of a linear trilateration solver if needed.
+     */
+    @Override
+    protected void buildLinearSolverIfNeeded() {
+<span class="fc bfc" id="L213" title="All 6 branches covered.">        if ((mInitialPosition == null || !mNonLinearSolverEnabled) &amp;&amp;</span>
+                mLinearSolver == null) {
+<span class="fc" id="L215">            mLinearSolver = new LinearLeastSquaresTrilateration3DSolver();</span>
+        }
+<span class="fc" id="L217">    }</span>
+
+    /**
+     * Builds an instance of a non-linear trilateration solver if needed.
+     */
+    @Override
+    protected void buildNonLinearSolverIfNeeded() {
+<span class="fc bfc" id="L224" title="All 4 branches covered.">        if (mNonLinearSolver == null &amp;&amp; mNonLinearSolverEnabled) {</span>
+<span class="fc" id="L225">            mNonLinearSolver = new NonLinearLeastSquaresTrilateration3DSolver();</span>
+        }
+<span class="fc" id="L227">    }</span>
+
+    /**
+     * Build an instance of accuracy if needed.
+     */
+    @Override
+    protected void buildAccuracyIfNeeded() {
+<span class="fc bfc" id="L234" title="All 4 branches covered.">        if (mAccuracy == null &amp;&amp; mUseReadingPositionCovariances) {</span>
+<span class="fc" id="L235">            mAccuracy = new Accuracy3D();</span>
+
+            //to work with standard deviations, we need a unitary factor
+<span class="fc" id="L238">            mAccuracy.setStandardDeviationFactor(1.0);</span>
+        }
+<span class="fc" id="L240">    }</span>
+
+    /**
+     * Sets positions, distances and standard deviations of distances on internal
+     * trilateration solver.
+     * @param positions positions to be set.
+     * @param distances distances to be set.
+     * @param distanceStandardDeviations standard deviations of distances to be set or
+     *                                   null.
+     * @throws LockedException if solvers are locked.
+     */
+    @Override
+    protected void setPositionsDistancesAndDistanceStandardDeviations(
+            List&lt;Point3D&gt; positions, List&lt;Double&gt; distances,
+            List&lt;Double&gt; distanceStandardDeviations) throws LockedException  {
+
+<span class="fc" id="L256">        int size = positions.size();</span>
+<span class="fc" id="L257">        Point3D[] positionsArray = new InhomogeneousPoint3D[size];</span>
+<span class="fc" id="L258">        positionsArray = positions.toArray(positionsArray);</span>
+
+<span class="fc" id="L260">        double[] distancesArray = new double[size];</span>
+<span class="fc" id="L261">        double[] distanceStandardDeviationsArray = new double[size];</span>
+<span class="fc bfc" id="L262" title="All 2 branches covered.">        for (int i = 0; i &lt; size; i++) {</span>
+<span class="fc" id="L263">            distancesArray[i] = distances.get(i);</span>
+<span class="fc" id="L264">            distanceStandardDeviationsArray[i] = distanceStandardDeviations.get(i);</span>
+        }
+
+<span class="fc bfc" id="L267" title="All 6 branches covered.">        if (mLinearSolver != null &amp;&amp;</span>
+                (mInitialPosition == null || !mNonLinearSolverEnabled)) {
+<span class="fc" id="L269">            mLinearSolver.setPositionsAndDistances(positionsArray, distancesArray);</span>
+        }
+<span class="fc bfc" id="L271" title="All 4 branches covered.">        if (mNonLinearSolver != null &amp;&amp; mNonLinearSolverEnabled) {</span>
+<span class="fc" id="L272">            mNonLinearSolver.setPositionsDistancesAndStandardDeviations(positionsArray, distancesArray,</span>
+                    distanceStandardDeviationsArray);
+        }
+<span class="fc" id="L275">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

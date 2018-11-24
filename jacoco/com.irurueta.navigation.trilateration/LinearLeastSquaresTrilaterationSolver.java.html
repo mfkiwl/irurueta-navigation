@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LinearLeastSquaresTrilaterationSolver.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.trilateration</a> &gt; <span class="el_source">LinearLeastSquaresTrilaterationSolver.java</span></div><h1>LinearLeastSquaresTrilaterationSolver.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.trilateration;
+
+import com.irurueta.algebra.AlgebraException;
+import com.irurueta.algebra.Matrix;
+import com.irurueta.algebra.Utils;
+import com.irurueta.geometry.Point;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NotReadyException;
+
+/**
+ * Linearly solves the trilateration problem.
+ * This class is base on the implementation found at: https://github.com/lemmingapex/trilateration
+ * @param &lt;P&gt; a {@link Point} type.
+ */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
+public abstract class LinearLeastSquaresTrilaterationSolver&lt;P extends Point&gt; extends TrilaterationSolver&lt;P&gt; {
+
+    /**
+     * Constructor.
+     */
+    public LinearLeastSquaresTrilaterationSolver() {
+<span class="fc" id="L37">        super();</span>
+<span class="fc" id="L38">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @throws IllegalArgumentException if either positions or distances are null, don't have the same length or their
+     * length is smaller than required 2 points.
+     */
+    public LinearLeastSquaresTrilaterationSolver(P[] positions, double[] distances) throws IllegalArgumentException {
+<span class="fc" id="L48">        super(positions, distances);</span>
+<span class="fc" id="L49">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener to be notified of events raised by this instance.
+     */
+    public LinearLeastSquaresTrilaterationSolver(TrilaterationSolverListener&lt;P&gt; listener) {
+<span class="fc" id="L56">        super(listener);</span>
+<span class="fc" id="L57">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param listener listener to be notified of events raised by this instance.
+     * @throws IllegalArgumentException if either positions or distances are null, don't have the same length or their
+     * length is smaller than required 2 points.
+     */
+    public LinearLeastSquaresTrilaterationSolver(P[] positions, double[] distances,
+            TrilaterationSolverListener&lt;P&gt; listener) throws IllegalArgumentException {
+<span class="fc" id="L69">        super(positions, distances, listener);</span>
+<span class="fc" id="L70">    }</span>
+
+    /**
+     * Solves the trilateration problem.
+     * @throws TrilaterationException if trilateration fails.
+     * @throws NotReadyException if solver is not ready.
+     * @throws LockedException if instance is busy solving the trilateration problem.
+     */
+    @Override
+    public void solve() throws TrilaterationException, NotReadyException,
+            LockedException {
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        if (!isReady()) {</span>
+<span class="fc" id="L82">            throw new NotReadyException();</span>
+        }
+<span class="fc bfc" id="L84" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L85">            throw new LockedException();</span>
+        }
+
+        try {
+<span class="fc" id="L89">            mLocked = true;</span>
+
+<span class="fc bfc" id="L91" title="All 2 branches covered.">            if (mListener != null) {</span>
+<span class="fc" id="L92">                mListener.onSolveStart(this);</span>
+            }
+
+<span class="fc" id="L95">            int numberOfPositions = mPositions.length;</span>
+<span class="fc" id="L96">            int numberOfPositionsMinus1 = numberOfPositions - 1;</span>
+<span class="fc" id="L97">            int dims = getNumberOfDimensions();</span>
+
+<span class="fc" id="L99">            Matrix a = new Matrix(numberOfPositionsMinus1, dims);</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">            for (int i = 1, i2 = 0; i &lt; numberOfPositions; i++, i2++) {</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">                for (int j = 0; j &lt; dims; j++) {</span>
+<span class="fc" id="L102">                    a.setElementAt(i2, j, mPositions[i].getInhomogeneousCoordinate(j) -</span>
+<span class="fc" id="L103">                                    mPositions[0].getInhomogeneousCoordinate(j));</span>
+                }
+            }
+
+            //reference point is first position mPositions[0] with distance mDistances[0]
+<span class="fc" id="L108">            double referenceDistance = mDistances[0];</span>
+<span class="fc" id="L109">            double sqrRefDistance = referenceDistance * referenceDistance;</span>
+<span class="fc" id="L110">            double[] b = new double[numberOfPositionsMinus1];</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">            for (int i = 1, i2 = 0; i &lt; numberOfPositions; i++, i2++) {</span>
+<span class="fc" id="L112">                double ri = mDistances[i];</span>
+<span class="fc" id="L113">                double sqrRi = ri * ri;</span>
+
+                //find distance between ri and r0
+                //noinspection unchecked
+<span class="fc" id="L117">                double sqrRi0 = mPositions[i].sqrDistanceTo(mPositions[0]);</span>
+<span class="fc" id="L118">                b[i2] = 0.5 * (sqrRefDistance - sqrRi + sqrRi0);</span>
+            }
+
+<span class="fc" id="L121">            mEstimatedPositionCoordinates = Utils.solve(a, b);</span>
+
+            //add position of reference point
+<span class="fc bfc" id="L124" title="All 2 branches covered.">            for (int i = 0; i &lt; dims; i++) {</span>
+<span class="fc" id="L125">                mEstimatedPositionCoordinates[i] += mPositions[0].getInhomogeneousCoordinate(i);</span>
+            }
+
+<span class="fc bfc" id="L128" title="All 2 branches covered.">            if (mListener != null) {</span>
+<span class="fc" id="L129">                mListener.onSolveEnd(this);</span>
+            }
+<span class="fc" id="L131">        } catch (AlgebraException e) {</span>
+<span class="fc" id="L132">            throw new TrilaterationException(e);</span>
+        } finally {
+<span class="fc" id="L134">            mLocked = false;</span>
+        }
+<span class="fc" id="L136">    }</span>
+
+    /**
+     * Gets trilateration solver type.
+     * @return trilateration solver type.
+     */
+    @Override
+    public TrilaterationSolverType getType() {
+<span class="fc" id="L144">        return TrilaterationSolverType.LINEAR_TRILATERATION_SOLVER;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

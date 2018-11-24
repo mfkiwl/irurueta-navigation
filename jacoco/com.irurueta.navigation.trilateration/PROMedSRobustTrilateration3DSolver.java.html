@@ -1,0 +1,630 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PROMedSRobustTrilateration3DSolver.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.trilateration</a> &gt; <span class="el_source">PROMedSRobustTrilateration3DSolver.java</span></div><h1>PROMedSRobustTrilateration3DSolver.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.trilateration;
+
+import com.irurueta.geometry.Point3D;
+import com.irurueta.geometry.Sphere;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NotReadyException;
+import com.irurueta.numerical.robust.*;
+
+import java.util.List;
+
+/**
+ * Robustly solves the trilateration problem by finding the best pairs of 3D
+ * positions and distances among the provided ones using PROMedS algorithm to
+ * discard outliers.
+ */
+@SuppressWarnings({&quot;WeakerAccess&quot;, &quot;Duplicates&quot;})
+public class PROMedSRobustTrilateration3DSolver extends RobustTrilateration3DSolver {
+
+    /**
+     * Default value to be used for stop threshold. Stop threshold can be used to
+     * avoid keeping the algorithm unnecessarily iterating in case that best
+     * estimated threshold using median of residuals is not small enough. Once a
+     * solution is found that generates a threshold below this value, the
+     * algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algorithm iterating
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     */
+    public static final double DEFAULT_STOP_THRESHOLD = 1e-5;
+
+    /**
+     * Minimum allowed stop threshold value.
+     */
+    public static final double MIN_STOP_THRESHOLD = 0.0;
+
+    /**
+     * Threshold to be used to keep the algorithm iterating in case that best
+     * estimated threshold using median of residuals is not small enough. Once
+     * a solution is found that generates a threshold below this value, the
+     * algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algorithm iterating
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     */
+<span class="fc" id="L74">    private double mStopThreshold = DEFAULT_STOP_THRESHOLD;</span>
+
+    /**
+     * Quality scores corresponding to each provided sample.
+     * The larger the score value the better the quality of the sample.
+     */
+    private double[] mQualityScores;
+
+    /**
+     * Constructor.
+     */
+    public PROMedSRobustTrilateration3DSolver() {
+<span class="fc" id="L86">        super();</span>
+<span class="fc" id="L87">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     */
+    public PROMedSRobustTrilateration3DSolver(
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener) {
+<span class="fc" id="L96">        super(listener);</span>
+<span class="fc" id="L97">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length of their length is smaller than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(Point3D[] positions, double[] distances)
+            throws IllegalArgumentException {
+<span class="fc" id="L109">        super(positions, distances);</span>
+<span class="fc" id="L110">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(Point3D[] positions, double[] distances,
+            double[] distanceStandardDeviations) throws IllegalArgumentException {
+<span class="fc" id="L123">        super(positions, distances, distanceStandardDeviations);</span>
+<span class="fc" id="L124">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation stats,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions, distances or
+     * standard deviations are null, don't have the same length or their length is smaller
+     * than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(Point3D[] positions, double[] distances,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L141">        super(positions, distances, distanceStandardDeviations, listener);</span>
+<span class="fc" id="L142">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param listener listener to be notified of events such as when estimation stats,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(Point3D[] positions, double[] distances,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L156">        super(positions, distances, listener);</span>
+<span class="fc" id="L157">    }</span>
+
+    /**
+     * Constructor.
+     * @param spheres spheres defining positions and distances.
+     * @throws IllegalArgumentException if spheres is null or if length of spheres array
+     * is less than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(Sphere[] spheres)
+            throws IllegalArgumentException {
+<span class="fc" id="L167">        super(spheres);</span>
+<span class="fc" id="L168">    }</span>
+
+    /**
+     * Constructor.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if spheres is null, length of spheres array is less
+     * than required (4 points) or don't have the same length.
+     */
+    public PROMedSRobustTrilateration3DSolver(Sphere[] spheres,
+            double[] distanceStandardDeviations) throws IllegalArgumentException {
+<span class="fc" id="L179">        super(spheres, distanceStandardDeviations);</span>
+<span class="fc" id="L180">    }</span>
+
+    /**
+     * Constructor.
+     * @param spheres spheres defining positions and distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if spheres is null or if length of spheres array
+     * is less than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(Sphere[] spheres,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L193">        super(spheres, listener);</span>
+<span class="fc" id="L194">    }</span>
+
+    /**
+     * Constructor.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if spheres is null, length of spheres array is less
+     * than required (4 points) or don't have the same length.
+     */
+    public PROMedSRobustTrilateration3DSolver(Sphere[] spheres,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L209">        super(spheres, distanceStandardDeviations, listener);</span>
+<span class="fc" id="L210">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @throws IllegalArgumentException if quality scores is null, length
+     * of quality scores is less than required minimum (4 samples).
+     */
+    public PROMedSRobustTrilateration3DSolver(double[] qualityScores)
+            throws IllegalArgumentException {
+<span class="fc" id="L222">        super();</span>
+<span class="fc" id="L223">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L224">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @throws IllegalArgumentException if quality scores is null, length
+     * of quality scores is less than required minimum (4 samples).
+     */
+    public PROMedSRobustTrilateration3DSolver(double[] qualityScores,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L239">        super(listener);</span>
+<span class="fc" id="L240">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L241">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @throws IllegalArgumentException if either positions, distances or quality
+     * scores are null, don't have the same length or their length is smaller
+     * than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(double[] qualityScores,
+            Point3D[] positions, double[] distances)
+            throws IllegalArgumentException {
+<span class="fc" id="L258">        super(positions, distances);</span>
+<span class="fc" id="L259">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L260">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if either positions, distances, quality scores or
+     * standard deviations are null, don't have the same length or their length is
+     * smaller than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(double[] qualityScores,
+            Point3D[] positions, double[] distances,
+            double[] distanceStandardDeviations)
+            throws IllegalArgumentException {
+<span class="fc" id="L279">        super(positions, distances, distanceStandardDeviations);</span>
+<span class="fc" id="L280">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L281">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions, distances or
+     * standard deviations are null, don't have the same length or their length is smaller
+     * than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(double[] qualityScores,
+            Point3D[] positions, double[] distances,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L302">        super(positions, distances, distanceStandardDeviations, listener);</span>
+<span class="fc" id="L303">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L304">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param listener listener to be notified of events such as when
+     *                 estimation starts, ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions, distances,
+     * quality scores or standard deviations are null, don't have the same
+     * length or their length is smaller than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(double[] qualityScores,
+            Point3D[] positions, double[] distances,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L323">        super(positions, distances, listener);</span>
+<span class="fc" id="L324">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L325">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param spheres spheres defining positions and distances.
+     * @throws IllegalArgumentException if either spheres or quality scores
+     * are null don't have the same length or their length is less than
+     * required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(double[] qualityScores,
+            Sphere[] spheres) throws IllegalArgumentException {
+<span class="fc" id="L339">        super(spheres);</span>
+<span class="fc" id="L340">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L341">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if either spheres, quality scores or
+     * standard deviations are null, don't have the same length or their
+     * length is less than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(double[] qualityScores,
+            Sphere[] spheres, double[] distanceStandardDeviations)
+            throws IllegalArgumentException {
+<span class="fc" id="L357">        super(spheres, distanceStandardDeviations);</span>
+<span class="fc" id="L358">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L359">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param spheres spheres defining positions and distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either spheres or quality scores
+     * are null, don't have the same length or their length is less than
+     * required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(double[] qualityScores,
+            Sphere[] spheres,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L377">        super(spheres, listener);</span>
+<span class="fc" id="L378">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L379">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either spheres, quality scores
+     * or standard deviations are null, don't have the same length or their
+     * length is less than required (4 points).
+     */
+    public PROMedSRobustTrilateration3DSolver(double[] qualityScores,
+            Sphere[] spheres, double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L398">        super(spheres, distanceStandardDeviations, listener);</span>
+<span class="fc" id="L399">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L400">    }</span>
+
+    /**
+     * Returns threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value, the
+     * algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algrithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @return stop threshold to stop the algorithm prematurely when a certain
+     * accuracy has been reached.
+     */
+    public double getStopThreshold() {
+<span class="fc" id="L421">        return mStopThreshold;</span>
+    }
+
+    /**
+     * Sets threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value,
+     * the algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algorithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @param stopThreshold stop threshold to stop the algorithm prematurely
+     *                      when a certain accuracy has been reached.
+     * @throws IllegalArgumentException if provided value is zero or negative.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setStopThreshold(double stopThreshold)
+            throws IllegalArgumentException, LockedException {
+<span class="fc bfc" id="L446" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L447">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L449" title="All 2 branches covered.">        if (stopThreshold &lt;= MIN_STOP_THRESHOLD) {</span>
+<span class="fc" id="L450">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L453">        mStopThreshold = stopThreshold;</span>
+<span class="fc" id="L454">    }</span>
+
+    /**
+     * Returns quality scores corresponding to each pair of
+     * positions and distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * @return quality scores corresponding to each sample.
+     */
+    @Override
+    public double[] getQualityScores() {
+<span class="fc" id="L464">        return mQualityScores;</span>
+    }
+
+    /**
+     * Sets quality scores corresponding to each pair of positions and
+     * distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * @param qualityScores quality scores corresponding to each pair of
+     *                      matched points.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than minimum required samples.
+     * @throws LockedException if robust solver is locked because an
+     * estimation is already in progress.
+     */
+    @Override
+    public void setQualityScores(double[] qualityScores)
+            throws IllegalArgumentException, LockedException {
+<span class="fc bfc" id="L481" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L482">            throw new LockedException();</span>
+        }
+<span class="fc" id="L484">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L485">    }</span>
+
+    /**
+     * Indicates whether solver is ready to find a solution.
+     * @return true if solver is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+<span class="pc bpc" id="L493" title="1 of 6 branches missed.">        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;</span>
+                mQualityScores.length == mDistances.length;
+    }
+
+    /**
+     * Solves the trilateration problem.
+     * @return estimated position.
+     * @throws LockedException if instance is busy solving the trilateration problem.
+     * @throws NotReadyException is solver is not ready.
+     * @throws RobustEstimatorException if estimation fails for any reason
+     * (i.e. numerical instability, no solution available, etc).
+     */
+    @Override
+    public Point3D solve() throws LockedException, NotReadyException,
+            RobustEstimatorException {
+<span class="fc bfc" id="L508" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L509">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L511" title="All 2 branches covered.">        if (!isReady()) {</span>
+<span class="fc" id="L512">            throw new NotReadyException();</span>
+        }
+
+<span class="fc" id="L515">        PROMedSRobustEstimator&lt;Point3D&gt; innerEstimator =</span>
+<span class="fc" id="L516">                new PROMedSRobustEstimator&lt;&gt;(new PROMedSRobustEstimatorListener&lt;Point3D&gt;() {</span>
+                    @Override
+                    public double[] getQualityScores() {
+<span class="fc" id="L519">                        return mQualityScores;</span>
+                    }
+
+                    @Override
+                    public double getThreshold() {
+<span class="nc" id="L524">                        return mStopThreshold;</span>
+                    }
+
+                    @Override
+                    public int getTotalSamples() {
+<span class="fc" id="L529">                        return mDistances.length;</span>
+                    }
+
+                    @Override
+                    public int getSubsetSize() {
+<span class="fc" id="L534">                        return getMinRequiredPositionsAndDistances();</span>
+                    }
+
+                    @Override
+                    public void estimatePreliminarSolutions(int[] samplesIndices, List&lt;Point3D&gt; solutions) {
+<span class="fc" id="L539">                        solvePreliminarSolutions(samplesIndices, solutions);</span>
+<span class="fc" id="L540">                    }</span>
+
+                    @Override
+                    public double computeResidual(Point3D currentEstimation, int i) {
+<span class="fc" id="L544">                        return Math.abs(currentEstimation.distanceTo(mPositions[i]) - mDistances[i]);</span>
+                    }
+
+                    @Override
+                    public boolean isReady() {
+<span class="fc" id="L549">                        return PROMedSRobustTrilateration3DSolver.this.isReady();</span>
+                    }
+
+                    @Override
+                    public void onEstimateStart(RobustEstimator&lt;Point3D&gt; estimator) {
+<span class="pc bpc" id="L554" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L555">                            mListener.onSolveStart(PROMedSRobustTrilateration3DSolver.this);</span>
+                        }
+<span class="fc" id="L557">                    }</span>
+
+                    @Override
+                    public void onEstimateEnd(RobustEstimator&lt;Point3D&gt; estimator) {
+<span class="pc bpc" id="L561" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L562">                            mListener.onSolveEnd(PROMedSRobustTrilateration3DSolver.this);</span>
+                        }
+<span class="fc" id="L564">                    }</span>
+
+                    @Override
+                    public void onEstimateNextIteration(RobustEstimator&lt;Point3D&gt; estimator, int iteration) {
+<span class="pc bpc" id="L568" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L569">                            mListener.onSolveNextIteration(PROMedSRobustTrilateration3DSolver.this,</span>
+                                    iteration);
+                        }
+<span class="fc" id="L572">                    }</span>
+
+                    @Override
+                    public void onEstimateProgressChange(RobustEstimator&lt;Point3D&gt; estimator, float progress) {
+<span class="nc bnc" id="L576" title="All 2 branches missed.">                        if (mListener != null) {</span>
+<span class="nc" id="L577">                            mListener.onSolveProgressChange(PROMedSRobustTrilateration3DSolver.this,</span>
+                                    progress);
+                        }
+<span class="nc" id="L580">                    }</span>
+                });
+
+        try {
+<span class="fc" id="L584">            mLocked = true;</span>
+<span class="fc" id="L585">            mInliersData = null;</span>
+<span class="fc" id="L586">            innerEstimator.setConfidence(mConfidence);</span>
+<span class="fc" id="L587">            innerEstimator.setMaxIterations(mMaxIterations);</span>
+<span class="fc" id="L588">            innerEstimator.setProgressDelta(mProgressDelta);</span>
+<span class="fc" id="L589">            innerEstimator.setUseInlierThresholds(false);</span>
+<span class="fc" id="L590">            Point3D result = innerEstimator.estimate();</span>
+<span class="fc" id="L591">            mInliersData = innerEstimator.getInliersData();</span>
+<span class="fc" id="L592">            return attemptRefine(result);</span>
+<span class="nc" id="L593">        } catch (com.irurueta.numerical.LockedException e) {</span>
+<span class="nc" id="L594">            throw new LockedException(e);</span>
+<span class="nc" id="L595">        } catch (com.irurueta.numerical.NotReadyException e) {</span>
+<span class="nc" id="L596">            throw new NotReadyException(e);</span>
+        } finally {
+<span class="fc" id="L598">            mLocked = false;</span>
+        }
+    }
+
+    /**
+     * Returns method being used for robust estimation.
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+<span class="fc" id="L608">        return RobustEstimatorMethod.PROMedS;</span>
+    }
+
+    /**
+     * Sets quality scores corresponding to each provided sample.
+     * This method is used internally and does not check whether instance is
+     * locked or not.
+     * @param qualityScores quality scores to be set.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than 3 samples.
+     */
+    private void internalSetQualityScores(double[] qualityScores)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L621" title="All 2 branches covered.">        if (qualityScores == null ||</span>
+<span class="fc bfc" id="L622" title="All 2 branches covered.">                qualityScores.length &lt; getMinRequiredPositionsAndDistances()) {</span>
+<span class="fc" id="L623">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L626">        mQualityScores = qualityScores;</span>
+<span class="fc" id="L627">    }</span>
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

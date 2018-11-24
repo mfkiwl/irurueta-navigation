@@ -1,0 +1,454 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BeaconIdentifier.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor</a> &gt; <span class="el_source">BeaconIdentifier.java</span></div><h1>BeaconIdentifier.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor;
+
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.nio.LongBuffer;
+import java.util.Arrays;
+import java.util.UUID;
+import java.util.regex.Pattern;
+
+/**
+ * Encapsulates a beacon identifier of arbitrary byte length.
+ * It can encapsulate an identifier that is a 16-byte UUID, or an integer.
+ * Based on: https://github.com/AltBeacon/android-beacon-library/blob/master/src/main/java/org/altbeacon/beacon/Identifier.java
+ */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
+public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Serializable {
+    /**
+     * Parses beacon identifiers in hexadecimal format.
+     */
+<span class="fc" id="L35">    private static final Pattern HEX_PATTERN = Pattern.compile(&quot;^0x[0-9A-Fa-f]*$&quot;);</span>
+
+    /**
+     * Parses beacon identifiers in hexadecimal format without prefix.
+     */
+<span class="fc" id="L40">    private static final Pattern HEX_PATTERN_NO_PREFIX = Pattern.compile(&quot;^[0-9A-Fa-f]*$&quot;);</span>
+
+    /**
+     * Parses beacon identifiers in decimal format.
+     */
+<span class="fc" id="L45">    private static final Pattern DECIMAL_PATTERN = Pattern.compile(&quot;^0|[1-9][0-9]*$&quot;);</span>
+
+    /**
+     * Parses beacon identifiers in UUID format.
+     */
+<span class="fc" id="L50">    private static final Pattern UUID_PATTERN = Pattern.compile(</span>
+            &quot;^[0-9A-Fa-f]{8}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{4}-?[0-9A-Fa-f]{12}$&quot;);
+
+    /**
+     * Maximum allowed identifier value from an integer.
+     */
+    private static final int MAX_INTEGER = 65535;
+
+    /**
+     * Contains digits to represent this instance in hexadecimal format.
+     */
+<span class="fc" id="L61">    private static final char[] HEX_DIGITS =</span>
+            {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+
+    /**
+     * Internal value holding a beacon identifier as a byte array.
+     */
+    private byte[] mValue;
+
+
+    /**
+     * Empty constructor to prevent deserialization issues.
+     */
+<span class="fc" id="L73">    protected BeaconIdentifier() { }</span>
+
+    /**
+     * Creates a nw instance of a beacon identifier.
+     * @param value value to use.
+     * @throws NullPointerException if provided value is null.
+     */
+<span class="fc" id="L80">    protected BeaconIdentifier(byte[] value) throws NullPointerException {</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc" id="L82">            throw new NullPointerException(</span>
+                    &quot;Identifiers cannot be constructed from null pointers but \&quot;value\&quot; is null.&quot;);
+        }
+
+<span class="fc" id="L86">        mValue = value;</span>
+<span class="fc" id="L87">    }</span>
+
+    /**
+     * Takes the passed string and tries to figure out what format it is in.
+     * Then turns the string into plain bytes and constructs an identifier.
+     *
+     * This method parses UUIDs without dashes for compatibility (although this is not a standard behaviour).
+     *
+     * Allowed formats:
+     * &lt;ul&gt;
+     *   &lt;li&gt;UUID: 2F234454-CF6D-4A0F-ADF2-F4911BA9FFA6 (16 bytes)&lt;/li&gt;
+     *   &lt;li&gt;Hexadecimal: 0x000000000003 (variable length)&lt;/li&gt;
+     *   &lt;li&gt;Decimal: 1337 (2 bytes)&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * @param stringValue string to be parsed.
+     * @return an identifier representinf the specified value.
+     * @throws NullPointerException if string value is null.
+     * @throws IllegalArgumentException if parsing fails for some other reason (invalid format, etc).
+     * @see &lt;a href=&quot;https://www.ietf.org/rfc/rfc4122.txt&quot;&gt;RFC 4122 on UUIDs&lt;/a&gt;
+     */
+    public static BeaconIdentifier parse(String stringValue) {
+<span class="fc" id="L109">        return parse(stringValue, -1);</span>
+    }
+
+    /**
+     * Variant of the parse method that allows specifying the byte length of the identifier.
+     * @param stringValue value to be parsed.
+     * @param desiredByteLength requested number of bytes to hold the identifier or -1 if not specified.
+     * @return the parsed identifier.
+     * @throws NullPointerException if string value is null.
+     * @throws IllegalArgumentException if parsing fails for some other reason (invalid format, etc).
+     */
+    public static BeaconIdentifier parse(String stringValue, int desiredByteLength) throws NullPointerException,
+            IllegalArgumentException {
+<span class="fc bfc" id="L122" title="All 2 branches covered.">        if (stringValue == null) {</span>
+<span class="fc" id="L123">            throw new NullPointerException(</span>
+                    &quot;Identifiers cannot be constructed from null pointers but \&quot;stringValue\&quot; is null.&quot;);
+        }
+
+<span class="fc bfc" id="L127" title="All 2 branches covered.">        if (HEX_PATTERN.matcher(stringValue).matches()) {</span>
+            //parse hexadecimal format
+<span class="fc" id="L129">            return parseHex(stringValue.substring(2), desiredByteLength);</span>
+        }
+
+<span class="fc bfc" id="L132" title="All 2 branches covered.">        if (UUID_PATTERN.matcher(stringValue).matches()) {</span>
+            //parse UUID format
+<span class="fc" id="L134">            return parseHex(stringValue.replace(&quot;-&quot;, &quot;&quot;), desiredByteLength);</span>
+        }
+
+<span class="fc bfc" id="L137" title="All 2 branches covered.">        if (DECIMAL_PATTERN.matcher(stringValue).matches()) {</span>
+            //parse decimal format
+<span class="fc" id="L139">            int value = Integer.valueOf(stringValue);</span>
+<span class="pc bpc" id="L140" title="1 of 4 branches missed.">            if (desiredByteLength &lt;= 0 || desiredByteLength == 2) {</span>
+<span class="fc" id="L141">                return fromInt(value);</span>
+            } else {
+<span class="fc" id="L143">                return fromLong(value, desiredByteLength);</span>
+            }
+        }
+
+<span class="fc bfc" id="L147" title="All 2 branches covered.">        if (HEX_PATTERN_NO_PREFIX.matcher(stringValue).matches()) {</span>
+            //parse hexadecimal format without prefix
+<span class="fc" id="L149">            return parseHex(stringValue, desiredByteLength);</span>
+        }
+
+<span class="fc" id="L152">        throw new IllegalArgumentException(&quot;Unable to parse identifier&quot;);</span>
+    }
+
+    /**
+     * Creates an identifier backed by an array of length desiredByteLength.
+     * @param longValue a long to put into the identifier.
+     * @param desiredByteLength how many bytes to make the identifier.
+     * @return the parsed identifier.
+     * @throws IllegalArgumentException if desired number of bytes is negative.
+     */
+    public static BeaconIdentifier fromLong(long longValue, int desiredByteLength)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L164" title="All 2 branches covered.">        if (desiredByteLength &lt; 0) {</span>
+<span class="fc" id="L165">            throw new IllegalArgumentException(&quot;identifier length must be &gt; 0&quot;);</span>
+        }
+<span class="fc" id="L167">        byte[] newValue = new byte[desiredByteLength];</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        for (int i = desiredByteLength - 1; i &gt;= 0; i--) {</span>
+<span class="fc" id="L169">            newValue[i] = (byte) (longValue &amp; 0xff);</span>
+<span class="fc" id="L170">            longValue = longValue &gt;&gt; 8;</span>
+        }
+<span class="fc" id="L172">        return new BeaconIdentifier(newValue);</span>
+    }
+
+    /**
+     * Creates an identifier backed by a two byte array (big endia).
+     * @param intValue an integer between 0 and 65535 (inclusive).
+     * @return an identifier with the specified value.
+     * @throws IllegalArgumentException if provided value is out of valid range (from 0 to 65535).
+     */
+    public static BeaconIdentifier fromInt(int intValue) throws IllegalArgumentException {
+<span class="fc bfc" id="L182" title="All 4 branches covered.">        if (intValue &lt; 0 || intValue &gt; MAX_INTEGER) {</span>
+<span class="fc" id="L183">            throw new IllegalArgumentException(</span>
+                    &quot;Identifiers can only be constructed from integers between 0 and &quot; + MAX_INTEGER + &quot; (inclusive).&quot;);
+        }
+
+<span class="fc" id="L187">        byte[] newValue = new byte[2];</span>
+
+<span class="fc" id="L189">        newValue[0] = (byte) (intValue &gt;&gt; 8);</span>
+<span class="fc" id="L190">        newValue[1] = (byte) (intValue);</span>
+
+<span class="fc" id="L192">        return new BeaconIdentifier(newValue);</span>
+    }
+
+    /**
+     * Creates an identifier from the specified byte array.
+     * @param bytes array to copy from.
+     * @param start the start index, inclusive.
+     * @param end the end index, exclusive.
+     * @param littleEndian whether the bytes are ordered in little endian.
+     * @return a new identifier.
+     * @throws NullPointerException if bytes is null.
+     * @throws ArrayIndexOutOfBoundsException if start or end are outside the bounds of the array.
+     * @throws IllegalArgumentException start is larger than end.
+     */
+    public static BeaconIdentifier fromBytes(byte[] bytes, int start, int end, boolean littleEndian)
+            throws NullPointerException, ArrayIndexOutOfBoundsException, IllegalArgumentException {
+<span class="fc bfc" id="L208" title="All 2 branches covered.">        if (bytes == null) {</span>
+<span class="fc" id="L209">            throw new NullPointerException(</span>
+                    &quot;Identifiers cannot be constructed from null pointers but \&quot;bytes\&quot; is null.&quot;);
+        }
+<span class="pc bpc" id="L212" title="1 of 4 branches missed.">        if (start &lt; 0 || start &gt; bytes.length) {</span>
+<span class="fc" id="L213">            throw new ArrayIndexOutOfBoundsException(&quot;start &lt; 0 || start &gt; bytes.length&quot;);</span>
+        }
+<span class="fc bfc" id="L215" title="All 2 branches covered.">        if (end &gt; bytes.length) {</span>
+<span class="fc" id="L216">            throw new ArrayIndexOutOfBoundsException(&quot;end &gt; bytes.length&quot;);</span>
+        }
+<span class="fc bfc" id="L218" title="All 2 branches covered.">        if (start &gt; end) {</span>
+<span class="fc" id="L219">            throw new IllegalArgumentException(&quot;start &gt; end&quot;);</span>
+        }
+
+<span class="fc" id="L222">        byte[] byteRange = Arrays.copyOfRange(bytes, start, end);</span>
+<span class="fc bfc" id="L223" title="All 2 branches covered.">        if (littleEndian) {</span>
+<span class="fc" id="L224">            reverseArray(byteRange);</span>
+        }
+<span class="fc" id="L226">        return new BeaconIdentifier(byteRange);</span>
+    }
+
+    /**
+     * Transforms a {@link UUID} into an identifier.
+     * No mangling with strings, only the underlying bytes of the
+     * UUID are used so this is fast and stable.
+     * @param uuid UUID to create identifier from.
+     * @return a new identifier.
+     */
+    public static BeaconIdentifier fromUuid(UUID uuid) {
+<span class="fc" id="L237">        ByteBuffer buf = ByteBuffer.allocate(16);</span>
+<span class="fc" id="L238">        buf.putLong(uuid.getMostSignificantBits());</span>
+<span class="fc" id="L239">        buf.putLong(uuid.getLeastSignificantBits());</span>
+<span class="fc" id="L240">        return new BeaconIdentifier(buf.array());</span>
+    }
+
+    /**
+     * Represents the value as a String. The output varies based on the length of the value.
+     * &lt;ul&gt;&lt;li&gt;When the value is 2 bytes long: decimal, for example 6536.
+     * &lt;li&gt;When the value is 16 bytes long: uuid, for example 2f234454-cf6d-4a0f-adf2-f4911ba9ffa6
+     * &lt;li&gt;Else: hexadecimal prefixed with &lt;code&gt;0x&lt;/code&gt;, for example 0x0012ab&lt;/ul&gt;
+     * @return string representation of the current value.
+     */
+    @Override
+    public String toString() {
+        // Note:  the toString() method is also used for serialization and deserialization.  So
+        // toString() and parse() must always return objects that return true when you call equals()
+<span class="fc bfc" id="L254" title="All 2 branches covered.">        if (mValue == null) {</span>
+<span class="fc" id="L255">            return super.toString();</span>
+        }
+
+<span class="fc bfc" id="L258" title="All 2 branches covered.">        if (mValue.length == 2) {</span>
+<span class="fc" id="L259">            return Integer.toString(toInt());</span>
+        }
+<span class="fc bfc" id="L261" title="All 2 branches covered.">        if (mValue.length == 16) {</span>
+<span class="fc" id="L262">            return toUuid().toString();</span>
+        }
+<span class="fc" id="L264">        return toHexString();</span>
+    }
+
+    /**
+     * Represents the value as an &lt;code&gt;int&lt;/code&gt;.
+     * @return value represented as int.
+     * @throws UnsupportedOperationException when value length is longer than 2.
+     */
+    public int toInt() throws UnsupportedOperationException {
+<span class="fc bfc" id="L273" title="All 2 branches covered.">        if (mValue == null) {</span>
+<span class="fc" id="L274">            return 0;</span>
+        }
+
+<span class="fc bfc" id="L277" title="All 2 branches covered.">        if (mValue.length &gt; 2) {</span>
+<span class="fc" id="L278">            throw new UnsupportedOperationException(&quot;Only supported for Identifiers with max byte length of 2&quot;);</span>
+        }
+<span class="fc" id="L280">        int result = 0;</span>
+
+<span class="fc bfc" id="L282" title="All 2 branches covered.">        for (int i = 0; i &lt; mValue.length; i++) {</span>
+<span class="fc" id="L283">            result |= (mValue[i] &amp; 0xFF) &lt;&lt; ((mValue.length - i - 1) * 8);</span>
+        }
+
+<span class="fc" id="L286">        return result;</span>
+    }
+
+    /**
+     * Converts identifier to a byte array.
+     * @param bigEndian true if bytes are MSB first.
+     * @return a new byte array with a copy of the value.
+     */
+    public byte[] toByteArrayOfSpecifiedEndianness(boolean bigEndian) {
+<span class="fc bfc" id="L295" title="All 2 branches covered.">        if (mValue == null) {</span>
+<span class="fc" id="L296">            return null;</span>
+        }
+
+<span class="fc" id="L299">        byte[] copy = Arrays.copyOf(mValue, mValue.length);</span>
+
+<span class="fc bfc" id="L301" title="All 2 branches covered.">        if (!bigEndian) {</span>
+<span class="fc" id="L302">            reverseArray(copy);</span>
+        }
+
+<span class="fc" id="L305">        return copy;</span>
+    }
+
+    /**
+     * Returns the byte length of this identifier.
+     * @return length of identifier.
+     */
+    public int getByteCount() {
+<span class="fc bfc" id="L313" title="All 2 branches covered.">        return mValue != null ? mValue.length : 0;</span>
+    }
+
+    /**
+     * Represents the vlaue as a hexadecimal String. The String is prefixed with &lt;code&gt;0x&lt;/code&gt;. For example
+     * 0x0034ab.
+     * @return value as hexadecimal String.
+     */
+    public String toHexString() {
+<span class="fc bfc" id="L322" title="All 2 branches covered.">        if (mValue == null) {</span>
+<span class="fc" id="L323">            return null;</span>
+        }
+
+<span class="fc" id="L326">        final int l = mValue.length;</span>
+<span class="fc" id="L327">        final char[] out = new char[l * 2 + 2];</span>
+<span class="fc" id="L328">        out[0] = '0';</span>
+<span class="fc" id="L329">        out[1] = 'x';</span>
+<span class="fc bfc" id="L330" title="All 2 branches covered.">        for (int i = 0, j = 2; i &lt; l; i++) {</span>
+<span class="fc" id="L331">            out[j++] = HEX_DIGITS[(0xF0 &amp; mValue[i]) &gt;&gt;&gt; 4];</span>
+<span class="fc" id="L332">            out[j++] = HEX_DIGITS[0x0F &amp; mValue[i]];</span>
+        }
+<span class="fc" id="L334">        return new String(out);</span>
+    }
+
+    /**
+     * Gives you the identifier as a UUID if possible.
+     * @return the identifier as a UUID.
+     * @throws UnsupportedOperationException if conversion to UUID fails.
+     */
+    public UUID toUuid() throws UnsupportedOperationException {
+<span class="fc bfc" id="L343" title="All 2 branches covered.">        if (mValue == null) {</span>
+<span class="fc" id="L344">            return null;</span>
+        }
+
+<span class="fc bfc" id="L347" title="All 2 branches covered.">        if (mValue.length != 16) {</span>
+<span class="fc" id="L348">            throw new UnsupportedOperationException(&quot;Only Identifiers backed by a byte array with length of exactly 16 can be UUIDs.&quot;);</span>
+        }
+<span class="fc" id="L350">        LongBuffer buf = ByteBuffer.wrap(mValue).asLongBuffer();</span>
+<span class="fc" id="L351">        return new UUID(buf.get(), buf.get());</span>
+    }
+
+    /**
+     * Gives you the byte array backing this identifier. Note that identifiers are immutable,
+     * so changing that the returned array will not result in a changed identifier.
+     * @return a deep copy of the data backing this identifier.
+     */
+    public byte[] toByteArray() {
+<span class="fc bfc" id="L360" title="All 2 branches covered.">        return mValue != null ? mValue.clone() : null;</span>
+    }
+
+    /**
+     * Computes hash code for this instance.
+     * @return this instance hash code.
+     */
+    @Override
+    public int hashCode() {
+<span class="fc bfc" id="L369" title="All 2 branches covered.">        return mValue != null ? Arrays.hashCode(mValue) : 0;</span>
+    }
+
+    /**
+     * Returns whether both identifiers contain equal value.
+     * This is the case when the value is the same and has the same length.
+     * @param that object to compare to.
+     * @return whether that equals this.
+     */
+    @Override
+    public boolean equals(Object that) {
+<span class="fc bfc" id="L380" title="All 2 branches covered.">        if (!(that instanceof BeaconIdentifier)) {</span>
+<span class="fc" id="L381">            return false;</span>
+        }
+<span class="fc" id="L383">        BeaconIdentifier thatIdentifier = (BeaconIdentifier) that;</span>
+<span class="fc" id="L384">        return Arrays.equals(mValue, thatIdentifier.mValue);</span>
+    }
+
+    /**
+     * Compares two identifiers.
+     * When the identifiers don't have the same length, the identifier having the shortest
+     * array is considered smaller than the other.
+     * @param that the other identifier.
+     * @return 0 if both identifiers are equal. Otherwise returns -1 or 1 depending on
+     * which is bigger than th other.
+     * @see Comparable#compareTo(Object)
+     */
+    @Override
+    public int compareTo(BeaconIdentifier that) {
+<span class="fc bfc" id="L398" title="All 2 branches covered.">        if (mValue.length != that.mValue.length) {</span>
+<span class="fc bfc" id="L399" title="All 2 branches covered.">            return mValue.length &lt; that.mValue.length ? -1 : 1;</span>
+        }
+<span class="fc bfc" id="L401" title="All 2 branches covered.">        for (int i = 0; i &lt; mValue.length; i++) {</span>
+<span class="fc bfc" id="L402" title="All 2 branches covered.">            if (mValue[i] != that.mValue[i]) {</span>
+<span class="fc bfc" id="L403" title="All 2 branches covered.">                return mValue[i] &lt; that.mValue[i] ? -1 : 1;</span>
+            }
+        }
+<span class="fc" id="L406">        return 0;</span>
+    }
+
+    /**
+     * Reverses provided array.
+     * @param bytes array to be reversed.
+     */
+    private static void reverseArray(byte[] bytes) {
+<span class="fc bfc" id="L414" title="All 2 branches covered.">        for (int i = 0; i &lt; bytes.length / 2; i++) {</span>
+<span class="fc" id="L415">            int mirroredIndex = bytes.length - i - 1;</span>
+<span class="fc" id="L416">            byte tmp = bytes[i];</span>
+<span class="fc" id="L417">            bytes[i] = bytes[mirroredIndex];</span>
+<span class="fc" id="L418">            bytes[mirroredIndex] = tmp;</span>
+        }
+<span class="fc" id="L420">    }</span>
+
+    /**
+     * Parses a string containing a beacon identifier in hexadecimal format.
+     * @param identifierString string to be parsed.
+     * @param desiredByteLength length of byte array to create to hold provided value.
+     * @return the parsed identifier.
+     */
+    private static BeaconIdentifier parseHex(String identifierString, int desiredByteLength) {
+<span class="pc bpc" id="L429" title="1 of 2 branches missed.">        String str = identifierString.length() % 2 == 0 ? &quot;&quot; : &quot;0&quot;;</span>
+<span class="fc" id="L430">        str += identifierString.toUpperCase();</span>
+<span class="fc" id="L431">        int len = str.length();</span>
+
+<span class="fc bfc" id="L433" title="All 4 branches covered.">        if (desiredByteLength &gt; 0 &amp;&amp; desiredByteLength &lt; len / 2) {</span>
+<span class="fc" id="L434">            str = str.substring(len - desiredByteLength * 2);</span>
+<span class="fc" id="L435">            len = str.length();</span>
+        }
+<span class="fc bfc" id="L437" title="All 4 branches covered.">        if (desiredByteLength &gt; 0 &amp;&amp; desiredByteLength &gt; len / 2) {</span>
+<span class="fc" id="L438">            int extraCharsToAdd = desiredByteLength * 2 - len;</span>
+<span class="fc" id="L439">            StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L440" title="All 2 branches covered.">            while (sb.length() &lt; extraCharsToAdd) {</span>
+<span class="fc" id="L441">                sb.append(&quot;0&quot;);</span>
+            }
+<span class="fc" id="L443">            str = sb.toString() + str;</span>
+<span class="fc" id="L444">            len = str.length();</span>
+        }
+
+<span class="fc" id="L447">        byte[] result = new byte[len / 2];</span>
+<span class="fc bfc" id="L448" title="All 2 branches covered.">        for (int i = 0; i &lt; result.length; i++) {</span>
+<span class="fc" id="L449">            result[i] = (byte)(Integer.parseInt(str.substring(i * 2, i * 2 + 2), 16) &amp; 0xFF);</span>
+        }
+<span class="fc" id="L451">        return new BeaconIdentifier(result);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

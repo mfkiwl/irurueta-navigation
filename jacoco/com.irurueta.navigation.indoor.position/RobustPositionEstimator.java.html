@@ -1,0 +1,605 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RobustPositionEstimator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor.position</a> &gt; <span class="el_source">RobustPositionEstimator.java</span></div><h1>RobustPositionEstimator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor.position;
+
+import com.irurueta.algebra.Matrix;
+import com.irurueta.geometry.Point;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NotReadyException;
+import com.irurueta.navigation.indoor.Fingerprint;
+import com.irurueta.navigation.indoor.RadioSource;
+import com.irurueta.navigation.indoor.RadioSourceLocated;
+import com.irurueta.navigation.indoor.Reading;
+import com.irurueta.navigation.trilateration.RobustTrilaterationSolver;
+import com.irurueta.navigation.trilateration.RobustTrilaterationSolverListener;
+import com.irurueta.numerical.robust.InliersData;
+import com.irurueta.numerical.robust.RobustEstimatorException;
+import com.irurueta.numerical.robust.RobustEstimatorMethod;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Base class for robust position estimators using located radio sources and their
+ * readings at unknown locations.
+ * These kind of estimators can be used to robustly determine the position of a given
+ * device by getting readings at an unknown location of different radio sources whose
+ * locations are known.
+ * Implementations of this class should be able to detect and discard outliers in order
+ * to find the best solution.
+ * @param &lt;P&gt; a {@link Point} type.
+ */
+@SuppressWarnings({&quot;WeakerAccess&quot;, &quot;Duplicates&quot;})
+public abstract class RobustPositionEstimator&lt;P extends Point&gt; {
+
+    /**
+     * Default robust estimator method when none is provided.
+     */
+<span class="fc" id="L51">    public static final RobustEstimatorMethod DEFAULT_ROBUST_METHOD =</span>
+            RobustEstimatorMethod.PROMedS;
+
+    /**
+     * Distance standard deviation assumed for provided distances as a fallback when
+     * none can be determined.
+     */
+    public static final double FALLBACK_DISTANCE_STANDARD_DEVIATION =
+            NonLinearPositionEstimator.FALLBACK_DISTANCE_STANDARD_DEVIATION;
+
+    /**
+     * Located radio sources used for trilateration.
+     */
+    protected List&lt;? extends RadioSourceLocated&lt;P&gt;&gt; mSources;
+
+    /**
+     * Fingerprint containing readings at an unknown location for provided location radio sources.
+     */
+    protected Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; mFingerprint;
+
+    /**
+     * Indicates whether located radio source position covariance must be taken
+     * into account (if available) to determine distance standard deviation.
+     */
+    private boolean mUseRadioSourcePositionCovariance;
+
+    /**
+     * Distance standard deviation fallback value to use when none can be
+     * determined from provided radio sources and fingerprint readings.
+     */
+<span class="fc" id="L81">    private double mFallbackDistanceStandardDeviation =</span>
+            FALLBACK_DISTANCE_STANDARD_DEVIATION;
+
+    /**
+     * Listener to be notified of events raised by this instance.
+     */
+    protected RobustPositionEstimatorListener&lt;P&gt; mListener;
+
+    /**
+     * A robust trilateration solver to solve position.
+     */
+    protected RobustTrilaterationSolver&lt;P&gt; mTrilaterationSolver;
+
+    /**
+     * Listener for the robust trilateration solver.
+     */
+    protected RobustTrilaterationSolverListener&lt;P&gt; mTrilaterationSolverListener;
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L102">    public RobustPositionEstimator() {</span>
+<span class="fc" id="L103">        init();</span>
+<span class="fc" id="L104">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener in charge of handling events.
+     */
+<span class="fc" id="L110">    public RobustPositionEstimator(RobustPositionEstimatorListener&lt;P&gt; listener) {</span>
+<span class="fc" id="L111">        mListener = listener;</span>
+<span class="fc" id="L112">        init();</span>
+<span class="fc" id="L113">    }</span>
+
+    /**
+     * Gets located radio sources used for trilateration.
+     * @return located radio sources used for trilateration.
+     */
+    public List&lt;? extends RadioSourceLocated&lt;P&gt;&gt; getSources() {
+<span class="fc" id="L120">        return mSources;</span>
+    }
+
+    /**
+     * Sets located radio sources used for trilateration.
+     * @param sources located radio sources used for trilateration.
+     * @throws LockedException if estimator is locked.
+     * @throws IllegalArgumentException if provided value is null or the number of provided sources is less
+     * than the required minimum.
+     */
+    public void setSources(List&lt;? extends RadioSourceLocated&lt;P&gt;&gt; sources)
+            throws LockedException, IllegalArgumentException {
+<span class="fc bfc" id="L132" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L133">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L136">        internalSetSources(sources);</span>
+<span class="fc" id="L137">    }</span>
+
+    /**
+     * Gets fingerprint containing readings at an unknown location for provided located radio sources.
+     * @return fingerprint containing readings at an unknown location for provided located radio sources.
+     */
+    public Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; getFingerprint() {
+<span class="fc" id="L144">        return mFingerprint;</span>
+    }
+
+    /**
+     * Sets fingerprint containing readings at an unknown location for provided located radio sources.
+     * @param fingerprint fingerprint containing readings at an unknown location for provided located radio sources.
+     * @throws LockedException if estimator is locked.
+     */
+    public void setFingerprint(
+            Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint)
+            throws LockedException {
+<span class="fc bfc" id="L155" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L156">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L159">        internalSetFingerprint(fingerprint);</span>
+<span class="fc" id="L160">    }</span>
+
+    /**
+     * Gets listener to be notified of events raised by this instance.
+     * @return listener to be notified of events raised by this instance.
+     */
+    public RobustPositionEstimatorListener&lt;P&gt; getListener() {
+<span class="fc" id="L167">        return mListener;</span>
+    }
+
+    /**
+     * Sets listener to be notified of events raised by this instance.
+     * @param listener listener to be notified of events raised by this instance.
+     * @throws LockedException if estimator is locked.
+     */
+    public void setListener(RobustPositionEstimatorListener&lt;P&gt; listener) throws LockedException {
+<span class="fc bfc" id="L176" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L177">            throw new LockedException();</span>
+        }
+<span class="fc" id="L179">        mListener = listener;</span>
+<span class="fc" id="L180">    }</span>
+
+    /**
+     * Indicates whether located radio source position covariance must be taken into
+     * account (if available) to determine distance standard deviation.
+     * @return true to take radio source position covariance into account, false
+     * otherwise.
+     */
+    public boolean isRadioSourcePositionCovarianceUsed() {
+<span class="fc" id="L189">        return mUseRadioSourcePositionCovariance;</span>
+    }
+
+    /**
+     * Specifies whether located radio source position covariance must be taken into
+     * account (if available) to determine distance standard deviation.
+     * @param useRadioSourcePositionCovariance true to take radio source position
+     *                                         covariance into account, false otherwise.
+     * @throws LockedException if estimator is locked.
+     */
+    public void setRadioSourcePositionCovarianceUsed(
+            boolean useRadioSourcePositionCovariance) throws LockedException {
+<span class="fc bfc" id="L201" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L202">            throw new LockedException();</span>
+        }
+<span class="fc" id="L204">        mUseRadioSourcePositionCovariance = useRadioSourcePositionCovariance;</span>
+
+<span class="fc" id="L206">        buildPositionsDistancesDistanceStandardDeviationsAndQualityScores();</span>
+<span class="fc" id="L207">    }</span>
+
+    /**
+     * Gets distance standard deviation fallback value to use when none can be
+     * determined from provided radio sources and fingerprint readings.
+     * @return distance standard deviation to use as fallback.
+     */
+    public double getFallbackDistanceStandardDeviation() {
+<span class="fc" id="L215">        return mFallbackDistanceStandardDeviation;</span>
+    }
+
+    /**
+     * Sets distance standard deviation fallback value to use when none can be
+     * determined from provided radio sources and fingerprint readings.
+     * @param fallbackDistanceStandardDeviation distance standard deviation to use
+     *                                          as fallback.
+     * @throws LockedException if estimator is locked.
+     */
+    public void setFallbackDistanceStandardDeviation(
+            double fallbackDistanceStandardDeviation) throws LockedException {
+<span class="fc bfc" id="L227" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L228">            throw new LockedException();</span>
+        }
+<span class="fc" id="L230">        mFallbackDistanceStandardDeviation = fallbackDistanceStandardDeviation;</span>
+
+<span class="fc" id="L232">        buildPositionsDistancesDistanceStandardDeviationsAndQualityScores();</span>
+<span class="fc" id="L233">    }</span>
+
+    /**
+     * Returns boolean indicating if estimator is locked because estimation is under
+     * progress.
+     * @return true if estimator is locked, false otherwise.
+     */
+    public boolean isLocked() {
+<span class="fc" id="L241">        return mTrilaterationSolver.isLocked();</span>
+    }
+
+    /**
+     * Returns amount of progress variation before notifying a progress change during
+     * estimation.
+     * @return amount of progress variation before notifying a progress change during
+     * estimation.
+     */
+    public float getProgressDelta() {
+<span class="fc" id="L251">        return mTrilaterationSolver.getProgressDelta();</span>
+    }
+
+    /**
+     * Sets amount of progress variation before notifying a progress change during
+     * estimation.
+     * @param progressDelta amount of progress variation before notifying a progress
+     *                      change during estimation.
+     * @throws IllegalArgumentException if progress delta is less than zero or greater than 1.
+     * @throws LockedException if this solver is locked because an estimation is being computed.
+     */
+    public void setProgressDelta(float progressDelta)
+            throws IllegalArgumentException, LockedException {
+<span class="fc" id="L264">        mTrilaterationSolver.setProgressDelta(progressDelta);</span>
+<span class="fc" id="L265">    }</span>
+
+    /**
+     * Returns amount of confidence expressed as a value between 0.0 and 1.0
+     * (which is equivalent to 100%). The amount of confidence indicates the probability
+     * that the estimated result is correct. Usually this value will be close to 1.0, but
+     * not exactly 1.0.
+     * @return amount of confidence as a value between 0.0 and 1.0.
+     */
+    public double getConfidence() {
+<span class="fc" id="L275">        return mTrilaterationSolver.getConfidence();</span>
+    }
+
+    /**
+     * Sets amount of confidence expressed as a value between 0.0 and 1.0 (which is
+     * equivalent to 100%). The amount of confidence indicates the probability that
+     * the estimated result is correct. Usually this value will be close to 1.0, but
+     * not exactly 1.0.
+     * @param confidence confidence to be set as a value between 0.0 and 1.0.
+     * @throws IllegalArgumentException if provided value is not between 0.0 and 1.0.
+     * @throws LockedException if solver is locked because an estimation is being computed.
+     */
+    public void setConfidence(double confidence)
+            throws IllegalArgumentException, LockedException {
+<span class="nc" id="L289">        mTrilaterationSolver.setConfidence(confidence);</span>
+<span class="nc" id="L290">    }</span>
+
+    /**
+     * Returns maximum allowed number of iterations. If maximum allowed number of
+     * iterations is achieved without converging to a result when calling solve(),
+     * a RobustEstimatorException will be raised.
+     * @return maximum allowed number of iterations.
+     */
+    public int getMaxIterations() {
+<span class="fc" id="L299">        return mTrilaterationSolver.getMaxIterations();</span>
+    }
+
+    /**
+     * Sets maximum allowed number of iterations. When the maximum number of iterations
+     * is exceeded, result will not be available, however an approximate result will be
+     * available for retrieval.
+     * @param maxIterations maximum allowed number of iterations to be set.
+     * @throws IllegalArgumentException if provided value is less than 1.
+     * @throws LockedException if this estimator is locked because an estimation is being
+     * computed.
+     */
+    public void setMaxIterations(int maxIterations)
+            throws IllegalArgumentException, LockedException {
+<span class="fc" id="L313">        mTrilaterationSolver.setMaxIterations(maxIterations);</span>
+<span class="fc" id="L314">    }</span>
+
+    /**
+     * Indicates whether result must be refined using a non-linear estimator over found
+     * inliers.
+     * @return true to refine result, false to simply use result found by robust estimator
+     * without further refining.
+     */
+    public boolean isResultRefined() {
+<span class="fc" id="L323">        return mTrilaterationSolver.isResultRefined();</span>
+    }
+
+    /**
+     * Specifies whether result must be refined using a non-linear estimator over found
+     * inliers.
+     * @param refineResult true to refine result, false to simply use result found by robust
+     *                     estimator without further refining.
+     * @throws LockedException if solver is locked.
+     */
+    public void setResultRefined(boolean refineResult) throws LockedException {
+<span class="fc" id="L334">        mTrilaterationSolver.setResultRefined(refineResult);</span>
+<span class="fc" id="L335">    }</span>
+
+    /**
+     * Indicates whether covariance must be kept after refining result.
+     * This setting is only taken into account if result is refined.
+     * @return true if covariance must be kept after refining result, false otherwise.
+     */
+    public boolean isCovarianceKept() {
+<span class="fc" id="L343">        return mTrilaterationSolver.isCovarianceKept();</span>
+    }
+
+    /**
+     * Specifies whether covariance must be kept after refining result.
+     * This setting is only taken into account if result is refined.
+     * @param keepCovariance true if covariance must be kept after refining result,
+     *                       false otherwise.
+     * @throws LockedException if estimator is locked.
+     */
+    public void setCovarianceKept(boolean keepCovariance) throws LockedException {
+<span class="fc" id="L354">        mTrilaterationSolver.setCovarianceKept(keepCovariance);</span>
+<span class="fc" id="L355">    }</span>
+
+    /**
+     * Gets data related to inliers found after estimation.
+     * Inlier data is related to the internal positions and distances used
+     * for solving trilateration.
+     * @return data related to inliers found after estimation.
+     */
+    public InliersData getInliersData() {
+<span class="fc" id="L364">        return mTrilaterationSolver.getInliersData();</span>
+    }
+
+    /**
+     * Gets known positions of radio sources used internally to solve trilateration.
+     * @return known positions used internally.
+     */
+    public P[] getPositions() {
+<span class="fc" id="L372">        return mTrilaterationSolver.getPositions();</span>
+    }
+
+    /**
+     * Gets euclidean distances from known located radio sources to
+     * the location of provided readings in a fingerprint.
+     * Distance values are used internally to solve trilateration.
+     * @return euclidean distances used internally.
+     */
+    public double[] getDistances() {
+<span class="fc" id="L382">        return mTrilaterationSolver.getDistances();</span>
+    }
+
+    /**
+     * Gets standard deviation distances from known located radio sources to
+     * the location of provided readings in a fingerprint.
+     * Distance standard deviations are used internally to solve trilateration.
+     * @return standard deviations used internally.
+     */
+    public double[] getDistanceStandardDeviations() {
+<span class="fc" id="L392">        return mTrilaterationSolver.getDistanceStandardDeviations();</span>
+    }
+
+    /**
+     * Indicates whether estimator is ready to find a solution.
+     * @return true if estimator is ready, false otherwise.
+     */
+    public boolean isReady() {
+<span class="fc" id="L400">        return mTrilaterationSolver.isReady();</span>
+    }
+
+    /**
+     * Returns quality scores corresponding to each radio source.
+     * The larger the score value the better the quality of the sample.
+     * This implementation always returns null.
+     * Subclasses using quality scores must implement proper behavior.
+     * @return quality scores corresponding to each sample.
+     */
+    public double[] getQualityScores() {
+<span class="fc" id="L411">        return null;</span>
+    }
+
+    /**
+     * Sets quality scores corresponding to each radio source.
+     * The larger the score value the better the quality of the sample.
+     * This implementation makes no action.
+     * Subclasses using quality scores must implement proper behaviour.
+     * @param qualityScores quality scores corresponding to each radio
+     *                      source.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than minimum required samples.
+     * @throws LockedException if robust solver is locked because an
+     * estimation is already in progress.
+     */
+    public void setQualityScores(double[] qualityScores)
+<span class="fc" id="L427">            throws IllegalArgumentException, LockedException { }</span>
+
+    /**
+     * Gets estimated covariance of estimated position if available.
+     * This is only available when result has been refined and covariance
+     * is kept.
+     * @return estimated covariance or null.
+     */
+    public Matrix getCovariance() {
+<span class="fc" id="L436">        return mTrilaterationSolver.getCovariance();</span>
+    }
+
+    /**
+     * Gets estimated position.
+     * @return estimated position.
+     */
+    public P getEstimatedPosition() {
+<span class="fc" id="L444">        return mTrilaterationSolver.getEstimatedPosition();</span>
+    }
+
+    /**
+     * Gets number of dimensions of provided points.
+     * @return number of dimensions of provided points.
+     */
+    public int getNumberOfDimensions() {
+<span class="fc" id="L452">        return mTrilaterationSolver.getNumberOfDimensions();</span>
+    }
+
+    /**
+     * Estimates position based on provided located radio sources and readings of such radio sources at
+     * an unknown location.
+     * @return estimated position.
+     * @throws LockedException if estimator is locked.
+     * @throws NotReadyException if estimator is not ready.
+     * @throws RobustEstimatorException if estimation fails for some other reason.
+     */
+    public P estimate() throws LockedException, NotReadyException,
+            RobustEstimatorException {
+<span class="fc" id="L465">        return mTrilaterationSolver.solve();</span>
+    }
+
+    /**
+     * Gets minimum required number of located radio sources to perform trilateration.
+     * @return minimum required number of located radio sources to perform trilateration.
+     */
+    public abstract int getMinRequiredSources();
+
+    /**
+     * Returns method being used for robust estimation.
+     * @return method being used for robust estimation.
+     */
+    public abstract RobustEstimatorMethod getMethod();
+
+    /**
+     * Internally sets located radio sources used for trilateration.
+     * @param sources located radio sources used for trilateration.
+     * @throws IllegalArgumentException if provided value is null or the number of provided sources is less
+     * than the required minimum.
+     */
+    protected void internalSetSources(List&lt;? extends RadioSourceLocated&lt;P&gt;&gt; sources)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L488" title="All 2 branches covered.">        if (sources == null) {</span>
+<span class="fc" id="L489">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc bfc" id="L492" title="All 2 branches covered.">        if (sources.size() &lt; getMinRequiredSources()) {</span>
+<span class="fc" id="L493">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L496">        mSources = sources;</span>
+
+<span class="fc" id="L498">        buildPositionsDistancesDistanceStandardDeviationsAndQualityScores();</span>
+<span class="fc" id="L499">    }</span>
+
+    /**
+     * Internally sets fingerprint containing readings at an unknown location for provided located radio sources.
+     * @param fingerprint fingerprint containing readings at an unknown location for provided located radio sources.
+     * @throws IllegalArgumentException if provided value is null.
+     */
+    protected void internalSetFingerprint(
+            Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L509" title="All 2 branches covered.">        if (fingerprint == null) {</span>
+<span class="fc" id="L510">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L513">        mFingerprint = fingerprint;</span>
+
+<span class="fc" id="L515">        buildPositionsDistancesDistanceStandardDeviationsAndQualityScores();</span>
+<span class="fc" id="L516">    }</span>
+
+    /**
+     * Sets positions, distances and standard deviations of distances on internal trilateration solver.
+     * @param positions positions to be set.
+     * @param distances distances to be set.
+     * @param distanceStandardDeviations standard deviations of distances to be set.
+     * @param distanceQualityScores distance quality scores or null if not required.
+     */
+    protected abstract void setPositionsDistancesDistanceStandardDeviationsAndQualityScores(
+            List&lt;P&gt; positions, List&lt;Double&gt; distances,
+            List&lt;Double&gt; distanceStandardDeviations,
+            List&lt;Double&gt; distanceQualityScores);
+
+    /**
+     * Initializes robust trilateration solver listener.
+     */
+    private void init() {
+<span class="fc" id="L534">        mTrilaterationSolverListener = new RobustTrilaterationSolverListener&lt;P&gt;() {</span>
+            @Override
+            public void onSolveStart(RobustTrilaterationSolver&lt;P&gt; solver) {
+<span class="pc bpc" id="L537" title="1 of 2 branches missed.">                if (mListener != null) {</span>
+<span class="fc" id="L538">                    mListener.onEstimateStart(RobustPositionEstimator.this);</span>
+                }
+<span class="fc" id="L540">            }</span>
+
+            @Override
+            public void onSolveEnd(RobustTrilaterationSolver&lt;P&gt; solver) {
+<span class="pc bpc" id="L544" title="1 of 2 branches missed.">                if (mListener != null) {</span>
+<span class="fc" id="L545">                    mListener.onEstimateEnd(RobustPositionEstimator.this);</span>
+                }
+<span class="fc" id="L547">            }</span>
+
+            @Override
+            public void onSolveNextIteration(RobustTrilaterationSolver&lt;P&gt; solver,
+                    int iteration) {
+<span class="pc bpc" id="L552" title="1 of 2 branches missed.">                if (mListener != null) {</span>
+<span class="fc" id="L553">                    mListener.onEstimateNextIteration(</span>
+                            RobustPositionEstimator.this, iteration);
+                }
+<span class="fc" id="L556">            }</span>
+
+            @Override
+            public void onSolveProgressChange(RobustTrilaterationSolver&lt;P&gt; solver,
+                    float progress) {
+<span class="pc bpc" id="L561" title="1 of 2 branches missed.">                if (mListener != null) {</span>
+<span class="fc" id="L562">                    mListener.onEstimateProgressChange(</span>
+                            RobustPositionEstimator.this, progress);
+                }
+<span class="fc" id="L565">            }</span>
+        };
+<span class="fc" id="L567">    }</span>
+
+    /**
+     * Builds positions, distances, standard deviation of distances and quality scores
+     * for the internal trilateration solver.
+     */
+    protected void buildPositionsDistancesDistanceStandardDeviationsAndQualityScores() {
+<span class="pc bpc" id="L574" title="1 of 2 branches missed.">        if (mTrilaterationSolver == null) {</span>
+<span class="nc" id="L575">            return;</span>
+        }
+
+<span class="fc" id="L578">        int min = getMinRequiredSources();</span>
+<span class="fc bfc" id="L579" title="All 4 branches covered.">        if (mSources == null || mFingerprint == null ||</span>
+<span class="pc bpc" id="L580" title="1 of 2 branches missed.">                mSources.size() &lt; min ||</span>
+<span class="pc bpc" id="L581" title="1 of 2 branches missed.">                mFingerprint.getReadings() == null ||</span>
+<span class="fc bfc" id="L582" title="All 2 branches covered.">                mFingerprint.getReadings().size() &lt; min) {</span>
+<span class="fc" id="L583">            return;</span>
+        }
+
+<span class="fc" id="L586">        List&lt;P&gt; positions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L587">        List&lt;Double&gt; distances = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L588">        List&lt;Double&gt; distanceStandardDeviations = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L590">        double[] qualityScores = getQualityScores();</span>
+<span class="fc" id="L591">        List&lt;Double&gt; distanceQualityScores = null;</span>
+<span class="fc bfc" id="L592" title="All 2 branches covered.">        if (qualityScores != null) {</span>
+<span class="fc" id="L593">            distanceQualityScores = new ArrayList&lt;&gt;();</span>
+        }
+<span class="fc" id="L595">        PositionEstimatorHelper.buildPositionsDistancesDistanceStandardDeviationsAndQualityScores(</span>
+                mSources, mFingerprint, qualityScores,
+                mUseRadioSourcePositionCovariance,
+                mFallbackDistanceStandardDeviation, positions, distances,
+                distanceStandardDeviations, distanceQualityScores);
+
+<span class="fc" id="L601">        setPositionsDistancesDistanceStandardDeviationsAndQualityScores(positions, distances,</span>
+                distanceStandardDeviations, distanceQualityScores);
+<span class="fc" id="L603">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

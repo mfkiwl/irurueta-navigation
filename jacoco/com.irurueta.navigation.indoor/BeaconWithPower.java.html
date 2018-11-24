@@ -1,0 +1,546 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BeaconWithPower.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor</a> &gt; <span class="el_source">BeaconWithPower.java</span></div><h1>BeaconWithPower.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor;
+
+import java.util.List;
+
+/**
+ * Data related to a beacon whose transmitted power and standard deviation of
+ * such transmitted power is known.
+ */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
+public class BeaconWithPower extends Beacon implements RadioSourceWithPower {
+
+    /**
+     * Default exponent typically used on free space for path loss propagation in
+     * terms of distance. This value is used for free space environments.
+     */
+    public static final double DEFAULT_PATH_LOSS_EXPONENT = 2.0;
+
+    /**
+     * Standard deviation of transmitted power value or null if unknown.
+     */
+    private Double mTransmittedPowerStandardDeviation;
+
+    /**
+     * Exponent typically used on free space for path loss propagation in
+     * terms of distance.
+     * On different environments path loss exponent might have different values:
+     * - Free space: 2.0
+     * - Urban Area: 2.7 to 3.5
+     * - Suburban Area: 3 to 5
+     * - Indoor (line-of-sight): 1.6 to 1.8
+     * If path loss exponent estimation is not enabled, this value will always be equal to
+     * {@link #DEFAULT_PATH_LOSS_EXPONENT}
+     */
+<span class="fc" id="L49">    private double mPathLossExponent = DEFAULT_PATH_LOSS_EXPONENT;</span>
+
+    /**
+     * Standard deviation of path loss exponent or null if unknown.
+     */
+    private Double mPathLossExponentStandardDeviation;
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @throws IllegalArgumentException if identifiers is null.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower) throws IllegalArgumentException {
+<span class="fc" id="L64">        super(identifiers, transmittedPower);</span>
+<span class="fc" id="L65">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param bluetoothAddress the bluetooth mac addres.
+     * @param beaconTypeCode the two byte value indicating the type of beacon.
+     * @param manufacturer a two byte code indicating the beacon manufacturer.
+     * @param serviceUuid a 32 bit service uuid for the beacon.
+     * @param bluetoothName the bluetooth device name.
+     * @throws IllegalArgumentException if identifiers is null.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, String bluetoothAddress,
+            int beaconTypeCode, int manufacturer,
+            int serviceUuid, String bluetoothName)
+            throws IllegalArgumentException {
+<span class="fc" id="L83">        super(identifiers, transmittedPower, bluetoothAddress,</span>
+                beaconTypeCode, manufacturer, serviceUuid,
+                bluetoothName);
+<span class="fc" id="L86">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @throws IllegalArgumentException if identifiers is null or standard deviation is negative.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, Double transmittedPowerStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L99">        super(identifiers, transmittedPower);</span>
+
+<span class="fc bfc" id="L101" title="All 4 branches covered.">        if (transmittedPowerStandardDeviation != null &amp;&amp; transmittedPowerStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L102">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L104">        mTransmittedPowerStandardDeviation = transmittedPowerStandardDeviation;</span>
+<span class="fc" id="L105">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param bluetoothAddress the bluetooth mac addres.
+     * @param beaconTypeCode the two byte value indicating the type of beacon.
+     * @param manufacturer a two byte code indicating the beacon manufacturer.
+     * @param serviceUuid a 32 bit service uuid for the beacon.
+     * @param bluetoothName the bluetooth device name.
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @throws IllegalArgumentException if identifiers is null.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, String bluetoothAddress,
+            int beaconTypeCode, int manufacturer,
+            int serviceUuid, String bluetoothName,
+            Double transmittedPowerStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L126">        super(identifiers, transmittedPower, bluetoothAddress,</span>
+                beaconTypeCode, manufacturer, serviceUuid,
+                bluetoothName);
+
+<span class="fc bfc" id="L130" title="All 4 branches covered.">        if (transmittedPowerStandardDeviation != null &amp;&amp; transmittedPowerStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L131">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L133">        mTransmittedPowerStandardDeviation = transmittedPowerStandardDeviation;</span>
+<span class="fc" id="L134">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param frequency frequency used by this Beacon.
+     * @param bluetoothAddress the bluetooth mac addres.
+     * @param beaconTypeCode the two byte value indicating the type of beacon.
+     * @param manufacturer a two byte code indicating the beacon manufacturer.
+     * @param serviceUuid a 32 bit service uuid for the beacon.
+     * @param bluetoothName the bluetooth device name.
+     * @throws IllegalArgumentException if identifiers is null.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, double frequency, String bluetoothAddress,
+            int beaconTypeCode, int manufacturer,
+            int serviceUuid, String bluetoothName)
+            throws IllegalArgumentException {
+<span class="fc" id="L153">        super(identifiers, transmittedPower, frequency, bluetoothAddress,</span>
+                beaconTypeCode, manufacturer, serviceUuid,
+                bluetoothName);
+<span class="fc" id="L156">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param frequency frequency used by this Beacon.
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @throws IllegalArgumentException if identifiers is null.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, double frequency, Double transmittedPowerStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L170">        super(identifiers, transmittedPower, frequency);</span>
+
+<span class="fc bfc" id="L172" title="All 4 branches covered.">        if (transmittedPowerStandardDeviation != null &amp;&amp; transmittedPowerStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L173">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L175">        mTransmittedPowerStandardDeviation = transmittedPowerStandardDeviation;</span>
+<span class="fc" id="L176">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param frequency frequency used by this Beacon.
+     * @param bluetoothAddress the bluetooth mac addres.
+     * @param beaconTypeCode the two byte value indicating the type of beacon.
+     * @param manufacturer a two byte code indicating the beacon manufacturer.
+     * @param serviceUuid a 32 bit service uuid for the beacon.
+     * @param bluetoothName the bluetooth device name.
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @throws IllegalArgumentException if identifiers is null.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, double frequency,
+            String bluetoothAddress, int beaconTypeCode, int manufacturer,
+            int serviceUuid, String bluetoothName,
+            Double transmittedPowerStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L198">        super(identifiers, transmittedPower, frequency, bluetoothAddress,</span>
+                beaconTypeCode, manufacturer, serviceUuid,
+                bluetoothName);
+
+<span class="fc bfc" id="L202" title="All 4 branches covered.">        if (transmittedPowerStandardDeviation != null &amp;&amp; transmittedPowerStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L203">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L205">        mTransmittedPowerStandardDeviation = transmittedPowerStandardDeviation;</span>
+<span class="fc" id="L206">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @throws IllegalArgumentException if identifiers is null.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, double pathLossExponent) throws IllegalArgumentException {
+<span class="fc" id="L217">        this(identifiers, transmittedPower);</span>
+<span class="fc" id="L218">        mPathLossExponent = pathLossExponent;</span>
+<span class="fc" id="L219">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param bluetoothAddress the bluetooth mac addres.
+     * @param beaconTypeCode the two byte value indicating the type of beacon.
+     * @param manufacturer a two byte code indicating the beacon manufacturer.
+     * @param serviceUuid a 32 bit service uuid for the beacon.
+     * @param bluetoothName the bluetooth device name.
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @throws IllegalArgumentException if identifiers is null.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, String bluetoothAddress,
+            int beaconTypeCode, int manufacturer,
+            int serviceUuid, String bluetoothName,
+            double pathLossExponent)
+            throws IllegalArgumentException {
+<span class="fc" id="L239">        this(identifiers, transmittedPower, bluetoothAddress,</span>
+                beaconTypeCode, manufacturer, serviceUuid,
+                bluetoothName);
+<span class="fc" id="L242">        mPathLossExponent = pathLossExponent;</span>
+<span class="fc" id="L243">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @throws IllegalArgumentException if identifiers is null or standard deviation is negative.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, Double transmittedPowerStandardDeviation,
+            double pathLossExponent) throws IllegalArgumentException {
+<span class="fc" id="L257">        this(identifiers, transmittedPower, pathLossExponent);</span>
+
+<span class="fc bfc" id="L259" title="All 4 branches covered.">        if (transmittedPowerStandardDeviation != null &amp;&amp; transmittedPowerStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L260">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L262">        mTransmittedPowerStandardDeviation = transmittedPowerStandardDeviation;</span>
+<span class="fc" id="L263">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param bluetoothAddress the bluetooth mac addres.
+     * @param beaconTypeCode the two byte value indicating the type of beacon.
+     * @param manufacturer a two byte code indicating the beacon manufacturer.
+     * @param serviceUuid a 32 bit service uuid for the beacon.
+     * @param bluetoothName the bluetooth device name.
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @throws IllegalArgumentException if identifiers is null or standard deviation is negative.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, String bluetoothAddress,
+            int beaconTypeCode, int manufacturer,
+            int serviceUuid, String bluetoothName,
+            double pathLossExponent,
+            Double transmittedPowerStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L286">        this(identifiers, transmittedPower, bluetoothAddress,</span>
+                beaconTypeCode, manufacturer, serviceUuid,
+                bluetoothName, pathLossExponent);
+
+<span class="fc bfc" id="L290" title="All 4 branches covered.">        if (transmittedPowerStandardDeviation != null &amp;&amp; transmittedPowerStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L291">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L293">        mTransmittedPowerStandardDeviation = transmittedPowerStandardDeviation;</span>
+<span class="fc" id="L294">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param frequency frequency used by this Beacon.
+     * @param bluetoothAddress the bluetooth mac addres.
+     * @param beaconTypeCode the two byte value indicating the type of beacon.
+     * @param manufacturer a two byte code indicating the beacon manufacturer.
+     * @param serviceUuid a 32 bit service uuid for the beacon.
+     * @param bluetoothName the bluetooth device name.
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @throws IllegalArgumentException if identifiers is null.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, double frequency, String bluetoothAddress,
+            int beaconTypeCode, int manufacturer,
+            int serviceUuid, String bluetoothName, double pathLossExponent)
+            throws IllegalArgumentException {
+<span class="fc" id="L314">        super(identifiers, transmittedPower, frequency, bluetoothAddress,</span>
+                beaconTypeCode, manufacturer, serviceUuid,
+                bluetoothName);
+<span class="fc" id="L317">        mPathLossExponent = pathLossExponent;</span>
+<span class="fc" id="L318">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param frequency frequency used by this Beacon.
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @throws IllegalArgumentException if identifiers is null or standard deviation is negative.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, double frequency, double pathLossExponent,
+            Double transmittedPowerStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L334">        this(identifiers, transmittedPower, frequency, transmittedPowerStandardDeviation);</span>
+<span class="fc" id="L335">        mPathLossExponent = pathLossExponent;</span>
+<span class="fc" id="L336">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param frequency frequency used by this Beacon.
+     * @param bluetoothAddress the bluetooth mac addres.
+     * @param beaconTypeCode the two byte value indicating the type of beacon.
+     * @param manufacturer a two byte code indicating the beacon manufacturer.
+     * @param serviceUuid a 32 bit service uuid for the beacon.
+     * @param bluetoothName the bluetooth device name.
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @throws IllegalArgumentException if identifiers is null or standard deviation is negative.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, double frequency,
+            String bluetoothAddress, int beaconTypeCode, int manufacturer,
+            int serviceUuid, String bluetoothName, double pathLossExponent,
+            Double transmittedPowerStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L359">        super(identifiers, transmittedPower, frequency, bluetoothAddress,</span>
+                beaconTypeCode, manufacturer, serviceUuid,
+                bluetoothName);
+<span class="fc" id="L362">        mPathLossExponent = pathLossExponent;</span>
+
+<span class="fc bfc" id="L364" title="All 4 branches covered.">        if (transmittedPowerStandardDeviation != null &amp;&amp; transmittedPowerStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L365">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L367">        mTransmittedPowerStandardDeviation = transmittedPowerStandardDeviation;</span>
+<span class="fc" id="L368">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @param pathLossExponentStandardDeviation standard deviation of path loss exponent or null if
+     *                                          unknown.
+     * @throws IllegalArgumentException if identifiers is null or any standard deviation is negative.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, Double transmittedPowerStandardDeviation,
+            double pathLossExponent, Double pathLossExponentStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L385">        this(identifiers, transmittedPower, pathLossExponent);</span>
+
+<span class="fc bfc" id="L387" title="All 4 branches covered.">        if (transmittedPowerStandardDeviation != null &amp;&amp; transmittedPowerStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L388">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc bfc" id="L390" title="All 4 branches covered.">        if (pathLossExponentStandardDeviation != null &amp;&amp; pathLossExponentStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L391">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L394">        mTransmittedPowerStandardDeviation = transmittedPowerStandardDeviation;</span>
+<span class="fc" id="L395">        mPathLossExponentStandardDeviation = pathLossExponentStandardDeviation;</span>
+<span class="fc" id="L396">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param bluetoothAddress the bluetooth mac addres.
+     * @param beaconTypeCode the two byte value indicating the type of beacon.
+     * @param manufacturer a two byte code indicating the beacon manufacturer.
+     * @param serviceUuid a 32 bit service uuid for the beacon.
+     * @param bluetoothName the bluetooth device name.
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @param pathLossExponentStandardDeviation standard deviation of path loss exponent or null if
+     *                                          unknown.
+     * @throws IllegalArgumentException if identifiers is null or any standard deviation is negative.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, String bluetoothAddress,
+            int beaconTypeCode, int manufacturer,
+            int serviceUuid, String bluetoothName,
+            double pathLossExponent,
+            Double transmittedPowerStandardDeviation,
+            Double pathLossExponentStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L422">        this(identifiers, transmittedPower, bluetoothAddress,</span>
+                beaconTypeCode, manufacturer, serviceUuid,
+                bluetoothName, pathLossExponent);
+
+<span class="fc bfc" id="L426" title="All 4 branches covered.">        if (transmittedPowerStandardDeviation != null &amp;&amp; transmittedPowerStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L427">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc bfc" id="L429" title="All 4 branches covered.">        if (pathLossExponentStandardDeviation != null &amp;&amp; pathLossExponentStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L430">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L433">        mTransmittedPowerStandardDeviation = transmittedPowerStandardDeviation;</span>
+<span class="fc" id="L434">        mPathLossExponentStandardDeviation = pathLossExponentStandardDeviation;</span>
+<span class="fc" id="L435">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param frequency frequency used by this Beacon.
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @param pathLossExponentStandardDeviation standard deviation of path loss exponent or null if
+     *                                          unknown.
+     * @throws IllegalArgumentException if identifiers is null or any standard deviation is negative.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, double frequency, double pathLossExponent,
+            Double transmittedPowerStandardDeviation,
+            Double pathLossExponentStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L454">        this(identifiers, transmittedPower, frequency, transmittedPowerStandardDeviation);</span>
+<span class="fc" id="L455">        mPathLossExponent = pathLossExponent;</span>
+
+<span class="pc bpc" id="L457" title="1 of 4 branches missed.">        if (pathLossExponentStandardDeviation != null &amp;&amp; pathLossExponentStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L458">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L461">        mPathLossExponentStandardDeviation = pathLossExponentStandardDeviation;</span>
+<span class="fc" id="L462">    }</span>
+
+    /**
+     * Constructor.
+     * @param identifiers list of the multi-part identifiers of the beacon.
+     * @param transmittedPower calibrated measured Tx power of the Beacon in RSSI (expressed in dBm's).
+     * @param frequency frequency used by this Beacon.
+     * @param bluetoothAddress the bluetooth mac addres.
+     * @param beaconTypeCode the two byte value indicating the type of beacon.
+     * @param manufacturer a two byte code indicating the beacon manufacturer.
+     * @param serviceUuid a 32 bit service uuid for the beacon.
+     * @param bluetoothName the bluetooth device name.
+     * @param pathLossExponent path loss exponent. By default this is 2.0.
+     * @param transmittedPowerStandardDeviation standard deviation of transmitted power value or null
+     *                                          if unknown.
+     * @param pathLossExponentStandardDeviation standard deviation of path loss exponent or null if
+     *                                          unknown.
+     * @throws IllegalArgumentException if identifiers is null.
+     */
+    public BeaconWithPower(List&lt;BeaconIdentifier&gt; identifiers,
+            double transmittedPower, double frequency,
+            String bluetoothAddress, int beaconTypeCode, int manufacturer,
+            int serviceUuid, String bluetoothName, double pathLossExponent,
+            Double transmittedPowerStandardDeviation,
+            Double pathLossExponentStandardDeviation)
+            throws IllegalArgumentException {
+<span class="fc" id="L488">        super(identifiers, transmittedPower, frequency, bluetoothAddress,</span>
+                beaconTypeCode, manufacturer, serviceUuid,
+                bluetoothName);
+<span class="fc" id="L491">        mPathLossExponent = pathLossExponent;</span>
+
+<span class="pc bpc" id="L493" title="1 of 4 branches missed.">        if (transmittedPowerStandardDeviation != null &amp;&amp; transmittedPowerStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L494">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc bfc" id="L496" title="All 4 branches covered.">        if (pathLossExponentStandardDeviation != null &amp;&amp; pathLossExponentStandardDeviation &lt; 0.0) {</span>
+<span class="fc" id="L497">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L500">        mTransmittedPowerStandardDeviation = transmittedPowerStandardDeviation;</span>
+<span class="fc" id="L501">        mPathLossExponentStandardDeviation = pathLossExponentStandardDeviation;</span>
+<span class="fc" id="L502">    }</span>
+
+    /**
+     * Empty constructor.
+     */
+    protected BeaconWithPower() {
+<span class="fc" id="L508">        super();</span>
+<span class="fc" id="L509">    }</span>
+
+    /**
+     * Gets standard deviation of transmitted power value or null if unknown.
+     * @return standard deviation of transmitted power value or null if unknown.
+     */
+    @Override
+    public Double getTransmittedPowerStandardDeviation() {
+<span class="fc" id="L517">        return mTransmittedPowerStandardDeviation;</span>
+    }
+
+    /**
+     * Gets exponent typically used on free space for path loss propagation in
+     * terms of distance.
+     * On different environments path loss exponent might have different values:
+     * - Free space: 2.0
+     * - Urban Area: 2.7 to 3.5
+     * - Suburban Area: 3 to 5
+     * - Indoor (line-of-sight): 1.6 to 1.8
+     * If path loss exponent estimation is not enabled, this value will always be equal to
+     * {@link #DEFAULT_PATH_LOSS_EXPONENT}
+     * @return path loss exponent.
+     */
+    @Override
+    public double getPathLossExponent() {
+<span class="fc" id="L534">        return mPathLossExponent;</span>
+    }
+
+    /**
+     * Gets standard deviation of path loss exponent or null if unknown.
+     * @return standard deviation of path loss exponent or null if unknown.
+     */
+    @Override
+    public Double getPathLossExponentStandardDeviation() {
+<span class="fc" id="L543">        return mPathLossExponentStandardDeviation;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

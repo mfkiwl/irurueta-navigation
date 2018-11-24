@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Utils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor</a> &gt; <span class="el_source">Utils.java</span></div><h1>Utils.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor;
+
+import com.irurueta.algebra.AlgebraException;
+import com.irurueta.algebra.Matrix;
+import com.irurueta.navigation.indoor.radiosource.RssiRadioSourceEstimator;
+import com.irurueta.statistics.MultivariateNormalDist;
+import com.irurueta.statistics.StatisticsException;
+
+@SuppressWarnings(&quot;Duplicates&quot;)
+public class Utils {
+
+    /**
+     * Speed of light expressed in meters per second (m/s).
+     */
+    public static final double SPEED_OF_LIGHT = RssiRadioSourceEstimator.SPEED_OF_LIGHT;
+
+    /**
+     * Prevents instantiation
+     */
+    private Utils() { }
+
+    /**
+     * Converts from dBm's to linear power value expressed in mW.
+     * @param dBm value to be converted expressed in dBm's.
+     * @return converted value expressed in mW.
+     */
+    public static double dBmToPower(double dBm) {
+<span class="fc" id="L43">        return Math.pow(10.0, dBm / 10.0);</span>
+    }
+
+    /**
+     * Converts from mW to logarithmic power value expressed in dBm's.
+     * @param mW value to be converted expressed in mW's.
+     * @return converted value expressed in dBm's.
+     */
+    public static double powerTodBm(double mW) {
+<span class="fc" id="L52">        return 10.0 * Math.log10(mW);</span>
+    }
+
+    /**
+     * Propagates variance on received power measure into distance variance by considering the following formula
+     * for received power (expressed in dBm's):
+     * rxPower = pathLossExponent * kdB + txPower - 5.0 * pathLossExponent * logSqrDistance,
+     * where logSqrDistance is the logarithm in base 10 of the squared distance logSqrDistance = Math.log(d^2).
+     * Taking into account the previous formula, distance can be expressed as:
+     * d = 10.0^((pathLossExponent * kdB + txPower - rxPower)/(10.0 * pathLossExponent))
+     * where kdB is a constant having the following expression:
+     * kdB = 10.0 * log(c / (4 * pi * f)),
+     * where c is the speed of light and f is the frequency.
+     * @param txPower transmitted power expressed in dBm's.
+     * @param rxPower received power expressed in dBm's.
+     * @param pathLossExponent path loss exponent.
+     * @param frequency frequency expressed in Hz.
+     * @param rxPowerVariance received power variance.
+     * @return distance variance.
+     */
+    public static double propagatePowerVarianceToDistanceVariance(double txPower,
+            double rxPower, double pathLossExponent, double frequency,
+            Double rxPowerVariance) {
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (rxPowerVariance == null) {</span>
+<span class="fc" id="L76">            return 0.0;</span>
+        }
+
+<span class="fc" id="L79">        double k = SPEED_OF_LIGHT / (4.0 * Math.PI * frequency);</span>
+<span class="fc" id="L80">        double kdB = 10.0 * Math.log10(k);</span>
+
+        //distance follows the following expression:
+        //d = 10.0^((pathLossExponent * kdB + txPower - rxPower)/(10.0 * pathLossExponent))
+        //where kdB is a constant having the following expression:
+        //kdB = 10.0 * log(c / (4 * pi * f)),
+        //where c is the speed of light and f is the frequency.
+
+        //hence, if the only unknown is the received power (x = rxPower), we can express the distance as:
+        //d = f(x) = 10.0^((pathLossExponent * kdB + txPower - x)/(10.0 * pathLossExponent))
+
+        //if we know the variance of received power var(x), then the variance of the distance will be:
+        //var(d) = var(f(x)) = (f'(E(x)))^2*var(x)
+        //where f'(x) is the derivative of f(x) evaluated at E(x) = rxPower
+
+        //the derivative f'(x) has the following expression:
+        //f'(x) = -ln(10)/(10.0*pathLossExponent)*10^((pathLossExponent * kdB + txPower - x)/(10.0 * pathLossExponent))
+
+        //evaluate derivative at E(x) = rxPower:
+<span class="fc" id="L99">        double tenPathLossExponent = 10.0 * pathLossExponent;</span>
+<span class="fc" id="L100">        double derivativeF = -Math.log(10.0) / tenPathLossExponent * Math.pow(10.0,</span>
+                (pathLossExponent * kdB + txPower - rxPower) / tenPathLossExponent);
+
+<span class="fc" id="L103">        return derivativeF * derivativeF * rxPowerVariance;</span>
+    }
+
+    /**
+     * Propagates provided variances (transmitted power variance, received power variance and pathloss variance) into
+     * distance variance by considering the following formula for received power (expressed in dBm's):
+     * rxPower = pathLossExponent * kdB + txPower - 5.0 * pathLossExponent * logSqrDistance,
+     * where logSqrDistance is the logarithm in base 10 of the squared distance logSqrDistance = Math.log(d^2).
+     * Taking into account the previous formula, distance can be expressed as:
+     * d = 10.0^((pathLossExponent * kdB + txPower - rxPower)/(10.0 * pathLossExponent))
+     * where kdB is a constant having the following expression:
+     * kdB = 10.0 * log(c / (4 * pi * f)),
+     * where c is the speed of light and f is the frequency.
+     * @param txPower transmitted power expressed in dBm's.
+     * @param rxPower received power expressed in dBm's.
+     * @param pathLossExponent path loss exponent.
+     * @param frequency frequency expressed in Hz.
+     * @param txPowerVariance transmitted power variance.
+     * @param rxPowerVariance received power variance.
+     * @param pathLossExponentVariance path loss exponent variance.
+     * @return a normal distribution containing both expected distance and its variance.
+     * @throws IndoorException if something fails.
+     */
+    public static MultivariateNormalDist propagateVariancesToDistanceVariance(final double txPower,
+            final double rxPower, final double pathLossExponent, final double frequency,
+            Double txPowerVariance, Double rxPowerVariance,
+            Double pathLossExponentVariance) throws IndoorException {
+<span class="pc bpc" id="L130" title="2 of 6 branches missed.">        if (txPowerVariance == null &amp;&amp; rxPowerVariance == null &amp;&amp; pathLossExponentVariance == null) {</span>
+<span class="fc" id="L131">            return null;</span>
+        }
+
+<span class="fc" id="L134">        double[] mean = new double[]{ txPower, rxPower, pathLossExponent };</span>
+<span class="fc" id="L135">        Matrix covariance = Matrix.diagonal(new double[]{</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">                txPowerVariance != null ? txPowerVariance : 0.0,</span>
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">                rxPowerVariance != null ? rxPowerVariance : 0.0,</span>
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">                pathLossExponentVariance != null ? pathLossExponentVariance : 0.0</span>
+        });
+
+        try {
+<span class="fc" id="L142">            return MultivariateNormalDist.propagate(new MultivariateNormalDist.JacobianEvaluator() {</span>
+                @Override
+                public void evaluate(double[] x, double[] y, Matrix jacobian) {
+<span class="fc" id="L145">                    double k = RssiRadioSourceEstimator.SPEED_OF_LIGHT / (4.0 * Math.PI * frequency);</span>
+<span class="fc" id="L146">                    double kdB = 10.0 * Math.log10(k);</span>
+
+                    //received power in dBm's follows the equation:
+                    //rxPower = pathLossExponent * kdB + txPower - 5.0 * pathLossExponent * logSqrDistance
+
+                    //hence, distance follows the following expression:
+                    //d = 10.0^((pathLossExponent * kdB + txPower - rxPower)/(10.0 * pathLossExponent))
+                    //where kdB is a constant having the following expression:
+                    //kdB = 10.0 * log(c / (4 * pi * f)),
+                    //where c is the speed of light and f is the frequency.
+
+<span class="fc" id="L157">                    double logSqrDistance = (pathLossExponent * kdB + txPower - rxPower) / (5.0 * pathLossExponent);</span>
+
+                    //where logSqrDistance = Math.log10(sqrDistance)
+                    //and sqrDistance = distance * distance, hence
+                    //logSqrDistance = Math.log10(distance * distance) = 2 * Math.log10(distance)
+
+<span class="fc" id="L163">                    y[0] = Math.pow(10.0,logSqrDistance / 2.0);</span>
+
+
+
+                    //compute gradient (is a jacobian having 1 row and 3 columns)
+
+                    //derivative of distance respect to transmitted power is:
+
+                    //if the only unknown is the transmitted power (x = txPower), then:
+                    //d = f(x) = 10.0^((pathLossExponent * kdB + x - rxPower)/(10.0 * pathLossExponent))
+                    //and the derivative is
+                    //f'(x) = ln(10)/(10.0 * pathLossExponent)*10.0^((pathLossExponent * kdB + x - rxPower)/(10.0 * pathLossExponent))
+<span class="fc" id="L175">                    double tenPathLossExponent = 10.0 * pathLossExponent;</span>
+<span class="fc" id="L176">                    double derivativeTxPower = Math.log(10.0) / tenPathLossExponent * Math.pow(10.0,</span>
+                            (pathLossExponent * kdB + txPower - rxPower) / tenPathLossExponent);
+
+                    //derivative of distance respect to received power is:
+
+                    //if the only unknown is the received power (x = rxPower), then:
+                    //d = f(x) = 10.0^((pathLossExponent * kdB + txPower - x)/(10.0 * pathLossExponent))
+                    //and the derivative is
+                    //f'(x) = -ln(10)/(10.0*pathLossExponent)*10^((pathLossExponent * kdB + txPower - x)/(10.0 * pathLossExponent))
+<span class="fc" id="L185">                    double derivativeRxPower = -Math.log(10.0) / tenPathLossExponent * Math.pow(10.0,</span>
+                            (pathLossExponent * kdB + txPower - rxPower) / tenPathLossExponent);
+
+
+                    //derivative respect to path loss exponent is:
+
+                    //if the only unknown is the path loss exponent (x = pathLossExponent), then:
+                    //d = f(x) = 10.0^((x * kdB + txPower - rxPower)/(10.0 * x))
+                    //and the derivative is:
+                    //f'(x) = ln(10) * g'(x) * 10.0^(g(x))
+                    //where g(x) is:
+                    //g(x) = (x * kdB + txPower - rxPower) / (10.0 * x)
+                    //and the derivative of g(x) is:
+                    //g'(x) = (kdB * 10.0 * x - 10.0 * (x * kdB + txPower - rxPower)) / (10.0 * x)^2
+                    //Hence:
+                    //f'(x) = lng(10) * (kdB * 10.0 * x - 10.0 * (x * kdB + txPower - rxPower)) / (10.0 * x)^2 * 10.0^((x * kdB + txPower - rxPower)/(10.0 * x))
+
+<span class="fc" id="L202">                    double g = (pathLossExponent * kdB + txPower - rxPower) / (10.0 * pathLossExponent);</span>
+<span class="fc" id="L203">                    double derivativeG = (kdB * 10.0 * pathLossExponent -</span>
+                            10.0 * (pathLossExponent * kdB + txPower - rxPower)) /
+<span class="fc" id="L205">                            Math.pow(10.0 * pathLossExponent, 2.0);</span>
+
+<span class="fc" id="L207">                    double derivativePathLossExponent = Math.log(10.0) * derivativeG * Math.pow(10.0, g);</span>
+
+<span class="fc" id="L209">                    jacobian.setElementAtIndex(0, derivativeTxPower);</span>
+<span class="fc" id="L210">                    jacobian.setElementAtIndex(1, derivativeRxPower);</span>
+<span class="fc" id="L211">                    jacobian.setElementAtIndex(2, derivativePathLossExponent);</span>
+<span class="fc" id="L212">                }</span>
+
+                @Override
+                public int getNumberOfVariables() {
+<span class="fc" id="L216">                    return 1;</span>
+                }
+            }, mean, covariance);
+<span class="nc" id="L219">        } catch (AlgebraException | StatisticsException e) {</span>
+<span class="nc" id="L220">            throw new IndoorException(e);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

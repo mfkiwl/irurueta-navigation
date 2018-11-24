@@ -1,0 +1,1392 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RobustTrilateration3DSolver.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.trilateration</a> &gt; <span class="el_source">RobustTrilateration3DSolver.java</span></div><h1>RobustTrilateration3DSolver.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.trilateration;
+
+import com.irurueta.geometry.Point3D;
+import com.irurueta.geometry.Sphere;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NavigationException;
+import com.irurueta.numerical.robust.RobustEstimatorMethod;
+
+import java.util.BitSet;
+import java.util.List;
+
+/**
+ * This is an abstract class to robustly solve the trilateration problem by
+ * finding the best pairs of 3D positions and distances among the provided
+ * ones.
+ * Implementations of this class should be able to detect and discard outliers
+ * in order to find the best solution.
+ */
+@SuppressWarnings({&quot;WeakerAccess&quot;, &quot;Duplicates&quot;})
+public abstract class RobustTrilateration3DSolver extends RobustTrilaterationSolver&lt;Point3D&gt; {
+
+    /**
+     * Default robust estimator method when none is provided.
+     */
+<span class="fc" id="L40">    public static final RobustEstimatorMethod DEFAULT_ROBUST_METHOD =</span>
+            RobustEstimatorMethod.PROMedS;
+
+    /**
+     * Linear trilateration solver internally used by a robust algorithm.
+     */
+    protected LinearLeastSquaresTrilateration3DSolver mLinearSolver;
+
+    /**
+     * Non linear trilateration solver internally used to refine solution
+     * found by robust algorithm.
+     */
+    protected NonLinearLeastSquaresTrilateration3DSolver mNonLinearSolver;
+
+    /**
+     * Positions for linear inner solver used during robust estimation.
+     */
+    protected Point3D[] mInnerPositions;
+
+    /**
+     * Distances for linear inner solver used during robust estimation.
+     */
+    protected double[] mInnerDistances;
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L67">    public RobustTrilateration3DSolver() {</span>
+<span class="fc" id="L68">        init();</span>
+<span class="fc" id="L69">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     */
+    public RobustTrilateration3DSolver(
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener) {
+<span class="fc" id="L78">        super(listener);</span>
+<span class="fc" id="L79">        init();</span>
+<span class="fc" id="L80">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (4 points).
+     */
+    public RobustTrilateration3DSolver(Point3D[] positions, double[] distances)
+            throws IllegalArgumentException {
+<span class="fc" id="L92">        super(positions, distances);</span>
+<span class="fc" id="L93">        init();</span>
+<span class="fc" id="L94">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (4 points).
+     */
+    public RobustTrilateration3DSolver(Point3D[] positions, double[] distances,
+            double[] distanceStandardDeviations) throws IllegalArgumentException {
+<span class="fc" id="L107">        super(positions, distances, distanceStandardDeviations);</span>
+<span class="fc" id="L108">        init();</span>
+<span class="fc" id="L109">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (4 points).
+     */
+    public RobustTrilateration3DSolver(Point3D[] positions, double[] distances,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L124">        super(positions, distances, listener);</span>
+<span class="fc" id="L125">        init();</span>
+<span class="fc" id="L126">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions, distances or
+     * standard deviations are null, don't have the same length or their length is smaller
+     * than required (4 points).
+     */
+    public RobustTrilateration3DSolver(Point3D[] positions, double[] distances,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L143">        super(positions, distances, distanceStandardDeviations, listener);</span>
+<span class="fc" id="L144">        init();</span>
+<span class="fc" id="L145">    }</span>
+
+    /**
+     * Constructor.
+     * @param spheres spheres defining positions and distances.
+     * @throws IllegalArgumentException if spheres is null or if length of spheres array
+     * is less than required (4 points).
+     */
+    public RobustTrilateration3DSolver(Sphere[] spheres) throws IllegalArgumentException {
+<span class="fc" id="L154">        this();</span>
+<span class="fc" id="L155">        internalSetSpheres(spheres);</span>
+<span class="fc" id="L156">    }</span>
+
+    /**
+     * Constructor.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if spheres is null, length of spheres array is less
+     * than required (4 points) or don't have the same length.
+     */
+    public RobustTrilateration3DSolver(Sphere[] spheres,
+            double[] distanceStandardDeviations) throws IllegalArgumentException {
+<span class="fc" id="L167">        this();</span>
+<span class="fc" id="L168">        internalSetSpheresAndStandardDeviations(spheres,</span>
+                distanceStandardDeviations);
+<span class="fc" id="L170">    }</span>
+
+    /**
+     * Constructor.
+     * @param spheres spheres defining positions and distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if spheres is null or if length of spheres array
+     * is less than required (4 points).
+     */
+    public RobustTrilateration3DSolver(Sphere[] spheres,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L183">        this(listener);</span>
+<span class="fc" id="L184">        internalSetSpheres(spheres);</span>
+<span class="fc" id="L185">    }</span>
+
+    /**
+     * Constructor.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if spheres is null, length of spheres array is less
+     * than required (4 points) or don't have the same length.
+     */
+    public RobustTrilateration3DSolver(Sphere[] spheres,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L200">        this(listener);</span>
+<span class="fc" id="L201">        internalSetSpheresAndStandardDeviations(spheres,</span>
+                distanceStandardDeviations);
+<span class="fc" id="L203">    }</span>
+
+    /**
+     * Gets number of dimensions of provided points.
+     * @return always returns 2 dimensions.
+     */
+    @Override
+    public int getNumberOfDimensions() {
+<span class="fc" id="L211">        return Point3D.POINT3D_INHOMOGENEOUS_COORDINATES_LENGTH;</span>
+    }
+
+    /**
+     * Minimum required number of positions and distances.
+     * At least 3 positions will be required.
+     * @return minimum required number of positions and distances.
+     */
+    @Override
+    public int getMinRequiredPositionsAndDistances() {
+<span class="fc" id="L221">        return Point3D.POINT3D_INHOMOGENEOUS_COORDINATES_LENGTH + 1;</span>
+    }
+
+    /**
+     * Gets spheres defined by provided positions and distances.
+     * @return spheres defined by provided positions and distances.
+     */
+    public Sphere[] getSpheres() {
+<span class="fc bfc" id="L229" title="All 2 branches covered.">        if (mPositions == null) {</span>
+<span class="fc" id="L230">            return null;</span>
+        }
+
+<span class="fc" id="L233">        Sphere[] result = new Sphere[mPositions.length];</span>
+
+<span class="fc bfc" id="L235" title="All 2 branches covered.">        for (int i = 0; i &lt; mPositions.length; i++) {</span>
+<span class="fc" id="L236">            result[i] = new Sphere(mPositions[i], mDistances[i]);</span>
+        }
+<span class="fc" id="L238">        return result;</span>
+    }
+
+    /**
+     * Sets spheres defining positions and euclidean distances.
+     * @param spheres spheres defining positions and distances.
+     * @throws IllegalArgumentException if sphere is null or length of array of spheres
+     * is less than 4.
+     * @throws LockedException if instance is busy solving the trilateration problem.
+     */
+    public void setSpheres(Sphere[] spheres) throws IllegalArgumentException,
+            LockedException {
+<span class="fc bfc" id="L250" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L251">            throw new LockedException();</span>
+        }
+<span class="fc" id="L253">        internalSetSpheres(spheres);</span>
+<span class="fc" id="L254">    }</span>
+
+    /**
+     * Sets spheres defining positions and euclidean distances along with the standard
+     * deviations of provided spheres radii.
+     * @param spheres spheres defining positions and distances.
+     * @param radiusStandardDeviations standard deviations of spheres radii.
+     * @throws IllegalArgumentException if spheres is null, length of arrays is less than
+     * 4 or don' thave the same length.
+     * @throws LockedException if instance is busy solving the trilateration problem.
+     */
+    public void setSpheresAndStandardDeviations(Sphere[] spheres, double[] radiusStandardDeviations)
+            throws IllegalArgumentException, LockedException {
+<span class="fc bfc" id="L267" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L268">            throw new LockedException();</span>
+        }
+<span class="fc" id="L270">        internalSetSpheresAndStandardDeviations(spheres, radiusStandardDeviations);</span>
+<span class="fc" id="L271">    }</span>
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     */
+    public static RobustTrilateration3DSolver create(RobustEstimatorMethod method) {
+<span class="fc bfc" id="L279" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L281">                return new RANSACRobustTrilateration3DSolver();</span>
+            case LMedS:
+<span class="fc" id="L283">                return new LMedSRobustTrilateration3DSolver();</span>
+            case MSAC:
+<span class="fc" id="L285">                return new MSACRobustTrilateration3DSolver();</span>
+            case PROSAC:
+<span class="fc" id="L287">                return new PROSACRobustTrilateration3DSolver();</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L290">                return new PROMedSRobustTrilateration3DSolver();</span>
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     */
+    public static RobustTrilateration3DSolver create(
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L304" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L306">                return new RANSACRobustTrilateration3DSolver(listener);</span>
+            case LMedS:
+<span class="fc" id="L308">                return new LMedSRobustTrilateration3DSolver(listener);</span>
+            case MSAC:
+<span class="fc" id="L310">                return new MSACRobustTrilateration3DSolver(listener);</span>
+            case PROSAC:
+<span class="fc" id="L312">                return new PROSACRobustTrilateration3DSolver(listener);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L315">                return new PROMedSRobustTrilateration3DSolver(listener);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(Point3D[] positions,
+            double[] distances, RobustEstimatorMethod method)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L332" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L334">                return new RANSACRobustTrilateration3DSolver(positions, distances);</span>
+            case LMedS:
+<span class="fc" id="L336">                return new LMedSRobustTrilateration3DSolver(positions, distances);</span>
+            case MSAC:
+<span class="fc" id="L338">                return new MSACRobustTrilateration3DSolver(positions, distances);</span>
+            case PROSAC:
+<span class="fc" id="L340">                return new PROSACRobustTrilateration3DSolver(positions, distances);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L343">                return new PROMedSRobustTrilateration3DSolver(positions, distances);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations if either positions or distances are null,
+     *                                   don't have the same length or their length
+     *                                   is smaller than required (4 points).
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required
+     * (4 points).
+     */
+    public static RobustTrilateration3DSolver create(Point3D[] positions,
+            double[] distances, double[] distanceStandardDeviations,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L364" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L366">                return new RANSACRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case LMedS:
+<span class="fc" id="L369">                return new LMedSRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case MSAC:
+<span class="fc" id="L372">                return new MSACRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case PROSAC:
+<span class="fc" id="L375">                return new PROSACRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case PROMedS:
+            default:
+<span class="fc" id="L379">                return new PROMedSRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(Point3D[] positions,
+            double[] distances, RobustTrilaterationSolverListener&lt;Point3D&gt; listener,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L399" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L401">                return new RANSACRobustTrilateration3DSolver(positions, distances,</span>
+                        listener);
+            case LMedS:
+<span class="fc" id="L404">                return new LMedSRobustTrilateration3DSolver(positions, distances,</span>
+                        listener);
+            case MSAC:
+<span class="fc" id="L407">                return new MSACRobustTrilateration3DSolver(positions, distances,</span>
+                        listener);
+            case PROSAC:
+<span class="fc" id="L410">                return new PROSACRobustTrilateration3DSolver(positions, distances,</span>
+                        listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L414">                return new PROMedSRobustTrilateration3DSolver(positions, distances,</span>
+                        listener);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions, distances or
+     * standard deviations are null, don't have the same length or their length
+     * is smaller than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(Point3D[] positions,
+            double[] distances, double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L438" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L440">                return new RANSACRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case LMedS:
+<span class="fc" id="L443">                return new LMedSRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case MSAC:
+<span class="fc" id="L446">                return new MSACRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case PROSAC:
+<span class="fc" id="L449">                return new PROSACRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L453">                return new PROMedSRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param spheres spheres defining positions and distances.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if spheres is null, length of spheres array
+     * is less than required (4 points) or don't have the same length.
+     */
+    public static RobustTrilateration3DSolver create(Sphere[] spheres,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L468" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L470">                return new RANSACRobustTrilateration3DSolver(spheres);</span>
+            case LMedS:
+<span class="fc" id="L472">                return new LMedSRobustTrilateration3DSolver(spheres);</span>
+            case MSAC:
+<span class="fc" id="L474">                return new MSACRobustTrilateration3DSolver(spheres);</span>
+            case PROSAC:
+<span class="fc" id="L476">                return new PROSACRobustTrilateration3DSolver(spheres);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L479">                return new PROMedSRobustTrilateration3DSolver(spheres);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if spheres is null, length of spheres array
+     * is less than required (4 points) or don't have the same length.
+     */
+    public static RobustTrilateration3DSolver create(Sphere[] spheres,
+            double[] distanceStandardDeviations, RobustEstimatorMethod method)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L496" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L498">                return new RANSACRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations);
+            case LMedS:
+<span class="fc" id="L501">                return new LMedSRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations);
+            case MSAC:
+<span class="fc" id="L504">                return new MSACRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations);
+            case PROSAC:
+<span class="fc" id="L507">                return new PROSACRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations);
+            case PROMedS:
+            default:
+<span class="fc" id="L511">                return new PROMedSRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param spheres spheres defining positions and distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if spheres is null or if length of spheres
+     * array is less than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(Sphere[] spheres,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L529" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L531">                return new RANSACRobustTrilateration3DSolver(spheres, listener);</span>
+            case LMedS:
+<span class="fc" id="L533">                return new LMedSRobustTrilateration3DSolver(spheres, listener);</span>
+            case MSAC:
+<span class="fc" id="L535">                return new MSACRobustTrilateration3DSolver(spheres, listener);</span>
+            case PROSAC:
+<span class="fc" id="L537">                return new PROSACRobustTrilateration3DSolver(spheres, listener);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L540">                return new PROMedSRobustTrilateration3DSolver(spheres, listener);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if spheres is null, length of spheres array
+     * is less than required (4 points) or don't have the same length.
+     */
+    public static RobustTrilateration3DSolver create(Sphere[] spheres,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L560" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L562">                return new RANSACRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations, listener);
+            case LMedS:
+<span class="fc" id="L565">                return new LMedSRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations, listener);
+            case MSAC:
+<span class="fc" id="L568">                return new MSACRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations, listener);
+            case PROSAC:
+<span class="fc" id="L571">                return new PROSACRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L575">                return new PROMedSRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if quality scores is null, length of
+     * quality scores is less than required minimum (4 samples).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L592" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L594">                return new RANSACRobustTrilateration3DSolver();</span>
+            case LMedS:
+<span class="fc" id="L596">                return new LMedSRobustTrilateration3DSolver();</span>
+            case MSAC:
+<span class="fc" id="L598">                return new MSACRobustTrilateration3DSolver();</span>
+            case PROSAC:
+<span class="fc" id="L600">                return new PROSACRobustTrilateration3DSolver(qualityScores);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L603">                return new PROMedSRobustTrilateration3DSolver(qualityScores);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if quality scores is null, length of
+     * quality scores is less than required minimum (4 samples).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L622" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L624">                return new RANSACRobustTrilateration3DSolver(listener);</span>
+            case LMedS:
+<span class="fc" id="L626">                return new LMedSRobustTrilateration3DSolver(listener);</span>
+            case MSAC:
+<span class="fc" id="L628">                return new MSACRobustTrilateration3DSolver(listener);</span>
+            case PROSAC:
+<span class="fc" id="L630">                return new PROSACRobustTrilateration3DSolver(qualityScores,</span>
+                        listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L634">                return new PROMedSRobustTrilateration3DSolver(qualityScores,</span>
+                        listener);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions, distances or quality
+     * scores are null, don't have the same length or their length is smaller than
+     * required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Point3D[] positions, double[] distances, RobustEstimatorMethod method)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L656" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L658">                return new RANSACRobustTrilateration3DSolver(positions, distances);</span>
+            case LMedS:
+<span class="fc" id="L660">                return new LMedSRobustTrilateration3DSolver(positions, distances);</span>
+            case MSAC:
+<span class="fc" id="L662">                return new MSACRobustTrilateration3DSolver(positions, distances);</span>
+            case PROSAC:
+<span class="fc" id="L664">                return new PROSACRobustTrilateration3DSolver(qualityScores,</span>
+                        positions, distances);
+            case PROMedS:
+            default:
+<span class="fc" id="L668">                return new PROMedSRobustTrilateration3DSolver(qualityScores,</span>
+                        positions, distances);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions, distances, quality
+     * scores or standard deviations are null, don't have the same length or their
+     * length is smaller than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Point3D[] positions, double[] distances,
+            double[] distanceStandardDeviations, RobustEstimatorMethod method)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L693" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L695">                return new RANSACRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case LMedS:
+<span class="fc" id="L698">                return new LMedSRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case MSAC:
+<span class="fc" id="L701">                return new MSACRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case PROSAC:
+<span class="fc" id="L704">                return new PROSACRobustTrilateration3DSolver(qualityScores,</span>
+                        positions, distances, distanceStandardDeviations);
+            case PROMedS:
+            default:
+<span class="fc" id="L708">                return new PROMedSRobustTrilateration3DSolver(qualityScores,</span>
+                        positions, distances, distanceStandardDeviations);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions, distances or standard
+     * deviations are null, don't have the same length or their length is smaller
+     * than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Point3D[] positions, double[] distances,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L735" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L737">                return new RANSACRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case LMedS:
+<span class="fc" id="L740">                return new LMedSRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case MSAC:
+<span class="fc" id="L743">                return new MSACRobustTrilateration3DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case PROSAC:
+<span class="fc" id="L746">                return new PROSACRobustTrilateration3DSolver(qualityScores,</span>
+                        positions, distances, distanceStandardDeviations, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L750">                return new PROMedSRobustTrilateration3DSolver(qualityScores,</span>
+                        positions, distances, distanceStandardDeviations, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions, distances, quality
+     * scores or standard deviations are null, don't have the same length or their
+     * length is smaller than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Point3D[] positions, double[] distances,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L774" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L776">                return new RANSACRobustTrilateration3DSolver(positions, distances,</span>
+                        listener);
+            case LMedS:
+<span class="fc" id="L779">                return new LMedSRobustTrilateration3DSolver(positions, distances,</span>
+                        listener);
+            case MSAC:
+<span class="fc" id="L782">                return new MSACRobustTrilateration3DSolver(positions, distances,</span>
+                        listener);
+            case PROSAC:
+<span class="fc" id="L785">                return new PROSACRobustTrilateration3DSolver(qualityScores,</span>
+                        positions, distances, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L789">                return new PROMedSRobustTrilateration3DSolver(qualityScores,</span>
+                        positions, distances, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param spheres spheres defining positions and distances.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either spheres or quality scores are
+     * null don't have the same length or their length is less than required
+     * (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Sphere[] spheres, RobustEstimatorMethod method)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L809" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L811">                return new RANSACRobustTrilateration3DSolver(spheres);</span>
+            case LMedS:
+<span class="fc" id="L813">                return new LMedSRobustTrilateration3DSolver(spheres);</span>
+            case MSAC:
+<span class="fc" id="L815">                return new MSACRobustTrilateration3DSolver(spheres);</span>
+            case PROSAC:
+<span class="fc" id="L817">                return new PROSACRobustTrilateration3DSolver(qualityScores,</span>
+                        spheres);
+            case PROMedS:
+            default:
+<span class="fc" id="L821">                return new PROMedSRobustTrilateration3DSolver(qualityScores,</span>
+                        spheres);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either spheres, quality scores or
+     * standard deviations are null, don't have the same length or their length
+     * is less than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Sphere[] spheres, double[] distanceStandardDeviations,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L843" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L845">                return new RANSACRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations);
+            case LMedS:
+<span class="fc" id="L848">                return new LMedSRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations);
+            case MSAC:
+<span class="fc" id="L851">                return new MSACRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations);
+            case PROSAC:
+<span class="fc" id="L854">                return new PROSACRobustTrilateration3DSolver(qualityScores,</span>
+                        spheres, distanceStandardDeviations);
+            case PROMedS:
+            default:
+<span class="fc" id="L858">                return new PROMedSRobustTrilateration3DSolver(qualityScores,</span>
+                        spheres, distanceStandardDeviations);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either spheres, quality scores or
+     * standard deviations are null, don't have the same length or their length
+     * is less than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Sphere[] spheres, double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener,
+            RobustEstimatorMethod method) throws IllegalArgumentException {
+<span class="fc bfc" id="L883" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L885">                return new RANSACRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations, listener);
+            case LMedS:
+<span class="fc" id="L888">                return new LMedSRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations, listener);
+            case MSAC:
+<span class="fc" id="L891">                return new MSACRobustTrilateration3DSolver(spheres,</span>
+                        distanceStandardDeviations, listener);
+            case PROSAC:
+<span class="fc" id="L894">                return new PROSACRobustTrilateration3DSolver(qualityScores,</span>
+                        spheres, distanceStandardDeviations, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L898">                return new PROMedSRobustTrilateration3DSolver(qualityScores,</span>
+                        spheres, distanceStandardDeviations, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @return a new robust 3D trilateration solver.
+     */
+    public static RobustTrilateration3DSolver create() {
+<span class="fc" id="L908">        return create(DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 3D trilateration solver.
+     */
+    public static RobustTrilateration3DSolver create(
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener) {
+<span class="fc" id="L919">        return create(listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required
+     * (4 points).
+     */
+    public static RobustTrilateration3DSolver create(Point3D[] positions,
+            double[] distances) throws IllegalArgumentException {
+<span class="fc" id="L934">        return create(positions, distances, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations if either positions or distances are null,
+     *                                   don't have the same length or their length
+     *                                   is smaller than required (4 points).
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required
+     * (4 points).
+     */
+    public static RobustTrilateration3DSolver create(Point3D[] positions,
+            double[] distances, double[] distanceStandardDeviations)
+            throws IllegalArgumentException {
+<span class="fc" id="L953">        return create(positions, distances, distanceStandardDeviations,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required
+     * (4 points).
+     */
+    public static RobustTrilateration3DSolver create(Point3D[] positions,
+            double[] distances, RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L972">        return create(positions, distances, listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions, distances or
+     * standard deviations are null, don't have the same length or their length
+     * is smaller than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(Point3D[] positions,
+            double[] distances, double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L993">        return create(positions, distances, distanceStandardDeviations,</span>
+                listener, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param spheres spheres defining positions and distances.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if spheres is null, length of spheres array
+     * is less than required (4 points) or don't have the same length.
+     */
+    public static RobustTrilateration3DSolver create(Sphere[] spheres)
+            throws IllegalArgumentException {
+<span class="fc" id="L1006">        return create(spheres, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if spheres is null, length of spheres array
+     * is less than required (4 points) or don't have the same length.
+     */
+    public static RobustTrilateration3DSolver create(Sphere[] spheres,
+            double[] distanceStandardDeviations) throws IllegalArgumentException {
+<span class="fc" id="L1020">        return create(spheres, distanceStandardDeviations,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param spheres spheres defining positions and distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if spheres is null or if length of spheres
+     * array is less than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(Sphere[] spheres,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L1036">        return create(spheres, listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if spheres is null, length of spheres array
+     * is less than required (4 points) or don't have the same length.
+     */
+    public static RobustTrilateration3DSolver create(Sphere[] spheres,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L1054">        return create(spheres, distanceStandardDeviations, listener,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param qualityscores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if quality scores is null, length of
+     * quality scores is less than required minimum (4 samples).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityscores)
+            throws IllegalArgumentException {
+<span class="fc" id="L1069">        return create(qualityscores, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, enda or its progress significantly changes.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if quality scores is null, length of
+     * quality scores is less than required minimum (4 samples).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L1086">        return create(qualityScores, listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions, distances or quality
+     * scores are null, don't have the same length or their length is smaller
+     * than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Point3D[] positions, double[] distances)
+            throws IllegalArgumentException {
+<span class="fc" id="L1105">        return create(qualityScores, positions, distances, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions, distances, quality
+     * scores or standard deviations are null, don't have the same length or their
+     * length is smaller than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Point3D[] positions, double[] distances,
+            double[] distanceStandardDeviations)
+            throws IllegalArgumentException {
+<span class="fc" id="L1127">        return create(qualityScores, positions, distances,</span>
+                distanceStandardDeviations, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions, distances or standard
+     * deviations are null, don't have the same length or their length is smaller
+     * than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Point3D[] positions, double[] distances,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L1152">        return create(qualityScores, positions, distances, distanceStandardDeviations,</span>
+                listener, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either positions, distances, quality
+     * scores or standard deviations are null, don't have the same length or their
+     * length is smaller than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Point3D[] positions, double[] distances,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L1174">        return create(qualityScores, positions, distances, listener,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param spheres spheres defining positions and distances.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either spheres or quality scores are
+     * null, don't have the same length or their length is less than required
+     * (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Sphere[] spheres) throws IllegalArgumentException {
+<span class="fc" id="L1191">        return create(qualityScores, spheres, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either spheres, quality scores or
+     * standard deviations are null, don't have the same length or their length
+     * is less than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Sphere[] spheres, double[] distanceStandardDeviations)
+            throws IllegalArgumentException {
+<span class="fc" id="L1210">        return create(qualityScores, spheres, distanceStandardDeviations,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 3D trilateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param spheres spheres defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 3D trilateration solver.
+     * @throws IllegalArgumentException if either spheres, quality scores or
+     * standard deviations are null, don't have the same length or their length
+     * is less than required (4 points).
+     */
+    public static RobustTrilateration3DSolver create(double[] qualityScores,
+            Sphere[] spheres, double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L1233">        return create(qualityScores, spheres, distanceStandardDeviations,</span>
+                listener, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Attempts to refine estimated position if refinement is requested.
+     * This method returns a refined solution or provided input if refinement is not
+     * requested or has failed.
+     * If refinement is enabled and it is requested to keep covariance, this method
+     * will also keep covariance of refined position.
+     * @param position position estimated by a robust estimator without refinement.
+     * @return solution after refinement (if requested) or provided non-refined
+     * estimated position if not requested or refinement failed.
+     */
+    protected Point3D attemptRefine(Point3D position) {
+<span class="fc bfc" id="L1248" title="All 4 branches covered.">        if (mRefineResult &amp;&amp; mInliersData != null) {</span>
+<span class="fc" id="L1249">            BitSet inliers = mInliersData.getInliers();</span>
+<span class="fc" id="L1250">            int nSamples = mDistances.length;</span>
+<span class="fc" id="L1251">            int nInliers = mInliersData.getNumInliers();</span>
+<span class="fc" id="L1252">            Point3D[] inlierPositions = new Point3D[nInliers];</span>
+<span class="fc" id="L1253">            double[] inlierDistances = new double[nInliers];</span>
+<span class="fc" id="L1254">            double[] inlierStandardDeviations = null;</span>
+<span class="fc bfc" id="L1255" title="All 2 branches covered.">            if (mDistanceStandardDeviations != null) {</span>
+<span class="fc" id="L1256">                inlierStandardDeviations = new double[nInliers];</span>
+            }
+<span class="fc" id="L1258">            int pos = 0;</span>
+<span class="fc bfc" id="L1259" title="All 2 branches covered.">            for (int i = 0; i &lt; nSamples; i++) {</span>
+<span class="fc bfc" id="L1260" title="All 2 branches covered.">                if (inliers.get(i)) {</span>
+                    //sample is inlier
+<span class="fc" id="L1262">                    inlierPositions[pos] = mPositions[i];</span>
+<span class="fc" id="L1263">                    inlierDistances[pos] = mDistances[i];</span>
+<span class="fc bfc" id="L1264" title="All 2 branches covered.">                    if (inlierStandardDeviations != null) {</span>
+<span class="fc" id="L1265">                        inlierStandardDeviations[pos] = mDistanceStandardDeviations[i];</span>
+                    }
+<span class="fc" id="L1267">                    pos++;</span>
+                }
+            }
+
+            try {
+<span class="fc" id="L1272">                mNonLinearSolver.setInitialPosition(position);</span>
+<span class="fc bfc" id="L1273" title="All 2 branches covered.">                if (inlierStandardDeviations != null) {</span>
+<span class="fc" id="L1274">                    mNonLinearSolver.setPositionsDistancesAndStandardDeviations(</span>
+                            inlierPositions, inlierDistances, inlierStandardDeviations);
+                } else {
+<span class="fc" id="L1277">                    mNonLinearSolver.setPositionsAndDistances(</span>
+                            inlierPositions, inlierDistances);
+                }
+<span class="fc" id="L1280">                mNonLinearSolver.solve();</span>
+
+<span class="pc bpc" id="L1282" title="1 of 2 branches missed.">                if (mKeepCovariance) {</span>
+                    //keep covariance
+<span class="fc" id="L1284">                    mCovariance = mNonLinearSolver.getCovariance();</span>
+                } else {
+<span class="nc" id="L1286">                    mCovariance = null;</span>
+                }
+
+<span class="fc" id="L1289">                return mEstimatedPosition = mNonLinearSolver.getEstimatedPosition();</span>
+<span class="fc" id="L1290">            } catch (Exception e) {</span>
+                //refinement failed, so we return input value
+<span class="fc" id="L1292">                mCovariance = null;</span>
+<span class="fc" id="L1293">                return mEstimatedPosition = position;</span>
+            }
+        } else {
+<span class="fc" id="L1296">            mCovariance = null;</span>
+<span class="fc" id="L1297">            return mEstimatedPosition = position;</span>
+        }
+    }
+
+    /**
+     * Solves a preliminar solution for a subset of samples picked by a robust estimator.
+     * @param samplesIndices indices of samples picked by the robust estimator.
+     * @param solutions list where estimated preliminar solution will be stored.
+     */
+    protected void solvePreliminarSolutions(int[] samplesIndices, List&lt;Point3D&gt; solutions) {
+        try {
+<span class="fc" id="L1308">            int length = samplesIndices.length;</span>
+            int index;
+<span class="fc bfc" id="L1310" title="All 2 branches covered.">            for (int i = 0; i &lt; length; i++) {</span>
+<span class="fc" id="L1311">                index = samplesIndices[i];</span>
+<span class="fc" id="L1312">                mInnerPositions[i] = mPositions[index];</span>
+<span class="fc" id="L1313">                mInnerDistances[i] = mDistances[index];</span>
+            }
+
+<span class="fc" id="L1316">            mLinearSolver.setPositionsAndDistances(mInnerPositions, mInnerDistances);</span>
+<span class="fc" id="L1317">            mLinearSolver.solve();</span>
+<span class="fc" id="L1318">            solutions.add(mLinearSolver.getEstimatedPosition());</span>
+<span class="fc" id="L1319">        } catch (NavigationException ignore) {</span>
+            //if anything fails, no solution is added
+<span class="fc" id="L1321">        }</span>
+<span class="fc" id="L1322">    }</span>
+
+    /**
+     * Internally sets spheres defining positions and euclidean distances.
+     * @param spheres spheres defining positions and distances.
+     * @throws IllegalArgumentException if spheres is null or length of array of spheres
+     * is less than {@link #getMinRequiredPositionsAndDistances()}
+     */
+    private void internalSetSpheres(Sphere[] spheres) throws IllegalArgumentException {
+<span class="fc bfc" id="L1331" title="All 4 branches covered.">        if (spheres == null || spheres.length &lt; getMinRequiredPositionsAndDistances()) {</span>
+<span class="fc" id="L1332">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L1335">        Point3D[] positions = new Point3D[spheres.length];</span>
+<span class="fc" id="L1336">        double[] distances = new double[spheres.length];</span>
+<span class="fc bfc" id="L1337" title="All 2 branches covered.">        for (int i = 0; i &lt; spheres.length; i++) {</span>
+<span class="fc" id="L1338">            Sphere sphere = spheres[i];</span>
+<span class="fc" id="L1339">            positions[i] = sphere.getCenter();</span>
+<span class="fc" id="L1340">            distances[i] = sphere.getRadius();</span>
+        }
+
+<span class="fc" id="L1343">        internalSetPositionsAndDistances(positions, distances);</span>
+<span class="fc" id="L1344">    }</span>
+
+    /**
+     * Internally sets spheres defining positions and euclidean distances along
+     * with the standard deviations of provided spheres radii.
+     * @param spheres spheres defining positions and distances.
+     * @param radiusStandardDeviations standard deviations of spheres radii.
+     * @throws IllegalArgumentException if spheres is null, length of arrays is less than
+     * 4 or don't have the same length.
+     */
+    private void internalSetSpheresAndStandardDeviations(Sphere[] spheres,
+            double[] radiusStandardDeviations) throws IllegalArgumentException {
+<span class="fc bfc" id="L1356" title="All 4 branches covered.">        if (spheres == null || spheres.length &lt; getMinRequiredPositionsAndDistances()) {</span>
+<span class="fc" id="L1357">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc bfc" id="L1360" title="All 2 branches covered.">        if (radiusStandardDeviations == null) {</span>
+<span class="fc" id="L1361">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc bfc" id="L1364" title="All 2 branches covered.">        if (radiusStandardDeviations.length != spheres.length) {</span>
+<span class="fc" id="L1365">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L1368">        Point3D[] positions = new Point3D[spheres.length];</span>
+<span class="fc" id="L1369">        double[] distances = new double[spheres.length];</span>
+<span class="fc bfc" id="L1370" title="All 2 branches covered.">        for (int i = 0; i &lt; spheres.length; i++) {</span>
+<span class="fc" id="L1371">            Sphere sphere = spheres[i];</span>
+<span class="fc" id="L1372">            positions[i] = sphere.getCenter();</span>
+<span class="fc" id="L1373">            distances[i] = sphere.getRadius();</span>
+        }
+
+<span class="fc" id="L1376">        internalSetPositionsDistancesAndStandardDeviations(positions, distances,</span>
+                radiusStandardDeviations);
+<span class="fc" id="L1378">    }</span>
+
+    /**
+     * Setup inner positions and distances.
+     */
+    private void init() {
+<span class="fc" id="L1384">        int points = getMinRequiredPositionsAndDistances();</span>
+<span class="fc" id="L1385">        mInnerPositions = new Point3D[points];</span>
+<span class="fc" id="L1386">        mInnerDistances = new double[points];</span>
+
+<span class="fc" id="L1388">        mLinearSolver = new LinearLeastSquaresTrilateration3DSolver();</span>
+<span class="fc" id="L1389">        mNonLinearSolver = new NonLinearLeastSquaresTrilateration3DSolver();</span>
+<span class="fc" id="L1390">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

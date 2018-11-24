@@ -1,0 +1,649 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PROSACRobustTrilateration2DSolver.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.trilateration</a> &gt; <span class="el_source">PROSACRobustTrilateration2DSolver.java</span></div><h1>PROSACRobustTrilateration2DSolver.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.trilateration;
+
+import com.irurueta.geometry.Circle;
+import com.irurueta.geometry.Point2D;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NotReadyException;
+import com.irurueta.numerical.robust.*;
+
+import java.util.List;
+
+/**
+ * Robustly solves the trilateration problem by finding the best pairs of 2D
+ * positions and distances among the provided ones using PROSAC algorithm to
+ * discard outliers.
+ */
+@SuppressWarnings(&quot;Duplicates&quot;)
+public class PROSACRobustTrilateration2DSolver extends RobustTrilateration2DSolver {
+
+    /**
+     * Constant defining default threshold to determine whether samples are inliers or not.
+     */
+    public static final double DEFAULT_THRESHOLD = 1e-2;
+
+    /**
+     * Minimum value that can be set as threshold.
+     * Threshold must be strictly greater than 0.0.
+     */
+    public static final double MIN_THRESHOLD = 0.0;
+
+    /**
+     * Indicates that by default inliers will only be computed but not kept.
+     */
+    public static final boolean DEFAULT_COMPUTE_AND_KEEP_INLIERS = false;
+
+    /**
+     * Indicates that by default residuals will only be computed but not kept.
+     */
+    public static final boolean DEFAULT_COMPUTE_AND_KEEP_RESIDUALS = false;
+
+    /**
+     * Threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on distance between estimated position and
+     * distances provided for each sample.
+     */
+<span class="fc" id="L60">    private double mThreshold = DEFAULT_THRESHOLD;</span>
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     */
+<span class="fc" id="L65">    private boolean mComputeAndKeepInliers = DEFAULT_COMPUTE_AND_KEEP_INLIERS;</span>
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     */
+<span class="fc" id="L70">    private boolean mComputeAndKeepResiduals = DEFAULT_COMPUTE_AND_KEEP_RESIDUALS;</span>
+
+    /**
+     * Quality scores corresponding to each provided sample.
+     * The larger the score value the better the quality of the sample.
+     */
+    private double[] mQualityScores;
+
+    /**
+     * Constructor.
+     */
+    public PROSACRobustTrilateration2DSolver() {
+<span class="fc" id="L82">        super();</span>
+<span class="fc" id="L83">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     */
+    public PROSACRobustTrilateration2DSolver(
+            RobustTrilaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L92">        super(listener);</span>
+<span class="fc" id="L93">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length of their length is smaller than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(Point2D[] positions, double[] distances)
+            throws IllegalArgumentException {
+<span class="fc" id="L105">        super(positions, distances);</span>
+<span class="fc" id="L106">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(Point2D[] positions, double[] distances,
+            double[] distanceStandardDeviations) throws IllegalArgumentException {
+<span class="fc" id="L119">        super(positions, distances, distanceStandardDeviations);</span>
+<span class="fc" id="L120">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation stats,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions, distances or
+     * standard deviations are null, don't have the same length or their length is smaller
+     * than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(Point2D[] positions, double[] distances,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L137">        super(positions, distances, distanceStandardDeviations, listener);</span>
+<span class="fc" id="L138">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param listener listener to be notified of events such as when estimation stats,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(Point2D[] positions, double[] distances,
+            RobustTrilaterationSolverListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L152">        super(positions, distances, listener);</span>
+<span class="fc" id="L153">    }</span>
+
+    /**
+     * Constructor.
+     * @param circles circles defining positions and distances.
+     * @throws IllegalArgumentException if circles is null or if length or circles array
+     * is less than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(Circle[] circles)
+            throws IllegalArgumentException {
+<span class="fc" id="L163">        super(circles);</span>
+<span class="fc" id="L164">    }</span>
+
+    /**
+     * Constructor.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if circles is null, length of circles array is less
+     * than required (3 points) or don't have the same length.
+     */
+    public PROSACRobustTrilateration2DSolver(Circle[] circles,
+            double[] distanceStandardDeviations) throws IllegalArgumentException {
+<span class="fc" id="L175">        super(circles, distanceStandardDeviations);</span>
+<span class="fc" id="L176">    }</span>
+
+    /**
+     * Constructor.
+     * @param circles circles defining positions and distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if circles is null or if length of circles array
+     * is less than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(Circle[] circles,
+            RobustTrilaterationSolverListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L189">        super(circles, listener);</span>
+<span class="fc" id="L190">    }</span>
+
+    /**
+     * Constructor.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if circles is null, length of circles array is less
+     * than required (3 points) or don't have the same length.
+     */
+    public PROSACRobustTrilateration2DSolver(Circle[] circles,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L205">        super(circles, distanceStandardDeviations, listener);</span>
+<span class="fc" id="L206">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @throws IllegalArgumentException if quality scores is null, length
+     * of quality scores is less than required minimum (3 samples).
+     */
+    public PROSACRobustTrilateration2DSolver(double[] qualityScores)
+            throws IllegalArgumentException {
+<span class="fc" id="L218">        super();</span>
+<span class="fc" id="L219">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L220">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @throws IllegalArgumentException if quality scores is null, length
+     * of quality scores is less than required minimum (3 samples).
+     */
+    public PROSACRobustTrilateration2DSolver(double[] qualityScores,
+            RobustTrilaterationSolverListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L235">        super(listener);</span>
+<span class="fc" id="L236">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L237">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @throws IllegalArgumentException if either positions, distances or quality
+     * scores are null, don't have the same length of their length is smaller
+     * than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(double[] qualityScores,
+            Point2D[] positions, double[] distances)
+            throws IllegalArgumentException {
+<span class="fc" id="L254">        super(positions, distances);</span>
+<span class="fc" id="L255">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L256">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if either positions, distances, quality scores or
+     * standard deviations are null, don't have the same length or their length is
+     * smaller than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(double[] qualityScores,
+            Point2D[] positions, double[] distances,
+            double[] distanceStandardDeviations)
+            throws IllegalArgumentException {
+<span class="fc" id="L275">        super(positions, distances, distanceStandardDeviations);</span>
+<span class="fc" id="L276">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L277">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions, distances or
+     * standard deviations are null, don't have the same length or their length is smaller
+     * than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(double[] qualityScores,
+            Point2D[] positions, double[] distances,
+            double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L298">        super(positions, distances, distanceStandardDeviations, listener);</span>
+<span class="fc" id="L299">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L300">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param listener listener to be notified of events such as when
+     *                 estimation starts, ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions, distances,
+     * quality scores or standard deviations are null, don't have the same
+     * length or their length is smaller than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(double[] qualityScores,
+            Point2D[] positions, double[] distances,
+            RobustTrilaterationSolverListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L319">        super(positions, distances, listener);</span>
+<span class="fc" id="L320">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L321">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param circles circles defining positions and distances.
+     * @throws IllegalArgumentException if either circles or quality scores
+     * are null don't have the same length or their length is less than
+     * required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(double[] qualityScores,
+            Circle[] circles) throws IllegalArgumentException {
+<span class="fc" id="L335">        super(circles);</span>
+<span class="fc" id="L336">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L337">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if either circles, quality scores or
+     * standard deviations are null, don't have the same length or their
+     * length is less than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(double[] qualityScores,
+            Circle[] circles, double[] distanceStandardDeviations)
+            throws IllegalArgumentException {
+<span class="fc" id="L353">        super(circles, distanceStandardDeviations);</span>
+<span class="fc" id="L354">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L355">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param circles circles defining positions and distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either circles or quality scores
+     * are null, don't have the same length or their length is less than
+     * required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(double[] qualityScores,
+            Circle[] circles,
+            RobustTrilaterationSolverListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L373">        super(circles, listener);</span>
+<span class="fc" id="L374">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L375">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                      the quality of the sample.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either circles, quality scores
+     * or standard deviations are null, don't have the same length or their
+     * length is less than required (3 points).
+     */
+    public PROSACRobustTrilateration2DSolver(double[] qualityScores,
+            Circle[] circles, double[] distanceStandardDeviations,
+            RobustTrilaterationSolverListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L394">        super(circles, distanceStandardDeviations, listener);</span>
+<span class="fc" id="L395">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L396">    }</span>
+
+    /**
+     * Gets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on distance between estimated position and distances
+     * provided for each sample.
+     * @return threshold to determine whether samples are inliers or not.
+     */
+    public double getThreshold() {
+<span class="fc" id="L405">        return mThreshold;</span>
+    }
+
+    /**
+     * Sets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on distance between estimated position and distances
+     * provided for each sample.
+     * @param threshold threshold to determine whether samples are inliers or not.
+     * @throws IllegalArgumentException if provided value is equal or less than zero.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setThreshold(double threshold)
+            throws IllegalArgumentException, LockedException {
+<span class="fc bfc" id="L418" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L419">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L421" title="All 2 branches covered.">        if (threshold &lt;= MIN_THRESHOLD) {</span>
+<span class="fc" id="L422">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L424">        mThreshold = threshold;</span>
+<span class="fc" id="L425">    }</span>
+
+    /**
+     * Returns quality scores corresponding to each pair of
+     * positions and distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * @return quality scores corresponding to each sample.
+     */
+    @Override
+    public double[] getQualityScores() {
+<span class="fc" id="L435">        return mQualityScores;</span>
+    }
+
+    /**
+     * Sets quality scores corresponding to each pair of positions and
+     * distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * @param qualityScores quality scores corresponding to each pair of
+     *                      matched points.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than minimum required samples.
+     * @throws LockedException if robust solver is locked because an
+     * estimation is already in progress.
+     */
+    @Override
+    public void setQualityScores(double[] qualityScores)
+            throws IllegalArgumentException, LockedException {
+<span class="fc bfc" id="L452" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L453">            throw new LockedException();</span>
+        }
+<span class="fc" id="L455">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L456">    }</span>
+
+    /**
+     * Indicates whether solver is ready to find a solution.
+     * @return true if solver is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+<span class="pc bpc" id="L464" title="1 of 6 branches missed.">        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;</span>
+                mQualityScores.length == mDistances.length;
+    }
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     * @return true if inliers must be computed and kept, false if inliers
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepInliersEnabled() {
+<span class="fc" id="L474">        return mComputeAndKeepInliers;</span>
+    }
+
+    /**
+     * Specifies whether inliers must be computed and kept.
+     * @param computeAndKeepInliers true if inliers must be computed and kept,
+     *                              false if inliers only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
+            throws LockedException {
+<span class="fc bfc" id="L485" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L486">            throw new LockedException();</span>
+        }
+<span class="fc" id="L488">        mComputeAndKeepInliers = computeAndKeepInliers;</span>
+<span class="fc" id="L489">    }</span>
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     * @return true if residuals must be computed and kept, false if residuals
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepResiduals() {
+<span class="fc" id="L497">        return mComputeAndKeepResiduals;</span>
+    }
+
+    /**
+     * Specifies whether residuals must be computed and kept.
+     * @param computeAndKeepResiduals true if residuals must be computed and kept,
+     *                                false if residuals only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
+            throws LockedException {
+<span class="fc bfc" id="L508" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L509">            throw new LockedException();</span>
+        }
+<span class="fc" id="L511">        mComputeAndKeepResiduals = computeAndKeepResiduals;</span>
+<span class="fc" id="L512">    }</span>
+
+    /**
+     * Solves the trilateration problem.
+     * @return estimated position.
+     * @throws LockedException if instance is busy solving the trilateration problem.
+     * @throws NotReadyException is solver is not ready.
+     * @throws RobustEstimatorException if estimation fails for any reason
+     * (i.e. numerical instability, no solution available, etc).
+     */
+    @Override
+    public Point2D solve() throws LockedException, NotReadyException,
+            RobustEstimatorException {
+<span class="fc bfc" id="L525" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L526">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L528" title="All 2 branches covered.">        if (!isReady()) {</span>
+<span class="fc" id="L529">            throw new NotReadyException();</span>
+        }
+
+<span class="fc" id="L532">        PROSACRobustEstimator&lt;Point2D&gt; innerEstimator =</span>
+<span class="fc" id="L533">                new PROSACRobustEstimator&lt;&gt;(new PROSACRobustEstimatorListener&lt;Point2D&gt;() {</span>
+                    @Override
+                    public double[] getQualityScores() {
+<span class="fc" id="L536">                        return mQualityScores;</span>
+                    }
+
+                    @Override
+                    public double getThreshold() {
+<span class="fc" id="L541">                        return mThreshold;</span>
+                    }
+
+                    @Override
+                    public int getTotalSamples() {
+<span class="fc" id="L546">                        return mDistances.length;</span>
+                    }
+
+                    @Override
+                    public int getSubsetSize() {
+<span class="fc" id="L551">                        return getMinRequiredPositionsAndDistances();</span>
+                    }
+
+                    @Override
+                    public void estimatePreliminarSolutions(int[] samplesIndices, List&lt;Point2D&gt; solutions) {
+<span class="fc" id="L556">                        solvePreliminarSolutions(samplesIndices, solutions);</span>
+<span class="fc" id="L557">                    }</span>
+
+                    @Override
+                    public double computeResidual(Point2D currentEstimation, int i) {
+<span class="fc" id="L561">                        return Math.abs(currentEstimation.distanceTo(mPositions[i]) - mDistances[i]);</span>
+                    }
+
+                    @Override
+                    public boolean isReady() {
+<span class="fc" id="L566">                        return PROSACRobustTrilateration2DSolver.this.isReady();</span>
+                    }
+
+                    @Override
+                    public void onEstimateStart(RobustEstimator&lt;Point2D&gt; estimator) {
+<span class="pc bpc" id="L571" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L572">                            mListener.onSolveStart(PROSACRobustTrilateration2DSolver.this);</span>
+                        }
+<span class="fc" id="L574">                    }</span>
+
+                    @Override
+                    public void onEstimateEnd(RobustEstimator&lt;Point2D&gt; estimator) {
+<span class="pc bpc" id="L578" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L579">                            mListener.onSolveEnd(PROSACRobustTrilateration2DSolver.this);</span>
+                        }
+<span class="fc" id="L581">                    }</span>
+
+                    @Override
+                    public void onEstimateNextIteration(RobustEstimator&lt;Point2D&gt; estimator, int iteration) {
+<span class="pc bpc" id="L585" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L586">                            mListener.onSolveNextIteration(PROSACRobustTrilateration2DSolver.this,</span>
+                                    iteration);
+                        }
+<span class="fc" id="L589">                    }</span>
+
+                    @Override
+                    public void onEstimateProgressChange(RobustEstimator&lt;Point2D&gt; estimator, float progress) {
+<span class="pc bpc" id="L593" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L594">                            mListener.onSolveProgressChange(PROSACRobustTrilateration2DSolver.this,</span>
+                                    progress);
+                        }
+<span class="fc" id="L597">                    }</span>
+                });
+
+        try {
+<span class="fc" id="L601">            mLocked = true;</span>
+<span class="fc" id="L602">            mInliersData = null;</span>
+<span class="fc bfc" id="L603" title="All 4 branches covered.">            innerEstimator.setComputeAndKeepInliersEnabled(</span>
+                    mComputeAndKeepInliers || mRefineResult);
+<span class="fc bfc" id="L605" title="All 4 branches covered.">            innerEstimator.setComputeAndKeepResidualsEnabled(</span>
+                    mComputeAndKeepResiduals || mRefineResult);
+<span class="fc" id="L607">            innerEstimator.setConfidence(mConfidence);</span>
+<span class="fc" id="L608">            innerEstimator.setMaxIterations(mMaxIterations);</span>
+<span class="fc" id="L609">            innerEstimator.setProgressDelta(mProgressDelta);</span>
+<span class="fc" id="L610">            Point2D result = innerEstimator.estimate();</span>
+<span class="fc" id="L611">            mInliersData = innerEstimator.getInliersData();</span>
+<span class="fc" id="L612">            return attemptRefine(result);</span>
+<span class="nc" id="L613">        } catch (com.irurueta.numerical.LockedException e) {</span>
+<span class="nc" id="L614">            throw new LockedException(e);</span>
+<span class="nc" id="L615">        } catch (com.irurueta.numerical.NotReadyException e) {</span>
+<span class="nc" id="L616">            throw new NotReadyException(e);</span>
+        } finally {
+<span class="fc" id="L618">            mLocked = false;</span>
+        }
+    }
+
+    /**
+     * Returns method being used for robust estimation.
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+<span class="fc" id="L628">        return RobustEstimatorMethod.PROSAC;</span>
+    }
+
+    /**
+     * Sets quality scores corresponding to each provided sample.
+     * This method is used internally and does not check whether instance is
+     * locked or not.
+     * @param qualityScores quality scores to be set.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than 3 samples.
+     */
+    private void internalSetQualityScores(double[] qualityScores)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L641" title="All 2 branches covered.">        if (qualityScores == null ||</span>
+<span class="fc bfc" id="L642" title="All 2 branches covered.">                qualityScores.length &lt; getMinRequiredPositionsAndDistances()) {</span>
+<span class="fc" id="L643">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L646">        mQualityScores = qualityScores;</span>
+<span class="fc" id="L647">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

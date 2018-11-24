@@ -1,0 +1,584 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RANSACRobustRangingAndRssiRadioSourceEstimator2D.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor.radiosource</a> &gt; <span class="el_source">RANSACRobustRangingAndRssiRadioSourceEstimator2D.java</span></div><h1>RANSACRobustRangingAndRssiRadioSourceEstimator2D.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor.radiosource;
+
+import com.irurueta.geometry.Point2D;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NotReadyException;
+import com.irurueta.navigation.indoor.RadioSource;
+import com.irurueta.navigation.indoor.RangingAndRssiReadingLocated;
+import com.irurueta.numerical.robust.*;
+
+import java.util.List;
+
+/**
+ * Robustly estimate 2D position, transmitted power and pathloss
+ * exponent of a radio source (e.g. WiFi access point or bluetooth beacon), by discarding
+ * outliers using PROSAC algorithm and assuming that the ranging data is available to
+ * obtain position with greater accuracy and that the radio source emits isotropically
+ * following the expression below:
+ * Pr = Pt*Gt*Gr*lambda^2 / (4*pi*d)^2,
+ * where Pr is the received power (expressed in mW),
+ * Gt is the Gain of the transmission antena
+ * Gr is the Gain of the receiver antena
+ * d is the distance between emitter and receiver
+ * and lambda is the wavelength and is equal to: lambda = c / f,
+ * where c is the speed of light
+ * and f is the carrier frequency of the radio signal.
+ * Because usually information about the antena of the radio source cannot be
+ * retrieved (because many measurements are made on unkown devices where
+ * physical access is not possible), this implementation will estimate the
+ * equivalent transmitted power as: Pte = Pt * Gt * Gr.
+ * If Readings contain RSSI standard deviations, those values will be used,
+ * otherwise it will be asumed an RSSI standard deviation of 1 dB.
+ *
+ * @param &lt;S&gt; a {@link RadioSource} type.
+ */
+@SuppressWarnings(&quot;Duplicates&quot;)
+public class RANSACRobustRangingAndRssiRadioSourceEstimator2D&lt;S extends RadioSource&gt; extends
+        RobustRangingAndRssiRadioSourceEstimator2D&lt;S&gt; {
+
+    /**
+     * Constant defining default threshold on received power (RSSI) expressed in
+     * dBm's.
+     */
+    public static final double DEFAULT_THRESHOLD = 0.1;
+
+    /**
+     * Minimum value that can be set as threshold.
+     * Threshold must be strictly greater than 0.0.s
+     */
+    public static final double MIN_THRESHOLD = 0.0;
+
+    /**
+     * Indicates that by default inliers will only be computed but not kept.
+     */
+    public static final boolean DEFAULT_COMPUTE_AND_KEEP_INLIERS = false;
+
+    /**
+     * Indicates that by default residuals will only be computed but not kept.
+     */
+    public static final boolean DEFAULT_COMPUTE_AND_KEEP_RESIDUALS = false;
+
+    /**
+     * Threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on received power (RSSI) expressed
+     * in dBm's between received value that should have been received on estimated
+     * istropical model and actual measured value.
+     */
+<span class="fc" id="L82">    private double mThreshold = DEFAULT_THRESHOLD;</span>
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     */
+<span class="fc" id="L87">    private boolean mComputeAndKeepInliers = DEFAULT_COMPUTE_AND_KEEP_INLIERS;</span>
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     */
+<span class="fc" id="L92">    private boolean mComputeAndKeepResiduals = DEFAULT_COMPUTE_AND_KEEP_RESIDUALS;</span>
+
+    /**
+     * Constructor.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D() {
+<span class="fc" id="L98">        super();</span>
+<span class="fc" id="L99">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings)
+            throws IllegalArgumentException {
+<span class="fc" id="L110">        super(readings);</span>
+<span class="fc" id="L111">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+<span class="fc" id="L119">        super(listener);</span>
+<span class="fc" id="L120">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L133">        super(readings, listener);</span>
+<span class="fc" id="L134">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition)
+            throws IllegalArgumentException {
+<span class="fc" id="L148">        super(readings, initialPosition);</span>
+<span class="fc" id="L149">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(Point2D initialPosition) {
+<span class="fc" id="L157">        super(initialPosition);</span>
+<span class="fc" id="L158">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(Point2D initialPosition,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+<span class="fc" id="L168">        super(initialPosition, listener);</span>
+<span class="fc" id="L169">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L185">        super(readings, initialPosition, listener);</span>
+<span class="fc" id="L186">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's)
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            Double initialTransmittedPowerdBm) {
+<span class="fc" id="L196">        super(initialTransmittedPowerdBm);</span>
+<span class="fc" id="L197">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's)
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Double initialTransmittedPowerdBm)
+            throws IllegalArgumentException {
+<span class="fc" id="L212">        super(readings, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L213">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's)
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            Double initialTransmittedPowerdBm,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+<span class="fc" id="L225">        super(initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L226">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's)
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Double initialTransmittedPowerdBm,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L243">        super(readings, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L244">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm)
+            throws IllegalArgumentException {
+<span class="fc" id="L261">        super(readings, initialPosition, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L262">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(Point2D initialPosition,
+            Double initialTransmittedPowerdBm) {
+<span class="fc" id="L274">        super(initialPosition, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L275">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener in charge of attending events raised by this instance.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(Point2D initialPosition,
+            Double initialTransmittedPowerdBm,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+<span class="fc" id="L289">        super(initialPosition, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L290">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L309">        super(readings, initialPosition, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L310">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent)
+            throws IllegalArgumentException {
+<span class="fc" id="L329">        super(readings, initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent);
+<span class="fc" id="L331">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent) {
+<span class="fc" id="L345">        super(initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent);
+<span class="fc" id="L347">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+<span class="fc" id="L363">        super(initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent, listener);
+<span class="fc" id="L365">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public RANSACRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L386">        super(readings, initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent, listener);
+<span class="fc" id="L388">    }</span>
+
+    /**
+     * Gets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on received power (RSSI) expressed
+     * in dBm's between received value that should have been received on estimated
+     * istropical model and actual measured value.
+     * @return threshold to determine whether samples are inliers or not.
+     */
+    public double getThreshold() {
+<span class="fc" id="L398">        return mThreshold;</span>
+    }
+
+    /**
+     * Sets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on received power (RSSI) expressed
+     * in dBm's between received value that should have been received on estimated
+     * istropical model and actual measured value.
+     * @param threshold threshold to determine whether samples are inliers or not.
+     * @throws IllegalArgumentException if provided value is equal or less than zero.
+     * @throws LockedException if this estimator is locked.
+     */
+    public void setThreshold(double threshold)
+            throws IllegalArgumentException, LockedException {
+<span class="fc bfc" id="L412" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L413">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L415" title="All 2 branches covered.">        if (threshold &lt;= MIN_THRESHOLD) {</span>
+<span class="fc" id="L416">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L418">        mThreshold = threshold;</span>
+<span class="fc" id="L419">    }</span>
+
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     * @return true if inliers must be computed and kept, false if inliers
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepInliersEnabled() {
+<span class="fc" id="L428">        return mComputeAndKeepInliers;</span>
+    }
+
+    /**
+     * Specifies whether inliers must be computed and kept.
+     * @param computeAndKeepInliers true if inliers must be computed and kept,
+     *                              false if inliers only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
+            throws LockedException {
+<span class="fc bfc" id="L439" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L440">            throw new LockedException();</span>
+        }
+<span class="fc" id="L442">        mComputeAndKeepInliers = computeAndKeepInliers;</span>
+<span class="fc" id="L443">    }</span>
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     * @return true if residuals must be computed and kept, false if residuals
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepResidualsEnabled() {
+<span class="fc" id="L451">        return mComputeAndKeepResiduals;</span>
+    }
+
+    /**
+     * Specifies whether residuals must be computed and kept.
+     * @param computeAndKeepResiduals true if residuals must be computed and kept,
+     *                                false if residuals only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
+            throws LockedException {
+<span class="fc bfc" id="L462" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L463">            throw new LockedException();</span>
+        }
+<span class="fc" id="L465">        mComputeAndKeepResiduals = computeAndKeepResiduals;</span>
+<span class="fc" id="L466">    }</span>
+
+    /**
+     * Robustly estimates position, transmitted power and pathloss exponent for a
+     * radio source.
+     * @throws LockedException if instance is busy during estimation.
+     * @throws NotReadyException if estimator is not ready.
+     * @throws RobustEstimatorException if estimation fails for any reason
+     * (i.e. numerical instability, no solution available, etc).
+     */
+    @Override
+    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
+<span class="fc bfc" id="L478" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L479">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L481" title="All 2 branches covered.">        if (!isReady()) {</span>
+<span class="fc" id="L482">            throw new NotReadyException();</span>
+        }
+
+<span class="fc" id="L485">        RANSACRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =</span>
+                new RANSACRobustEstimator&lt;&gt;(
+<span class="fc" id="L487">                        new RANSACRobustEstimatorListener&lt;Solution&lt;Point2D&gt;&gt;() {</span>
+                    @Override
+                    public double getThreshold() {
+<span class="fc" id="L490">                        return mThreshold;</span>
+                    }
+
+                    @Override
+                    public int getTotalSamples() {
+<span class="fc" id="L495">                        return mReadings.size();</span>
+                    }
+
+                    @Override
+                    public int getSubsetSize() {
+<span class="fc" id="L500">                        return getMinReadings();</span>
+                    }
+
+                    @Override
+                    public void estimatePreliminarSolutions(int[] samplesIndices,
+                            List&lt;Solution&lt;Point2D&gt;&gt; solutions) {
+<span class="fc" id="L506">                        solvePreliminarSolutions(samplesIndices, solutions);</span>
+<span class="fc" id="L507">                    }</span>
+
+                    @Override
+                    public double computeResidual(Solution&lt;Point2D&gt; currentEstimation, int i) {
+<span class="fc" id="L511">                        return residual(currentEstimation, i);</span>
+                    }
+
+                    @Override
+                    public boolean isReady() {
+<span class="fc" id="L516">                        return RANSACRobustRangingAndRssiRadioSourceEstimator2D.this.isReady();</span>
+                    }
+
+                    @Override
+                    public void onEstimateStart(RobustEstimator&lt;Solution&lt;Point2D&gt;&gt; estimator) {
+<span class="fc bfc" id="L521" title="All 2 branches covered.">                        if (mListener != null) {</span>
+<span class="fc" id="L522">                            mListener.onEstimateStart(</span>
+                                    RANSACRobustRangingAndRssiRadioSourceEstimator2D.this);
+                        }
+<span class="fc" id="L525">                    }</span>
+
+                    @Override
+                    public void onEstimateEnd(RobustEstimator&lt;Solution&lt;Point2D&gt;&gt; estimator) {
+<span class="fc bfc" id="L529" title="All 2 branches covered.">                        if (mListener != null) {</span>
+<span class="fc" id="L530">                            mListener.onEstimateEnd(</span>
+                                    RANSACRobustRangingAndRssiRadioSourceEstimator2D.this);
+                        }
+<span class="fc" id="L533">                    }</span>
+
+                    @Override
+                    public void onEstimateNextIteration(RobustEstimator&lt;Solution&lt;Point2D&gt;&gt; estimator, int iteration) {
+<span class="fc bfc" id="L537" title="All 2 branches covered.">                        if (mListener != null) {</span>
+<span class="fc" id="L538">                            mListener.onEstimateNextIteration(</span>
+                                    RANSACRobustRangingAndRssiRadioSourceEstimator2D.this, iteration);
+                        }
+<span class="fc" id="L541">                    }</span>
+
+                    @Override
+                    public void onEstimateProgressChange(RobustEstimator&lt;Solution&lt;Point2D&gt;&gt; estimator, float progress) {
+<span class="fc bfc" id="L545" title="All 2 branches covered.">                        if (mListener != null) {</span>
+<span class="fc" id="L546">                            mListener.onEstimateProgressChange(</span>
+                                    RANSACRobustRangingAndRssiRadioSourceEstimator2D.this, progress);
+                        }
+<span class="fc" id="L549">                    }</span>
+                });
+
+        try {
+<span class="fc" id="L553">            mLocked = true;</span>
+<span class="fc" id="L554">            mInliersData = null;</span>
+<span class="fc bfc" id="L555" title="All 4 branches covered.">            innerEstimator.setComputeAndKeepInliersEnabled(</span>
+                    mComputeAndKeepInliers || mRefineResult);
+<span class="fc bfc" id="L557" title="All 4 branches covered.">            innerEstimator.setComputeAndKeepResidualsEnabled(</span>
+                    mComputeAndKeepResiduals || mRefineResult);
+<span class="fc" id="L559">            innerEstimator.setConfidence(mConfidence);</span>
+<span class="fc" id="L560">            innerEstimator.setMaxIterations(mMaxIterations);</span>
+<span class="fc" id="L561">            innerEstimator.setProgressDelta(mProgressDelta);</span>
+<span class="fc" id="L562">            Solution&lt;Point2D&gt; result = innerEstimator.estimate();</span>
+<span class="fc" id="L563">            mInliersData = innerEstimator.getInliersData();</span>
+<span class="fc" id="L564">            attemptRefine(result);</span>
+
+<span class="nc" id="L566">        } catch (com.irurueta.numerical.LockedException e) {</span>
+<span class="nc" id="L567">            throw new LockedException(e);</span>
+<span class="nc" id="L568">        } catch (com.irurueta.numerical.NotReadyException e) {</span>
+<span class="nc" id="L569">            throw new NotReadyException(e);</span>
+        } finally {
+<span class="fc" id="L571">            mLocked = false;</span>
+        }
+<span class="fc" id="L573">    }</span>
+
+    /**
+     * Returns method being used for robust estimation.
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+<span class="fc" id="L581">        return RobustEstimatorMethod.RANSAC;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

@@ -1,0 +1,562 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LMedSRobustRangingAndRssiRadioSourceEstimator3D.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor.radiosource</a> &gt; <span class="el_source">LMedSRobustRangingAndRssiRadioSourceEstimator3D.java</span></div><h1>LMedSRobustRangingAndRssiRadioSourceEstimator3D.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor.radiosource;
+
+import com.irurueta.geometry.Point3D;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NotReadyException;
+import com.irurueta.navigation.indoor.RadioSource;
+import com.irurueta.navigation.indoor.RangingAndRssiReadingLocated;
+import com.irurueta.numerical.robust.*;
+
+import java.util.List;
+
+/**
+ * Robustly estimate 3D position, transmitted power and pathloss
+ * exponent of a radio source (e.g. WiFi access point or bluetooth beacon), by discarding
+ * outliers using LMedS algorithm and assuming that the ranging data is available to
+ * obtain position with greater accuracy and that the radio source emits isotropically
+ * following the expression below:
+ * Pr = Pt*Gt*Gr*lambda^2 / (4*pi*d)^2,
+ * where Pr is the received power (expressed in mW),
+ * Gt is the Gain of the transmission antena
+ * Gr is the Gain of the receiver antena
+ * d is the distance between emitter and receiver
+ * and lambda is the wavelength and is equal to: lambda = c / f,
+ * where c is the speed of light
+ * and f is the carrier frequency of the radio signal.
+ * Because usually information about the antena of the radio source cannot be
+ * retrieved (because many measurements are made on unkown devices where
+ * physical access is not possible), this implementation will estimate the
+ * equivalent transmitted power as: Pte = Pt * Gt * Gr.
+ * If Readings contain RSSI standard deviations, those values will be used,
+ * otherwise it will be asumed an RSSI standard deviation of 1 dB.
+ *
+ * @param &lt;S&gt; a {@link RadioSource} type.
+ */
+@SuppressWarnings(&quot;Duplicates&quot;)
+public class LMedSRobustRangingAndRssiRadioSourceEstimator3D&lt;S extends RadioSource&gt; extends
+        RobustRangingAndRssiRadioSourceEstimator3D&lt;S&gt; {
+
+    /**
+     * Default value to be used for stop threshold. Stop threshold can be used to
+     * avoid keeping the algorithm unnecessarily iterating in case that best
+     * estimated threshold using median of residuals is not small enough. Once a
+     * solution is found that generates a threshold below this value, the
+     * algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algorithm iterating
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     */
+    public static final double DEFAULT_STOP_THRESHOLD = 1e-4;
+
+    /**
+     * Minimum allowed stop threshold value.
+     */
+    public static final double MIN_STOP_THRESHOLD = 0.0;
+
+    /**
+     * Threshold to be used to keep the algorithm iterating in case that best
+     * estimated threshold using median of residuals is not small enough. Once
+     * a solution is found that generates a threshold below this value, the
+     * algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algorithm iterating
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     */
+<span class="fc" id="L94">    private double mStopThreshold = DEFAULT_STOP_THRESHOLD;</span>
+
+    /**
+     * Constructor.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D() {
+<span class="fc" id="L100">        super();</span>
+<span class="fc" id="L101">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings)
+            throws IllegalArgumentException {
+<span class="fc" id="L112">        super(readings);</span>
+<span class="fc" id="L113">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener) {
+<span class="fc" id="L121">        super(listener);</span>
+<span class="fc" id="L122">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L135">        super(readings, listener);</span>
+<span class="fc" id="L136">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            Point3D initialPosition)
+            throws IllegalArgumentException {
+<span class="fc" id="L150">        super(readings, initialPosition);</span>
+<span class="fc" id="L151">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(Point3D initialPosition) {
+<span class="fc" id="L159">        super(initialPosition);</span>
+<span class="fc" id="L160">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(Point3D initialPosition,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener) {
+<span class="fc" id="L170">        super(initialPosition, listener);</span>
+<span class="fc" id="L171">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            Point3D initialPosition,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L187">        super(readings, initialPosition, listener);</span>
+<span class="fc" id="L188">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's)
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            Double initialTransmittedPowerdBm) {
+<span class="fc" id="L198">        super(initialTransmittedPowerdBm);</span>
+<span class="fc" id="L199">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's)
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            Double initialTransmittedPowerdBm)
+            throws IllegalArgumentException {
+<span class="fc" id="L214">        super(readings, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L215">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's)
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            Double initialTransmittedPowerdBm,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener) {
+<span class="fc" id="L227">        super(initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L228">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's)
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            Double initialTransmittedPowerdBm,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L245">        super(readings, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L246">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            Point3D initialPosition, Double initialTransmittedPowerdBm)
+            throws IllegalArgumentException {
+<span class="fc" id="L263">        super(readings, initialPosition, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L264">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(Point3D initialPosition,
+            Double initialTransmittedPowerdBm) {
+<span class="fc" id="L276">        super(initialPosition, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L277">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener in charge of attending events raised by this instance.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(Point3D initialPosition,
+            Double initialTransmittedPowerdBm,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener) {
+<span class="fc" id="L291">        super(initialPosition, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L292">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            Point3D initialPosition, Double initialTransmittedPowerdBm,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L311">        super(readings, initialPosition, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L312">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            Point3D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent)
+            throws IllegalArgumentException {
+<span class="fc" id="L331">        super(readings, initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent);
+<span class="fc" id="L333">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            Point3D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent) {
+<span class="fc" id="L347">        super(initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent);
+<span class="fc" id="L349">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            Point3D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener) {
+<span class="fc" id="L365">        super(initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent, listener);
+<span class="fc" id="L367">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public LMedSRobustRangingAndRssiRadioSourceEstimator3D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings,
+            Point3D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent,
+            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L388">        super(readings, initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent, listener);
+<span class="fc" id="L390">    }</span>
+
+    /**
+     * Returns threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value, the
+     * algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algrithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @return stop threshold to stop the algorithm prematurely when a certain
+     * accuracy has been reached.
+     */
+    public double getStopThreshold() {
+<span class="fc" id="L411">        return mStopThreshold;</span>
+    }
+
+    /**
+     * Sets threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value,
+     * the algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algorithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @param stopThreshold stop threshold to stop the algorithm prematurely
+     *                      when a certain accuracy has been reached.
+     * @throws IllegalArgumentException if provided value is zero or negative.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setStopThreshold(double stopThreshold)
+            throws IllegalArgumentException, LockedException {
+<span class="fc bfc" id="L436" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L437">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L439" title="All 2 branches covered.">        if (stopThreshold &lt;= MIN_STOP_THRESHOLD) {</span>
+<span class="fc" id="L440">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L443">        mStopThreshold = stopThreshold;</span>
+<span class="fc" id="L444">    }</span>
+
+    /**
+     * Robustly estimates position, transmitted power and pathloss exponent for a
+     * radio source.
+     * @throws LockedException if instance is busy during estimation.
+     * @throws NotReadyException if estimator is not ready.
+     * @throws RobustEstimatorException if estimation fails for any reason
+     * (i.e. numerical instability, no solution available, etc).
+     */
+    @Override
+    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
+<span class="fc bfc" id="L456" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L457">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L459" title="All 2 branches covered.">        if (!isReady()) {</span>
+<span class="fc" id="L460">            throw new NotReadyException();</span>
+        }
+
+<span class="fc" id="L463">        LMedSRobustEstimator&lt;RobustRangingAndRssiRadioSourceEstimator.Solution&lt;Point3D&gt;&gt; innerEstimator =</span>
+                new LMedSRobustEstimator&lt;&gt;(
+<span class="fc" id="L465">                        new LMedSRobustEstimatorListener&lt;RobustRangingAndRssiRadioSourceEstimator.Solution&lt;Point3D&gt;&gt;() {</span>
+
+                    @Override
+                    public int getTotalSamples() {
+<span class="fc" id="L469">                        return mReadings.size();</span>
+                    }
+
+                    @Override
+                    public int getSubsetSize() {
+<span class="fc" id="L474">                        return getMinReadings();</span>
+                    }
+
+                    @Override
+                    public void estimatePreliminarSolutions(int[] samplesIndices,
+                            List&lt;RobustRangingAndRssiRadioSourceEstimator.Solution&lt;Point3D&gt;&gt; solutions) {
+<span class="fc" id="L480">                        solvePreliminarSolutions(samplesIndices, solutions);</span>
+<span class="fc" id="L481">                    }</span>
+
+                    @Override
+                    public double computeResidual(
+                            RobustRangingAndRssiRadioSourceEstimator.Solution&lt;Point3D&gt; currentEstimation,
+                            int i) {
+<span class="fc" id="L487">                        return residual(currentEstimation, i);</span>
+                    }
+
+                    @Override
+                    public boolean isReady() {
+<span class="fc" id="L492">                        return LMedSRobustRangingAndRssiRadioSourceEstimator3D.this.isReady();</span>
+                    }
+
+                    @Override
+                    public void onEstimateStart(
+                            RobustEstimator&lt;RobustRangingAndRssiRadioSourceEstimator.Solution&lt;Point3D&gt;&gt; estimator) {
+<span class="fc bfc" id="L498" title="All 2 branches covered.">                        if (mListener != null) {</span>
+<span class="fc" id="L499">                            mListener.onEstimateStart(</span>
+                                    LMedSRobustRangingAndRssiRadioSourceEstimator3D.this);
+                        }
+<span class="fc" id="L502">                    }</span>
+
+                    @Override
+                    public void onEstimateEnd(
+                            RobustEstimator&lt;RobustRangingAndRssiRadioSourceEstimator.Solution&lt;Point3D&gt;&gt; estimator) {
+<span class="fc bfc" id="L507" title="All 2 branches covered.">                        if (mListener != null) {</span>
+<span class="fc" id="L508">                            mListener.onEstimateEnd(</span>
+                                    LMedSRobustRangingAndRssiRadioSourceEstimator3D.this);
+                        }
+<span class="fc" id="L511">                    }</span>
+
+                    @Override
+                    public void onEstimateNextIteration(
+                            RobustEstimator&lt;RobustRangingAndRssiRadioSourceEstimator.Solution&lt;Point3D&gt;&gt; estimator,
+                            int iteration) {
+<span class="fc bfc" id="L517" title="All 2 branches covered.">                        if (mListener != null) {</span>
+<span class="fc" id="L518">                            mListener.onEstimateNextIteration(</span>
+                                    LMedSRobustRangingAndRssiRadioSourceEstimator3D.this, iteration);
+                        }
+<span class="fc" id="L521">                    }</span>
+
+                    @Override
+                    public void onEstimateProgressChange(
+                            RobustEstimator&lt;RobustRangingAndRssiRadioSourceEstimator.Solution&lt;Point3D&gt;&gt; estimator,
+                            float progress) {
+<span class="fc bfc" id="L527" title="All 2 branches covered.">                        if (mListener != null) {</span>
+<span class="fc" id="L528">                            mListener.onEstimateProgressChange(</span>
+                                    LMedSRobustRangingAndRssiRadioSourceEstimator3D.this, progress);
+                        }
+<span class="fc" id="L531">                    }</span>
+                });
+
+        try {
+<span class="fc" id="L535">            mLocked = true;</span>
+<span class="fc" id="L536">            mInliersData = null;</span>
+<span class="fc" id="L537">            innerEstimator.setConfidence(mConfidence);</span>
+<span class="fc" id="L538">            innerEstimator.setMaxIterations(mMaxIterations);</span>
+<span class="fc" id="L539">            innerEstimator.setProgressDelta(mProgressDelta);</span>
+<span class="fc" id="L540">            RobustRangingAndRssiRadioSourceEstimator.Solution&lt;Point3D&gt; result = innerEstimator.estimate();</span>
+<span class="fc" id="L541">            mInliersData = innerEstimator.getInliersData();</span>
+<span class="fc" id="L542">            attemptRefine(result);</span>
+
+<span class="nc" id="L544">        } catch (com.irurueta.numerical.LockedException e) {</span>
+<span class="nc" id="L545">            throw new LockedException(e);</span>
+<span class="nc" id="L546">        } catch (com.irurueta.numerical.NotReadyException e) {</span>
+<span class="nc" id="L547">            throw new NotReadyException(e);</span>
+        } finally {
+<span class="fc" id="L549">            mLocked = false;</span>
+        }
+<span class="fc" id="L551">    }</span>
+
+    /**
+     * Returns method being used for robust estimation.
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+<span class="fc" id="L559">        return RobustEstimatorMethod.LMedS;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

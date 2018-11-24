@@ -1,0 +1,937 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SequentialRobustRangingAndRssiRadioSourceEstimator2D.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor.radiosource</a> &gt; <span class="el_source">SequentialRobustRangingAndRssiRadioSourceEstimator2D.java</span></div><h1>SequentialRobustRangingAndRssiRadioSourceEstimator2D.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor.radiosource;
+
+import com.irurueta.algebra.Matrix;
+import com.irurueta.geometry.Point2D;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.indoor.*;
+
+import java.util.List;
+
+/**
+ * Robustly estimates 2D position, transmitted power and pathloss exponent of a radio
+ * source (e.g. WiFi access point or bluetooth beacon), by discarding
+ * outliers and assuming that the ranging data is available to obtain position with
+ * greater accuracy and that the radio source emits isotropically following the
+ * expression below:
+ * Pr = Pt*Gt*Gr*lambda^2 / (4*pi*d)^2,
+ * where Pr is the received power (expressed in mW),
+ * Gt is the Gain of the transmission antena
+ * Gr is the Gain of the receiver antena
+ * d is the distance between emitter and receiver
+ * and lambda is the wavelength and is equal to: lambda = c / f,
+ * where c is the speed of light
+ * and f is the carrier frequency of the radio signal.
+ *
+ * Implementations of this class sequentially estimate position and then remaining
+ * parameters. First ranging data is used to robustly estimate position and then
+ * remaining parameters are robustly estimated using former estimated position as
+ * an initial guess.
+ *
+ * Because usually information about the antena of the radio source cannot be
+ * retrieved (because many measurements are made on unkown devices where
+ * physical access is not possible), this implementation will estimate the
+ * equivalent transmitted power as: Pte = Pt * Gt * Gr.
+ * If Readings contain RSSI standard deviations, those values will be used,
+ * otherwise it will be asumed an RSSI standard deviation of 1 dB.
+ *
+ * Implementations of this class might produce more stable positions of estimated
+ * radio sources than implementations of RobustRangingAndRssiRadioSourceEstimator2D.
+ *
+ * @param &lt;S&gt; a {@link RadioSource} type.
+ */
+@SuppressWarnings({&quot;WeakerAccess&quot;, &quot;Duplicates&quot;})
+public class SequentialRobustRangingAndRssiRadioSourceEstimator2D&lt;S extends RadioSource&gt; extends
+        SequentialRobustRangingAndRssiRadioSourceEstimator&lt;S, Point2D&gt; {
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L64">    public SequentialRobustRangingAndRssiRadioSourceEstimator2D() { }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings)
+            throws IllegalArgumentException {
+<span class="fc" id="L75">        super(readings);</span>
+<span class="fc" id="L76">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+<span class="fc" id="L84">        super(listener);</span>
+<span class="fc" id="L85">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L98">        super(readings, listener);</span>
+<span class="fc" id="L99">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition) throws IllegalArgumentException {
+<span class="fc" id="L112">        super(readings, initialPosition);</span>
+<span class="fc" id="L113">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(Point2D initialPosition) {
+<span class="fc" id="L121">        super(initialPosition);</span>
+<span class="fc" id="L122">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(Point2D initialPosition,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+<span class="fc" id="L132">        super(initialPosition, listener);</span>
+<span class="fc" id="L133">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L149">        super(readings, initialPosition, listener);</span>
+<span class="fc" id="L150">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            Double initialTransmittedPowerdBm) {
+<span class="fc" id="L160">        super(initialTransmittedPowerdBm);</span>
+<span class="fc" id="L161">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Double initialTransmittedPowerdBm) throws IllegalArgumentException {
+<span class="fc" id="L175">        super(readings, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L176">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            Double initialTransmittedPowerdBm,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+<span class="fc" id="L188">        super(initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L189">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Double initialTransmittedPowerdBm,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L206">        super(readings, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L207">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm)
+            throws IllegalArgumentException {
+<span class="fc" id="L224">        super(readings, initialPosition, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L225">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(Point2D initialPosition,
+            Double initialTransmittedPowerdBm) {
+<span class="fc" id="L237">        super(initialPosition, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L238">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener in charge of attenging events raised by this instance.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(Point2D initialPosition,
+            Double initialTransmittedPowerdBm,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+<span class="fc" id="L252">        super(initialPosition, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L253">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L272">        super(readings, initialPosition, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L273">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent) throws IllegalArgumentException {
+<span class="fc" id="L291">        super(readings, initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent);
+<span class="fc" id="L293">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(Point2D initialPosition,
+            Double initialTransmittedPowerdBm, double initialPathLossExponent) {
+<span class="fc" id="L306">        super(initialPosition, initialTransmittedPowerdBm, initialPathLossExponent);</span>
+<span class="fc" id="L307">    }</span>
+
+    /**
+     * Constructor.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @param listener listener in charge of attending events raised by this instance.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(Point2D initialPosition,
+            Double initialTransmittedPowerdBm, double initialPathLossExponent,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+<span class="fc" id="L322">        super(initialPosition, initialTransmittedPowerdBm, initialPathLossExponent,</span>
+                listener);
+<span class="fc" id="L324">    }</span>
+
+    /**
+     * Constructors.
+     * Sets signal readings belonging to the same radio source.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L345">        super(readings, initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent, listener);
+<span class="fc" id="L347">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @throws IllegalArgumentException if quality scores is null, or length of
+     * quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(double[] qualityScores)
+            throws IllegalArgumentException {
+<span class="fc" id="L359">        super(qualityScores);</span>
+<span class="fc" id="L360">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param readings signal readings belonging to the same radio source.
+     * @throws IllegalArgumentException if readings are not valid, quality scores is
+     * null, or length of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores,
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings)
+            throws IllegalArgumentException {
+<span class="fc" id="L376">        super(qualityScores, readings);</span>
+<span class="fc" id="L377">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if quality scores is null, or length
+     * of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L392">        super(qualityScores, listener);</span>
+<span class="fc" id="L393">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param readings signal readings belonging to the same radio source.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid, quality scores is
+     * null, or length of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores,
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L411">        super(qualityScores, readings, listener);</span>
+<span class="fc" id="L412">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @throws IllegalArgumentException if readings are not valid, quality scores is
+     * null, or length of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores,
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition) throws IllegalArgumentException {
+<span class="fc" id="L430">        super(qualityScores, readings, initialPosition);</span>
+<span class="fc" id="L431">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @throws IllegalArgumentException if quality scores is null, or length
+     * of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(double[] qualityScores,
+            Point2D initialPosition) throws IllegalArgumentException {
+<span class="fc" id="L445">        super(qualityScores, initialPosition);</span>
+<span class="fc" id="L446">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if quality scores is null, or length
+     * of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores, Point2D initialPosition,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L463">        super(qualityScores, initialPosition, listener);</span>
+<span class="fc" id="L464">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid, quality scores
+     * is null, or length of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores,
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L485">        super(qualityScores,readings, initialPosition, listener);</span>
+<span class="fc" id="L486">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @throws IllegalArgumentException if quality scores is null, or length
+     * of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores, Double initialTransmittedPowerdBm)
+            throws IllegalArgumentException {
+<span class="fc" id="L502">        super(qualityScores, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L503">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @throws IllegalArgumentException if readings are not valid, quality scores
+     * is null, or length of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores,
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Double initialTransmittedPowerdBm) throws IllegalArgumentException {
+<span class="fc" id="L522">        super(qualityScores, readings, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L523">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if quality scores is null, or length
+     * of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores, Double initialTransmittedPowerdBm,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L541">        super(qualityScores, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L542">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                     the quality of the sample.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid, quality scores
+     * is null, or length of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores,
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Double initialTransmittedPowerdBm,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L564">        super(qualityScores, readings, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L565">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                     the quality of the sample.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @throws IllegalArgumentException if readings are not valid, quality scores
+     * is null, or length of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores,
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm)
+            throws IllegalArgumentException {
+<span class="fc" id="L587">        super(qualityScores, readings, initialPosition, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L588">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                     the quality of the sample.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @throws IllegalArgumentException if quality scores is null, or length
+     * of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(
+            double[] qualityScores, Point2D initialPosition,
+            Double initialTransmittedPowerdBm) throws IllegalArgumentException {
+<span class="fc" id="L606">        super(qualityScores, initialPosition, initialTransmittedPowerdBm);</span>
+<span class="fc" id="L607">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                     the quality of the sample.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener in charge of attenging events raised by this instance.
+     * @throws IllegalArgumentException if quality scores is null, or length
+     * of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(double[] qualityScores,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L627">        super(qualityScores, initialPosition, initialTransmittedPowerdBm, listener);</span>
+<span class="fc" id="L628">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                     the quality of the sample.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid, quality scores
+     * is null, or length of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(double[] qualityScores,
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L651">        super(qualityScores, readings, initialPosition, initialTransmittedPowerdBm,</span>
+                listener);
+<span class="fc" id="L653">    }</span>
+
+    /**
+     * Constructor.
+     * Sets signal readings belonging to the same radio source.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                     the quality of the sample.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @throws IllegalArgumentException if readings are not valid, quality scores
+     * is null, or length of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(double[] qualityScores,
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent) throws IllegalArgumentException {
+<span class="fc" id="L675">        super(qualityScores, readings, initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent);
+<span class="fc" id="L677">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                     the quality of the sample.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @throws IllegalArgumentException if quality scores is null, or length
+     * of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(double[] qualityScores,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent) throws IllegalArgumentException {
+<span class="fc" id="L696">        super(qualityScores, initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent);
+<span class="fc" id="L698">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                     the quality of the sample.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if quality scores is null, or length
+     * of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(double[] qualityScores,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L720">        super(qualityScores, initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent, listener);
+<span class="fc" id="L722">    }</span>
+
+    /**
+     * Constructors.
+     * Sets signal readings belonging to the same radio source.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     sample. The larger the score value the better
+     *                     the quality of the sample.
+     * @param readings signal readings belonging to the same radio source.
+     * @param initialPosition initial position to start the estimation of radio
+     *                        source position.
+     * @param initialTransmittedPowerdBm initial transmitted power to start the
+     *                                   estimation of radio source transmitted power
+     *                                   (expressed in dBm's).
+     * @param initialPathLossExponent initial path loss exponent. A typical value is 2.0.
+     * @param listener listener in charge of attending events raised by this instance.
+     * @throws IllegalArgumentException if readings are not valid, quality scores
+     * is null, or length of quality scores is less than required minimum.
+     */
+    public SequentialRobustRangingAndRssiRadioSourceEstimator2D(double[] qualityScores,
+            List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings,
+            Point2D initialPosition, Double initialTransmittedPowerdBm,
+            double initialPathLossExponent,
+            SequentialRobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L747">        super(qualityScores, readings, initialPosition, initialTransmittedPowerdBm,</span>
+                initialPathLossExponent, listener);
+<span class="fc" id="L749">    }</span>
+
+
+    /**
+     * Gets minimum required number of readings to estimate
+     * power, position and pathloss exponent.
+     * This value depends on the number of parameters to
+     * be estimated, but for position only, this is 3
+     * readings.
+     * @return minimum required number of readings.
+     */
+    @Override
+    public int getMinReadings() {
+<span class="fc" id="L762">        int minReadings = Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH;</span>
+<span class="fc bfc" id="L763" title="All 2 branches covered.">        if (isTransmittedPowerEstimationEnabled()) {</span>
+<span class="fc" id="L764">            minReadings++;</span>
+        }
+<span class="fc bfc" id="L766" title="All 2 branches covered.">        if (isPathLossEstimationEnabled()) {</span>
+<span class="fc" id="L767">            minReadings ++;</span>
+        }
+<span class="fc" id="L769">        return ++minReadings;</span>
+    }
+
+    /**
+     * Gets number of dimensions of position points.
+     * @return always returns 2 dimensions.
+     */
+    @Override
+    public int getNumberOfDimensions() {
+<span class="fc" id="L778">        return Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH;</span>
+    }
+
+    /**
+     * Gets estimated located radio source with estimated transmitted power.
+     * @return estimated located radio source with estimated transmitted power or null.
+     */
+    @Override
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public RadioSourceWithPowerAndLocated&lt;Point2D&gt; getEstimatedRadioSource() {
+<span class="fc" id="L788">        List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings = getReadings();</span>
+<span class="pc bpc" id="L789" title="2 of 4 branches missed.">        if (readings == null || readings.isEmpty()) {</span>
+<span class="nc" id="L790">            return null;</span>
+        }
+<span class="fc" id="L792">        S source = readings.get(0).getSource();</span>
+
+<span class="fc" id="L794">        Point2D estimatedPosition = getEstimatedPosition();</span>
+<span class="pc bpc" id="L795" title="1 of 2 branches missed.">        if (estimatedPosition == null) {</span>
+<span class="nc" id="L796">            return null;</span>
+        }
+
+<span class="fc" id="L799">        Matrix estimatedPositionCovariance = getEstimatedPositionCovariance();</span>
+
+<span class="fc" id="L801">        Double transmittedPowerVariance =</span>
+<span class="fc" id="L802">                getEstimatedTransmittedPowerVariance();</span>
+<span class="fc bfc" id="L803" title="All 2 branches covered.">        Double transmittedPowerStandardDeviation = transmittedPowerVariance != null ?</span>
+<span class="fc" id="L804">                Math.sqrt(transmittedPowerVariance) : null;</span>
+
+<span class="fc" id="L806">        Double pathlossExponentVariance =</span>
+<span class="fc" id="L807">                getEstimatedPathLossExponentVariance();</span>
+<span class="fc bfc" id="L808" title="All 2 branches covered.">        Double pathlossExponentStandardDeviation = pathlossExponentVariance != null ?</span>
+<span class="fc" id="L809">                Math.sqrt(pathlossExponentVariance) : null;</span>
+
+<span class="fc bfc" id="L811" title="All 2 branches covered.">        if (source instanceof WifiAccessPoint) {</span>
+<span class="fc" id="L812">            WifiAccessPoint accessPoint = (WifiAccessPoint) source;</span>
+<span class="fc" id="L813">            return new WifiAccessPointWithPowerAndLocated2D(accessPoint.getBssid(),</span>
+<span class="fc" id="L814">                    source.getFrequency(), accessPoint.getSsid(),</span>
+<span class="fc" id="L815">                    getEstimatedTransmittedPowerdBm(),</span>
+                    transmittedPowerStandardDeviation,
+<span class="fc" id="L817">                    getEstimatedPathLossExponent(),</span>
+                    pathlossExponentStandardDeviation,
+                    estimatedPosition,
+                    estimatedPositionCovariance);
+<span class="pc bpc" id="L821" title="1 of 2 branches missed.">        } else if(source instanceof Beacon) {</span>
+<span class="fc" id="L822">            Beacon beacon = (Beacon) source;</span>
+<span class="fc" id="L823">            return new BeaconWithPowerAndLocated2D(beacon.getIdentifiers(),</span>
+<span class="fc" id="L824">                    getEstimatedTransmittedPowerdBm(), beacon.getFrequency(),</span>
+<span class="fc" id="L825">                    beacon.getBluetoothAddress(), beacon.getBeaconTypeCode(),</span>
+<span class="fc" id="L826">                    beacon.getManufacturer(), beacon.getServiceUuid(),</span>
+<span class="fc" id="L827">                    beacon.getBluetoothName(),</span>
+<span class="fc" id="L828">                    getEstimatedPathLossExponent(),</span>
+                    transmittedPowerStandardDeviation,
+                    pathlossExponentStandardDeviation,
+                    estimatedPosition, estimatedPositionCovariance);
+        }else {
+<span class="nc" id="L833">            return null;</span>
+        }
+    }
+
+    /**
+     * Builds ranging estimator.
+     */
+    @Override
+    protected void buildRangingEstimatorIfNeeded() {
+<span class="pc bpc" id="L842" title="1 of 4 branches missed.">        if (mRangingEstimator == null || mRangingEstimator.getMethod() != mRangingRobustMethod) {</span>
+<span class="fc" id="L843">            mRangingEstimator = RobustRangingRadioSourceEstimator2D.create(mRangingRobustMethod);</span>
+        }
+<span class="fc" id="L845">    }</span>
+
+    /**
+     * build RSSI estimator.
+     * @throws LockedException if estimator is locked.
+     */
+    @Override
+    protected void buildRssiEstimatorIfNeeded() throws LockedException {
+<span class="pc bpc" id="L853" title="1 of 4 branches missed.">        if (mRssiEstimator == null || mRssiEstimator.getMethod() != mRssiRobustMethod) {</span>
+<span class="fc" id="L854">            mRssiEstimator = RobustRssiRadioSourceEstimator2D.create(mRssiRobustMethod);</span>
+
+            //rssi estimator will never need position estimator, but to
+            //ensure it is ready we need to provide an initial position
+<span class="fc" id="L858">            mRssiEstimator.setPositionEstimationEnabled(false);</span>
+<span class="fc" id="L859">            mRssiEstimator.setInitialPosition(Point2D.create());</span>
+        }
+<span class="fc" id="L861">    }</span>
+
+    /**
+     * Setups ranging estimator.
+     * @throws LockedException if estimator is locked.
+     */
+    @Override
+    protected void setupRangingEstimator() throws LockedException {
+<span class="fc" id="L869">        super.setupRangingEstimator();</span>
+
+<span class="pc bpc" id="L871" title="5 of 6 branches missed.">        switch (mRangingRobustMethod) {</span>
+            case RANSAC:
+<span class="nc" id="L873">                ((RANSACRobustRangingRadioSourceEstimator2D&lt;S&gt;)mRangingEstimator).</span>
+<span class="nc bnc" id="L874" title="All 2 branches missed.">                        setThreshold(mRangingThreshold != null ? mRangingThreshold :</span>
+<span class="nc" id="L875">                                RANSACRobustRangingRadioSourceEstimator2D.DEFAULT_THRESHOLD);</span>
+<span class="nc" id="L876">                break;</span>
+            case LMedS:
+<span class="nc" id="L878">                ((LMedSRobustRangingRadioSourceEstimator2D&lt;S&gt;)mRangingEstimator).</span>
+<span class="nc bnc" id="L879" title="All 2 branches missed.">                        setStopThreshold(mRangingThreshold != null ? mRangingThreshold :</span>
+<span class="nc" id="L880">                                LMedSRobustRangingRadioSourceEstimator2D.DEFAULT_STOP_THRESHOLD);</span>
+<span class="nc" id="L881">                break;</span>
+            case MSAC:
+<span class="nc" id="L883">                ((MSACRobustRangingRadioSourceEstimator2D&lt;S&gt;)mRangingEstimator).</span>
+<span class="nc bnc" id="L884" title="All 2 branches missed.">                        setThreshold(mRangingThreshold != null ? mRangingThreshold :</span>
+<span class="nc" id="L885">                                MSACRobustRangingRadioSourceEstimator2D.DEFAULT_THRESHOLD);</span>
+<span class="nc" id="L886">                break;</span>
+            case PROSAC:
+<span class="nc" id="L888">                ((PROSACRobustRangingRadioSourceEstimator2D&lt;S&gt;)mRangingEstimator).</span>
+<span class="nc bnc" id="L889" title="All 2 branches missed.">                        setThreshold(mRangingThreshold != null ? mRangingThreshold :</span>
+<span class="nc" id="L890">                                PROSACRobustRangingRadioSourceEstimator2D.DEFAULT_THRESHOLD);</span>
+<span class="nc" id="L891">                break;</span>
+            case PROMedS:
+<span class="fc" id="L893">                ((PROMedSRobustRangingRadioSourceEstimator2D&lt;S&gt;)mRangingEstimator).</span>
+<span class="pc bpc" id="L894" title="1 of 2 branches missed.">                        setStopThreshold(mRangingThreshold != null ? mRangingThreshold :</span>
+<span class="fc" id="L895">                                PROMedSRobustRangingRadioSourceEstimator2D.DEFAULT_STOP_THRESHOLD);</span>
+                break;
+        }
+<span class="fc" id="L898">    }</span>
+
+    /**
+     * Setups RSSI estimator.
+     * @throws LockedException if estimator is locked.
+     */
+    @Override
+    protected void setupRssiEstimator() throws LockedException {
+<span class="fc" id="L906">        super.setupRssiEstimator();</span>
+
+<span class="pc bpc" id="L908" title="5 of 6 branches missed.">        switch (mRssiRobustMethod) {</span>
+            case RANSAC:
+<span class="nc" id="L910">                ((RANSACRobustRssiRadioSourceEstimator2D&lt;S&gt;)mRssiEstimator).</span>
+<span class="nc bnc" id="L911" title="All 2 branches missed.">                        setThreshold(mRssiThreshold != null ? mRssiThreshold :</span>
+<span class="nc" id="L912">                                RANSACRobustRssiRadioSourceEstimator2D.DEFAULT_THRESHOLD);</span>
+<span class="nc" id="L913">                break;</span>
+            case LMedS:
+<span class="nc" id="L915">                ((LMedSRobustRssiRadioSourceEstimator2D&lt;S&gt;)mRssiEstimator).</span>
+<span class="nc bnc" id="L916" title="All 2 branches missed.">                        setStopThreshold(mRssiThreshold != null ? mRssiThreshold :</span>
+<span class="nc" id="L917">                                LMedSRobustRssiRadioSourceEstimator2D.DEFAULT_STOP_THRESHOLD);</span>
+<span class="nc" id="L918">                break;</span>
+            case MSAC:
+<span class="nc" id="L920">                ((MSACRobustRssiRadioSourceEstimator2D&lt;S&gt;)mRssiEstimator).</span>
+<span class="nc bnc" id="L921" title="All 2 branches missed.">                        setThreshold(mRssiThreshold != null ? mRssiThreshold :</span>
+<span class="nc" id="L922">                                MSACRobustRssiRadioSourceEstimator2D.DEFAULT_THRESHOLD);</span>
+<span class="nc" id="L923">                break;</span>
+            case PROSAC:
+<span class="nc" id="L925">                ((PROSACRobustRssiRadioSourceEstimator2D&lt;S&gt;)mRssiEstimator).</span>
+<span class="nc bnc" id="L926" title="All 2 branches missed.">                        setThreshold(mRssiThreshold != null ? mRssiThreshold :</span>
+<span class="nc" id="L927">                                PROSACRobustRssiRadioSourceEstimator2D.DEFAULT_THRESHOLD);</span>
+<span class="nc" id="L928">                break;</span>
+            case PROMedS:
+<span class="fc" id="L930">                ((PROMedSRobustRssiRadioSourceEstimator2D&lt;S&gt;)mRssiEstimator).</span>
+<span class="pc bpc" id="L931" title="1 of 2 branches missed.">                        setStopThreshold(mRssiThreshold != null ? mRssiThreshold :</span>
+<span class="fc" id="L932">                                PROMedSRobustRssiRadioSourceEstimator2D.DEFAULT_STOP_THRESHOLD);</span>
+                break;
+        }
+<span class="fc" id="L935">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

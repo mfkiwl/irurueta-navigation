@@ -1,0 +1,436 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PROSACRobustPositionEstimator2D.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor.position</a> &gt; <span class="el_source">PROSACRobustPositionEstimator2D.java</span></div><h1>PROSACRobustPositionEstimator2D.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor.position;
+
+import com.irurueta.geometry.Point2D;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.indoor.Fingerprint;
+import com.irurueta.navigation.indoor.RadioSource;
+import com.irurueta.navigation.indoor.RadioSourceLocated;
+import com.irurueta.navigation.indoor.Reading;
+import com.irurueta.navigation.trilateration.PROSACRobustTrilateration2DSolver;
+import com.irurueta.numerical.robust.RobustEstimatorMethod;
+
+import java.util.List;
+
+/**
+ * Robustly estimates 2D position using located radio sources and their
+ * readings at unknown locations and using PROSAC algorithm to discard outliers.
+ * This kind of estimator can be used to robustly determine the 2D position of a given
+ * device by getting readings at an unknown location of different radio sources whose
+ * 2D locations are known.
+ */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
+public class PROSACRobustPositionEstimator2D extends RobustPositionEstimator2D {
+
+    /**
+     * Quality scores corresponding to each provided located radio source.
+     * The larger the score value the better the quality of the radio source.
+     */
+    private double[] mQualityScores;
+
+    /**
+     * Constructor.
+     */
+    public PROSACRobustPositionEstimator2D() {
+<span class="fc" id="L49">        super();</span>
+<span class="fc" id="L50">        init();</span>
+<span class="fc" id="L51">    }</span>
+
+    /**
+     * Constructor.
+     * @param sources located radio sources used for trilateration.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public PROSACRobustPositionEstimator2D(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources)
+            throws IllegalArgumentException {
+<span class="fc" id="L62">        super();</span>
+<span class="fc" id="L63">        init();</span>
+<span class="fc" id="L64">        internalSetSources(sources);</span>
+<span class="fc" id="L65">    }</span>
+
+    /**
+     * Constructor.
+     * @param fingerprint fingerprint containing readings at an unknown location for
+     *                    provided located radio sources.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public PROSACRobustPositionEstimator2D(
+            Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint)
+            throws IllegalArgumentException {
+<span class="fc" id="L76">        super();</span>
+<span class="fc" id="L77">        init();</span>
+<span class="fc" id="L78">        internalSetFingerprint(fingerprint);</span>
+<span class="fc" id="L79">    }</span>
+
+    /**
+     * Constructor.
+     * @param sources located radio sources used for trilateration.
+     * @param fingerprint fingerprint containing readings at an unknown location for
+     *                    provided located radio sources.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public PROSACRobustPositionEstimator2D(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint)
+            throws IllegalArgumentException {
+<span class="fc" id="L93">        super();</span>
+<span class="fc" id="L94">        init();</span>
+<span class="fc" id="L95">        internalSetSources(sources);</span>
+<span class="fc" id="L96">        internalSetFingerprint(fingerprint);</span>
+<span class="fc" id="L97">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener in charge of handling events.
+     */
+    public PROSACRobustPositionEstimator2D(
+            RobustPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L105">        super(listener);</span>
+<span class="fc" id="L106">        init();</span>
+<span class="fc" id="L107">    }</span>
+
+    /**
+     * Constructor.
+     * @param sources located radio sources used for trilateration.
+     * @param listener listener in charge of handling events.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public PROSACRobustPositionEstimator2D(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RobustPositionEstimatorListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L120">        super(listener);</span>
+<span class="fc" id="L121">        init();</span>
+<span class="fc" id="L122">        internalSetSources(sources);</span>
+<span class="fc" id="L123">    }</span>
+
+    /**
+     * Constructor.
+     * @param fingerprint fingerprint containing readings at an unknown location for provided
+     *                    location radio sources.
+     * @param listener listener in charge of handling events.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public PROSACRobustPositionEstimator2D(
+            Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustPositionEstimatorListener&lt;Point2D&gt; listener) throws IllegalArgumentException {
+<span class="fc" id="L135">        super(listener);</span>
+<span class="fc" id="L136">        init();</span>
+<span class="fc" id="L137">        internalSetFingerprint(fingerprint);</span>
+<span class="fc" id="L138">    }</span>
+
+    /**
+     * Constructor.
+     * @param sources located radio sources used for trilateration.
+     * @param fingerprint fingerprint containing readings at an unknown location for
+     *                    provided located radio sources.
+     * @param listener listener in charge of handling events.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is
+     * null or the number of provided sources is less than the required minimum.
+     */
+    public PROSACRobustPositionEstimator2D(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustPositionEstimatorListener&lt;Point2D&gt; listener) throws IllegalArgumentException {
+<span class="fc" id="L153">        super(listener);</span>
+<span class="fc" id="L154">        init();</span>
+<span class="fc" id="L155">        internalSetSources(sources);</span>
+<span class="fc" id="L156">        internalSetFingerprint(fingerprint);</span>
+<span class="fc" id="L157">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     located radio source. The larger the score
+     *                      value the better the quality of the radio
+     *                      source.
+     */
+    public PROSACRobustPositionEstimator2D(double[] qualityScores) {
+<span class="fc" id="L167">        this();</span>
+<span class="fc" id="L168">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L169">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     located radio source. The larger the score
+     *                      value the better the quality of the radio
+     *                      source.
+     * @param sources located radio sources used for trilateration.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public PROSACRobustPositionEstimator2D(double[] qualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources)
+            throws IllegalArgumentException {
+<span class="fc" id="L184">        this(sources);</span>
+<span class="fc" id="L185">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L186">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     located radio source. The larger the score
+     *                      value the better the quality of the radio
+     *                      source.
+     * @param fingerprint fingerprint containing readings at an unknown location for
+     *                    provided located radio sources.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public PROSACRobustPositionEstimator2D(double[] qualityScores,
+            Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint)
+            throws IllegalArgumentException {
+<span class="fc" id="L201">        this(fingerprint);</span>
+<span class="fc" id="L202">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L203">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     located radio source. The larger the score
+     *                      value the better the quality of the radio
+     *                      source.
+     * @param sources located radio sources used for trilateration.
+     * @param fingerprint fingerprint containing readings at an unknown location for
+     *                    provided located radio sources.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public PROSACRobustPositionEstimator2D(double[] qualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint)
+            throws IllegalArgumentException {
+<span class="fc" id="L221">        this(sources, fingerprint);</span>
+<span class="fc" id="L222">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L223">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     located radio source. The larger the score
+     *                      value the better the quality of the radio
+     *                      source.
+     * @param listener listener in charge of handling events.
+     */
+    public PROSACRobustPositionEstimator2D(double[] qualityScores,
+            RobustPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L235">        this(listener);</span>
+<span class="fc" id="L236">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L237">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     located radio source. The larger the score
+     *                      value the better the quality of the radio
+     *                      source.
+     * @param sources located radio sources used for trilateration.
+     * @param listener listener in charge of handling events.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public PROSACRobustPositionEstimator2D(double[] qualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RobustPositionEstimatorListener&lt;Point2D&gt; listener)
+            throws IllegalArgumentException {
+<span class="fc" id="L254">        this(sources, listener);</span>
+<span class="fc" id="L255">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L256">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     located radio source. The larger the score
+     *                      value the better the quality of the radio
+     *                      source.
+     * @param fingerprint fingerprint containing readings at an unknown location for provided
+     *                    location radio sources.
+     * @param listener listener in charge of handling events.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public PROSACRobustPositionEstimator2D(double[] qualityScores,
+            Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustPositionEstimatorListener&lt;Point2D&gt; listener) throws IllegalArgumentException {
+<span class="fc" id="L272">        this(fingerprint, listener);</span>
+<span class="fc" id="L273">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L274">    }</span>
+
+    /**
+     * Constructor.
+     * @param qualityScores quality scores corresponding to each provided
+     *                     located radio source. The larger the score
+     *                      value the better the quality of the radio
+     *                      source.
+     * @param sources located radio sources used for trilateration.
+     * @param fingerprint fingerprint containing readings at an unknown location for
+     *                    provided located radio sources.
+     * @param listener listener in charge of handling events.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is
+     * null or the number of provided sources is less than the required minimum.
+     */
+    public PROSACRobustPositionEstimator2D(double[] qualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustPositionEstimatorListener&lt;Point2D&gt; listener) throws IllegalArgumentException {
+<span class="fc" id="L293">        this(sources, fingerprint, listener);</span>
+<span class="fc" id="L294">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L295">    }</span>
+
+    /**
+     * Returns quality scores corresponding to each provided located
+     * radio source.
+     * The larger the score value the better the quality of the radio
+     * source.
+     * @return quality scores corresponding to each radio source.
+     */
+    @Override
+    public double[] getQualityScores() {
+<span class="fc" id="L306">        return mQualityScores;</span>
+    }
+
+    /**
+     * Sets quality scores corresponding to each provided located
+     * radio source.
+     * The larger the score value the better the quality of the radio
+     * source.
+     * @param qualityScores quality scores corresponding to each radio
+     *                      source.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than minimum required samples.
+     * @throws LockedException if robust solver is locked because an
+     * estimation is already in progress.
+     */
+    @Override
+    public void setQualityScores(double[] qualityScores)
+            throws IllegalArgumentException, LockedException {
+<span class="fc bfc" id="L324" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L325">            throw new LockedException();</span>
+        }
+<span class="fc" id="L327">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L328">    }</span>
+
+    /**
+     * Gets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on distance between estimated position and distances
+     * provided for each sample.
+     * @return threshold to determine whether samples are inliers or not.
+     */
+    public double getThreshold() {
+<span class="fc" id="L337">        return ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L338">                getThreshold();</span>
+    }
+
+    /**
+     * Sets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on distance between estimated position and distances
+     * provided for each sample.
+     * @param threshold threshold to determine whether samples are inliers or not.
+     * @throws IllegalArgumentException if provided value is equal or less than zero.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setThreshold(double threshold)
+            throws IllegalArgumentException, LockedException {
+<span class="fc" id="L351">        ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L352">                setThreshold(threshold);</span>
+<span class="fc" id="L353">    }</span>
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     * @return true if inliers must be computed and kept, false if inliers
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepInliersEnabled() {
+<span class="fc" id="L361">        return ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L362">                isComputeAndKeepInliersEnabled();</span>
+    }
+
+    /**
+     * Specifies whether inliers must be computed and kept.
+     * @param computeAndKeepInliers true if inliers must be computed and kept,
+     *                              false if inliers only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
+            throws LockedException {
+<span class="fc" id="L373">        ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L374">                setComputeAndKeepInliersEnabled(computeAndKeepInliers);</span>
+<span class="fc" id="L375">    }</span>
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     * @return true if residuals must be computed and kept, false if residuals
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepResiduals() {
+<span class="fc" id="L383">        return ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L384">                isComputeAndKeepResiduals();</span>
+    }
+
+    /**
+     * Specifies whether residuals must be computed and kept.
+     * @param computeAndKeepResiduals true if residuals must be computed and kept,
+     *                                false if residuals only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
+            throws LockedException {
+<span class="fc" id="L395">        ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L396">                setComputeAndKeepResidualsEnabled(computeAndKeepResiduals);</span>
+<span class="fc" id="L397">    }</span>
+
+    /**
+     * Returns method being used for robust estimation.
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+<span class="fc" id="L405">        return RobustEstimatorMethod.PROSAC;</span>
+    }
+
+    /**
+     * Initializes robust trilateration solver.
+     */
+    private void init() {
+<span class="fc" id="L412">        mTrilaterationSolver = new PROSACRobustTrilateration2DSolver(</span>
+                mTrilaterationSolverListener);
+<span class="fc" id="L414">    }</span>
+
+    /**
+     * Sets quality scores corresponding to each provided located radio source.
+     * This method is used internally and does not check whether instance is
+     * locked or not.
+     * @param qualityScores quality scores to be set.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than 3 samples.
+     */
+    private void internalSetQualityScores(double[] qualityScores)
+            throws IllegalArgumentException {
+<span class="fc bfc" id="L426" title="All 2 branches covered.">        if (qualityScores == null ||</span>
+<span class="fc bfc" id="L427" title="All 2 branches covered.">                qualityScores.length &lt; getMinRequiredSources()) {</span>
+<span class="fc" id="L428">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L431">        mQualityScores = qualityScores;</span>
+
+<span class="fc" id="L433">        buildPositionsDistancesDistanceStandardDeviationsAndQualityScores();</span>
+<span class="fc" id="L434">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
