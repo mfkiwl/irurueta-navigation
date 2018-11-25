@@ -81,5 +81,84 @@ public class RssiFingerprint&lt;S extends RadioSource, R extends RssiReading&lt;
 
 <span class="fc" id="L82">        return result;</span>
     }
+
+    /**
+     * Gets average RSSI (received signal strength indicator) of all readings contained in this fingerprint
+     * expressed in dB's.
+     * @return average RSSI of all readings.
+     */
+    public double getMeanRssi() {
+<span class="pc bpc" id="L91" title="2 of 4 branches missed.">        if (mReadings == null || mReadings.isEmpty()) {</span>
+<span class="nc" id="L92">            return Double.MAX_VALUE;</span>
+        }
+
+<span class="fc" id="L95">        double result = 0.0;</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        for (R reading : mReadings) {</span>
+<span class="fc" id="L97">            result += reading.getRssi() / (double)mReadings.size();</span>
+<span class="fc" id="L98">        }</span>
+
+<span class="fc" id="L100">        return result;</span>
+    }
+
+    /**
+     * Gets euclidean distance of signal readings from another fingerprint.
+     * @param otherFingerprint other fingerprint to compare.
+     * @return euclidean distance of signal readings from another fingerprint.
+     */
+    public double noMeanDistanceTo(RssiFingerprint&lt;S, R&gt; otherFingerprint) {
+<span class="fc" id="L109">        return Math.sqrt(noMeanSqrDistanceTo(otherFingerprint));</span>
+    }
+
+    /**
+     * Gets squared euclidean distance of signal readings with mean RSSI removed from another fingerprint.
+     * Mean RSSI's are taken into account so that bias effects introduced by different device's hardware is
+     * partially removed.
+     * @param otherFingerprint other fingerprint to compare.
+     * @return squared euclidean distance of signal readings from another
+     * fingerprint with average RSSI's removed.
+     */
+    public double noMeanSqrDistanceTo(RssiFingerprint&lt;S, R&gt; otherFingerprint) {
+<span class="fc bfc" id="L121" title="All 2 branches covered.">        if (otherFingerprint == null) {</span>
+<span class="fc" id="L122">            return Double.MAX_VALUE;</span>
+        }
+
+<span class="fc" id="L125">        List&lt;R&gt; otherReadings = otherFingerprint.getReadings();</span>
+<span class="fc" id="L126">        int numAccessPoints = 0;</span>
+<span class="fc" id="L127">        double avgRssiThis = 0.0, avgRssiOther = 0.0;</span>
+<span class="fc bfc" id="L128" title="All 2 branches covered.">        for (R reading : mReadings) {</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">            for (R otherReading : otherReadings) {</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">                if (reading.hasSameSource(otherReading)) {</span>
+<span class="fc" id="L131">                    avgRssiThis += reading.getRssi();</span>
+<span class="fc" id="L132">                    avgRssiOther += otherReading.getRssi();</span>
+
+<span class="fc" id="L134">                    numAccessPoints++;</span>
+                }
+<span class="fc" id="L136">            }</span>
+
+<span class="fc" id="L138">        }</span>
+
+<span class="fc bfc" id="L140" title="All 2 branches covered.">        if (numAccessPoints == 0) {</span>
+<span class="fc" id="L141">            return Double.MAX_VALUE;</span>
+        }
+
+<span class="fc" id="L144">        avgRssiThis /= (double)numAccessPoints;</span>
+<span class="fc" id="L145">        avgRssiOther /= (double)numAccessPoints;</span>
+
+
+<span class="fc" id="L148">        numAccessPoints = 0;</span>
+<span class="fc" id="L149">        double result = 0.0, diff;</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">        for (R reading : mReadings) {</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">            for (R otherReading : otherReadings) {</span>
+<span class="fc bfc" id="L152" title="All 2 branches covered.">                if (reading.hasSameSource(otherReading)) {</span>
+<span class="fc" id="L153">                    diff = (reading.getRssi() - avgRssiThis) -</span>
+<span class="fc" id="L154">                            (otherReading.getRssi() - avgRssiOther);</span>
+<span class="fc" id="L155">                    result += diff * diff;</span>
+<span class="fc" id="L156">                    numAccessPoints++;</span>
+                }
+<span class="fc" id="L158">            }</span>
+<span class="fc" id="L159">        }</span>
+
+<span class="fc" id="L161">        return result;</span>
+    }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
