@@ -520,8 +520,8 @@ public class Geodesic {
 
         //Guard against underflow in salp0. Also -0 is converted to +0.
 <span class="fc" id="L522">        Pair p = GeoMath.sincosd(GeoMath.angRound(azi1));</span>
-<span class="fc" id="L523">        salp1 = p.first;</span>
-<span class="fc" id="L524">        calp1 = p.second;</span>
+<span class="fc" id="L523">        salp1 = p.getFirst();</span>
+<span class="fc" id="L524">        calp1 = p.getSecond();</span>
 
         //Automatically supply DISTANCE_IN if necessary
 <span class="fc bfc" id="L527" title="All 2 branches covered.">        if (!arcmode) {</span>
@@ -1087,57 +1087,59 @@ public class Geodesic {
 
         //Compute longitude difference (angDiff does this carefully). Result is in [-180, 180] but
         //-180 is only for west-going geodesics. 180 is for east-going and meridional geodesics.
-<span class="fc" id="L1090">        r.setLat1(lat1 = GeoMath.latFix(lat1));</span>
-<span class="fc" id="L1091">        r.setLat2(lat2 = GeoMath.latFix(lat2));</span>
+<span class="fc" id="L1090">        lat1 = GeoMath.latFix(lat1);</span>
+<span class="fc" id="L1091">        lat2 = GeoMath.latFix(lat2);</span>
+<span class="fc" id="L1092">        r.setLat1(lat1);</span>
+<span class="fc" id="L1093">        r.setLat2(lat2);</span>
 
         //if really close to the equator, treat as on equator
-<span class="fc" id="L1094">        lat1 = GeoMath.angRound(lat1);</span>
-<span class="fc" id="L1095">        lat2 = GeoMath.angRound(lat2);</span>
+<span class="fc" id="L1096">        lat1 = GeoMath.angRound(lat1);</span>
+<span class="fc" id="L1097">        lat2 = GeoMath.angRound(lat2);</span>
 
         double lon12;
         double lon12s;
 
-<span class="fc" id="L1100">        Pair p = GeoMath.angDiff(lon1, lon2);</span>
-<span class="fc" id="L1101">        lon12 = p.first;</span>
-<span class="fc" id="L1102">        lon12s = p.second;</span>
+<span class="fc" id="L1102">        Pair p = GeoMath.angDiff(lon1, lon2);</span>
+<span class="fc" id="L1103">        lon12 = p.getFirst();</span>
+<span class="fc" id="L1104">        lon12s = p.getSecond();</span>
 
-<span class="fc bfc" id="L1104" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.LONG_UNROLL) != 0) {</span>
-<span class="fc" id="L1105">            r.setLon1(lon1);</span>
-<span class="fc" id="L1106">            r.setLon2((lon1 + lon12) + lon12s);</span>
+<span class="fc bfc" id="L1106" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.LONG_UNROLL) != 0) {</span>
+<span class="fc" id="L1107">            r.setLon1(lon1);</span>
+<span class="fc" id="L1108">            r.setLon2((lon1 + lon12) + lon12s);</span>
         } else {
-<span class="fc" id="L1108">            r.setLon1(GeoMath.angNormalize(lon1));</span>
-<span class="fc" id="L1109">            r.setLon2(GeoMath.angNormalize(lon2));</span>
+<span class="fc" id="L1110">            r.setLon1(GeoMath.angNormalize(lon1));</span>
+<span class="fc" id="L1111">            r.setLon2(GeoMath.angNormalize(lon2));</span>
         }
 
         //make longitude difference positive
-<span class="fc bfc" id="L1113" title="All 2 branches covered.">        int lonsign = lon12 &gt;= 0 ? 1 : -1;</span>
+<span class="fc bfc" id="L1115" title="All 2 branches covered.">        int lonsign = lon12 &gt;= 0 ? 1 : -1;</span>
 
         //if very close to being on the same half-meridian, then make it so
-<span class="fc" id="L1116">        lon12 = lonsign * GeoMath.angRound(lon12);</span>
-<span class="fc" id="L1117">        lon12s = GeoMath.angRound((180 - lon12) - lonsign * lon12s);</span>
-<span class="fc" id="L1118">        double lam12 = Math.toRadians(lon12);</span>
+<span class="fc" id="L1118">        lon12 = lonsign * GeoMath.angRound(lon12);</span>
+<span class="fc" id="L1119">        lon12s = GeoMath.angRound((180 - lon12) - lonsign * lon12s);</span>
+<span class="fc" id="L1120">        double lam12 = Math.toRadians(lon12);</span>
         double slam12;
         double clam12;
 
-<span class="fc bfc" id="L1122" title="All 2 branches covered.">        p = GeoMath.sincosd(lon12 &gt; 90 ? lon12s : lon12);</span>
-<span class="fc" id="L1123">        slam12 = p.first;</span>
-<span class="fc bfc" id="L1124" title="All 2 branches covered.">        clam12 = (lon12 &gt; 90 ? -1 : 1) * p.second;</span>
+<span class="fc bfc" id="L1124" title="All 2 branches covered.">        p = GeoMath.sincosd(lon12 &gt; 90 ? lon12s : lon12);</span>
+<span class="fc" id="L1125">        slam12 = p.getFirst();</span>
+<span class="fc bfc" id="L1126" title="All 2 branches covered.">        clam12 = (lon12 &gt; 90 ? -1 : 1) * p.getSecond();</span>
 
         //swap points so that point with higher (abs) latitude is point 1
         //if one latitude is a nan, then it becomes lat1
-<span class="fc bfc" id="L1128" title="All 2 branches covered.">        int swapp = Math.abs(lat1) &lt; Math.abs(lat2) ? -1 : 1;</span>
-<span class="fc bfc" id="L1129" title="All 2 branches covered.">        if (swapp &lt; 0) {</span>
-<span class="fc" id="L1130">            lonsign *= -1;</span>
+<span class="fc bfc" id="L1130" title="All 2 branches covered.">        int swapp = Math.abs(lat1) &lt; Math.abs(lat2) ? -1 : 1;</span>
+<span class="fc bfc" id="L1131" title="All 2 branches covered.">        if (swapp &lt; 0) {</span>
+<span class="fc" id="L1132">            lonsign *= -1;</span>
 
-<span class="fc" id="L1132">            double t = lat1;</span>
-<span class="fc" id="L1133">            lat1 = lat2;</span>
-<span class="fc" id="L1134">            lat2 = t;</span>
+<span class="fc" id="L1134">            double t = lat1;</span>
+<span class="fc" id="L1135">            lat1 = lat2;</span>
+<span class="fc" id="L1136">            lat2 = t;</span>
         }
 
         //make lat1 &lt;= 0
-<span class="fc bfc" id="L1138" title="All 2 branches covered.">        int latsign = lat1 &lt; 0 ? 1 : -1;</span>
-<span class="fc" id="L1139">        lat1 *= latsign;</span>
-<span class="fc" id="L1140">        lat2 *= latsign;</span>
+<span class="fc bfc" id="L1140" title="All 2 branches covered.">        int latsign = lat1 &lt; 0 ? 1 : -1;</span>
+<span class="fc" id="L1141">        lat1 *= latsign;</span>
+<span class="fc" id="L1142">        lat2 *= latsign;</span>
 
         //now we have
         //0 &lt;= lon2 &lt;= 180
@@ -1154,30 +1156,30 @@ public class Geodesic {
         double cbet2;
         double s12x;
         double m12x;
-<span class="fc" id="L1157">        s12x = m12x = Double.NaN;</span>
+<span class="fc" id="L1159">        s12x = m12x = Double.NaN;</span>
 
-<span class="fc" id="L1159">        p = GeoMath.sincosd(lat1);</span>
-<span class="fc" id="L1160">        sbet1 = mF1 * p.first;</span>
-<span class="fc" id="L1161">        cbet1 = p.second;</span>
+<span class="fc" id="L1161">        p = GeoMath.sincosd(lat1);</span>
+<span class="fc" id="L1162">        sbet1 = mF1 * p.getFirst();</span>
+<span class="fc" id="L1163">        cbet1 = p.getSecond();</span>
 
         //ensure cbet1 = +epsilon at poles; doing the fix on beta means that sig12 will be &lt;= 2*tiny
         //for two points at the same pole.
-<span class="fc" id="L1165">        p = GeoMath.norm(sbet1, cbet1);</span>
-<span class="fc" id="L1166">        sbet1 = p.first;</span>
-<span class="fc" id="L1167">        cbet1 = p.second;</span>
+<span class="fc" id="L1167">        p = GeoMath.norm(sbet1, cbet1);</span>
+<span class="fc" id="L1168">        sbet1 = p.getFirst();</span>
+<span class="fc" id="L1169">        cbet1 = p.getSecond();</span>
 
-<span class="fc" id="L1169">        cbet1 = Math.max(TINY, cbet1);</span>
+<span class="fc" id="L1171">        cbet1 = Math.max(TINY, cbet1);</span>
 
-<span class="fc" id="L1171">        p = GeoMath.sincosd(lat2);</span>
-<span class="fc" id="L1172">        sbet2 = mF1 * p.first;</span>
-<span class="fc" id="L1173">        cbet2 = p.second;</span>
+<span class="fc" id="L1173">        p = GeoMath.sincosd(lat2);</span>
+<span class="fc" id="L1174">        sbet2 = mF1 * p.getFirst();</span>
+<span class="fc" id="L1175">        cbet2 = p.getSecond();</span>
 
         //ensure cbet2 = +epsilon at poles
-<span class="fc" id="L1176">        p = GeoMath.norm(sbet2, cbet2);</span>
-<span class="fc" id="L1177">        sbet2 = p.first;</span>
-<span class="fc" id="L1178">        cbet2 = p.second;</span>
+<span class="fc" id="L1178">        p = GeoMath.norm(sbet2, cbet2);</span>
+<span class="fc" id="L1179">        sbet2 = p.getFirst();</span>
+<span class="fc" id="L1180">        cbet2 = p.getSecond();</span>
 
-<span class="fc" id="L1180">        cbet2 = Math.max(TINY, cbet2);</span>
+<span class="fc" id="L1182">        cbet2 = Math.max(TINY, cbet2);</span>
 
         //if cbet1 &lt; -sbet1, then cbet2 - cbet1 is a sensitive measure of the |bet1| - |bet2|.
         //Alternatively (cbet1 &gt;= -sbet1), abs(sbet2) + sbet1 is a better measure.
@@ -1186,18 +1188,18 @@ public class Geodesic {
         //An example where it is necessary is the inverse problem
         //48.522876735459 0 -48.522876735458293 179.599720456223079643
 
-<span class="fc bfc" id="L1189" title="All 2 branches covered.">        if (cbet1 &lt; -sbet1) {</span>
-<span class="fc bfc" id="L1190" title="All 2 branches covered.">            if (cbet2 == cbet1) {</span>
-<span class="fc bfc" id="L1191" title="All 2 branches covered.">                sbet2 = sbet2 &lt; 0 ? sbet1 : -sbet1;</span>
+<span class="fc bfc" id="L1191" title="All 2 branches covered.">        if (cbet1 &lt; -sbet1) {</span>
+<span class="fc bfc" id="L1192" title="All 2 branches covered.">            if (cbet2 == cbet1) {</span>
+<span class="fc bfc" id="L1193" title="All 2 branches covered.">                sbet2 = sbet2 &lt; 0 ? sbet1 : -sbet1;</span>
             }
         } else {
-<span class="fc bfc" id="L1194" title="All 2 branches covered.">            if (Math.abs(sbet2) == -sbet1) {</span>
-<span class="fc" id="L1195">                cbet2 = cbet1;</span>
+<span class="fc bfc" id="L1196" title="All 2 branches covered.">            if (Math.abs(sbet2) == -sbet1) {</span>
+<span class="fc" id="L1197">                cbet2 = cbet1;</span>
             }
         }
 
-<span class="fc" id="L1199">        double dn1 = Math.sqrt(1 + mEp2 * GeoMath.sq(sbet1));</span>
-<span class="fc" id="L1200">        double dn2 = Math.sqrt(1 + mEp2 * GeoMath.sq(sbet2));</span>
+<span class="fc" id="L1201">        double dn1 = Math.sqrt(1 + mEp2 * GeoMath.sq(sbet1));</span>
+<span class="fc" id="L1202">        double dn2 = Math.sqrt(1 + mEp2 * GeoMath.sq(sbet2));</span>
 
         double a12;
         double sig12;
@@ -1205,107 +1207,107 @@ public class Geodesic {
         double salp1;
         double calp2;
         double salp2;
-<span class="fc" id="L1208">        a12 = calp1 = salp1 = calp2 = salp2 = Double.NaN;</span>
+<span class="fc" id="L1210">        a12 = calp1 = salp1 = calp2 = salp2 = Double.NaN;</span>
 
         //index zero elements of these arrays are unused
-<span class="fc" id="L1211">        double[] c1a = new double[NC1 + 1];</span>
-<span class="fc" id="L1212">        double[] c2a = new double[NC2 + 1];</span>
-<span class="fc" id="L1213">        double[] c3a = new double[NC3];</span>
+<span class="fc" id="L1213">        double[] c1a = new double[NC1 + 1];</span>
+<span class="fc" id="L1214">        double[] c2a = new double[NC2 + 1];</span>
+<span class="fc" id="L1215">        double[] c3a = new double[NC3];</span>
 
-<span class="fc bfc" id="L1215" title="All 4 branches covered.">        boolean meridian = lat1 == -90 || slam12 == 0;</span>
+<span class="fc bfc" id="L1217" title="All 4 branches covered.">        boolean meridian = lat1 == -90 || slam12 == 0;</span>
 
-<span class="fc bfc" id="L1217" title="All 2 branches covered.">        if (meridian) {</span>
+<span class="fc bfc" id="L1219" title="All 2 branches covered.">        if (meridian) {</span>
             //endpoints are on a single full meridian, so the geodesic might lie on a meridian
 
             //head to the target longitude
-<span class="fc" id="L1221">            calp1 = clam12;</span>
-<span class="fc" id="L1222">            salp1 = slam12;</span>
+<span class="fc" id="L1223">            calp1 = clam12;</span>
+<span class="fc" id="L1224">            salp1 = slam12;</span>
 
             //at the target we're heading north
-<span class="fc" id="L1225">            calp2 = 1;</span>
-<span class="fc" id="L1226">            salp2 = 0;</span>
+<span class="fc" id="L1227">            calp2 = 1;</span>
+<span class="fc" id="L1228">            salp2 = 0;</span>
 
             //tan(bet) = tan(sig) * cos(alp)
             //noinspection all
-<span class="fc" id="L1230">            double ssig1 = sbet1;</span>
-<span class="fc" id="L1231">            double csig1 = calp1 * cbet1;</span>
-<span class="fc" id="L1232">            double csig2 = calp2 * cbet2;</span>
+<span class="fc" id="L1232">            double ssig1 = sbet1;</span>
+<span class="fc" id="L1233">            double csig1 = calp1 * cbet1;</span>
+<span class="fc" id="L1234">            double csig2 = calp2 * cbet2;</span>
 
             //sig12 = sig2 - sig1
-<span class="fc" id="L1235">            sig12 = Math.atan2(Math.max(0.0, csig1 * sbet2 - ssig1 * csig2),</span>
+<span class="fc" id="L1237">            sig12 = Math.atan2(Math.max(0.0, csig1 * sbet2 - ssig1 * csig2),</span>
                     csig1 * csig2 + ssig1 * sbet2);
 
-<span class="fc" id="L1238">            LengthsV v = lengths(mN, sig12, ssig1, csig1, dn1, sbet2, csig2, dn2, cbet1, cbet2,</span>
+<span class="fc" id="L1240">            LengthsV v = lengths(mN, sig12, ssig1, csig1, dn1, sbet2, csig2, dn2, cbet1, cbet2,</span>
                     outmask | GeodesicMask.DISTANCE | GeodesicMask.REDUCED_LENGTH, c1a, c2a);
-<span class="fc" id="L1240">            s12x = v.mS12b;</span>
-<span class="fc" id="L1241">            m12x = v.mM12b;</span>
+<span class="fc" id="L1242">            s12x = v.mS12b;</span>
+<span class="fc" id="L1243">            m12x = v.mM12b;</span>
 
-<span class="pc bpc" id="L1243" title="1 of 2 branches missed.">            if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
-<span class="nc" id="L1244">                r.setScaleM12(v.mM12);</span>
-<span class="nc" id="L1245">                r.setScaleM21(v.mM21);</span>
+<span class="pc bpc" id="L1245" title="1 of 2 branches missed.">            if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
+<span class="nc" id="L1246">                r.setScaleM12(v.mM12);</span>
+<span class="nc" id="L1247">                r.setScaleM21(v.mM21);</span>
             }
 
             //add the check for sig12 since zero length geodesics might yield m12 &lt; 0. Test case was
             //echo 20.001 0 20.001 0 | GeodSolve -i
             //in fact, we will have sig12 &gt; pi/2 for meridional geodesic which is not a shortest path.
-<span class="fc bfc" id="L1251" title="All 4 branches covered.">            if (sig12 &lt; 1 || m12x &gt;= 0) {</span>
+<span class="fc bfc" id="L1253" title="All 4 branches covered.">            if (sig12 &lt; 1 || m12x &gt;= 0) {</span>
                 //need at least 2, to handle 90 0 90 180
-<span class="fc bfc" id="L1253" title="All 2 branches covered.">                if (sig12 &lt; 3 * TINY) {</span>
-<span class="fc" id="L1254">                    sig12 = m12x = s12x = 0;</span>
+<span class="fc bfc" id="L1255" title="All 2 branches covered.">                if (sig12 &lt; 3 * TINY) {</span>
+<span class="fc" id="L1256">                    sig12 = m12x = s12x = 0;</span>
                 }
-<span class="fc" id="L1256">                m12x *= mB;</span>
-<span class="fc" id="L1257">                s12x *= mB;</span>
-<span class="fc" id="L1258">                a12 = Math.toDegrees(sig12);</span>
+<span class="fc" id="L1258">                m12x *= mB;</span>
+<span class="fc" id="L1259">                s12x *= mB;</span>
+<span class="fc" id="L1260">                a12 = Math.toDegrees(sig12);</span>
             } else {
                 //m12 &lt; 0, i.e., prolate and too close to anti-podal
-<span class="fc" id="L1261">                meridian = false;</span>
+<span class="fc" id="L1263">                meridian = false;</span>
             }
         }
 
-<span class="fc" id="L1265">        double omg12 = Double.NaN;</span>
-<span class="fc" id="L1266">        double somg12 = 2.0;</span>
-<span class="fc" id="L1267">        double comg12 = Double.NaN;</span>
+<span class="fc" id="L1267">        double omg12 = Double.NaN;</span>
+<span class="fc" id="L1268">        double somg12 = 2.0;</span>
+<span class="fc" id="L1269">        double comg12 = Double.NaN;</span>
         //and sbet2 == 0 mimic the way Lambda12 works with calp1 = 0
-<span class="fc bfc" id="L1269" title="All 8 branches covered.">        if (!meridian &amp;&amp; sbet1 == 0 &amp;&amp; (mF &lt;= 0 || lon12s &gt;= mF * 180)) {</span>
+<span class="fc bfc" id="L1271" title="All 8 branches covered.">        if (!meridian &amp;&amp; sbet1 == 0 &amp;&amp; (mF &lt;= 0 || lon12s &gt;= mF * 180)) {</span>
             //geodesic runs along equator
-<span class="fc" id="L1271">            calp1 = calp2 = 0;</span>
-<span class="fc" id="L1272">            salp1 = salp2 = 1;</span>
-<span class="fc" id="L1273">            s12x = mA * lam12;</span>
-<span class="fc" id="L1274">            sig12 = omg12 = lam12 / mF1;</span>
-<span class="fc" id="L1275">            m12x = mB * Math.sin(sig12);</span>
-<span class="pc bpc" id="L1276" title="1 of 2 branches missed.">            if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
-<span class="nc" id="L1277">                double value = Math.cos(sig12);</span>
-<span class="nc" id="L1278">                r.setScaleM12(value);</span>
-<span class="nc" id="L1279">                r.setScaleM21(value);</span>
+<span class="fc" id="L1273">            calp1 = calp2 = 0;</span>
+<span class="fc" id="L1274">            salp1 = salp2 = 1;</span>
+<span class="fc" id="L1275">            s12x = mA * lam12;</span>
+<span class="fc" id="L1276">            sig12 = omg12 = lam12 / mF1;</span>
+<span class="fc" id="L1277">            m12x = mB * Math.sin(sig12);</span>
+<span class="pc bpc" id="L1278" title="1 of 2 branches missed.">            if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
+<span class="nc" id="L1279">                double value = Math.cos(sig12);</span>
+<span class="nc" id="L1280">                r.setScaleM12(value);</span>
+<span class="nc" id="L1281">                r.setScaleM21(value);</span>
             }
-<span class="fc" id="L1281">            a12 = lon12 / mF1;</span>
+<span class="fc" id="L1283">            a12 = lon12 / mF1;</span>
 
-<span class="fc bfc" id="L1283" title="All 2 branches covered.">        } else if (!meridian) {</span>
+<span class="fc bfc" id="L1285" title="All 2 branches covered.">        } else if (!meridian) {</span>
             //now point1 and point2 belong within a hemisphere bounded by a
             //meridian and geodesic is neither meridional or equatorial
 
             //figure a starting point for Newton's method
             double dnm;
-<span class="fc" id="L1289">            InverseStartV iv = inverseStart(sbet1, cbet1, dn1, sbet2, cbet2, dn2,</span>
+<span class="fc" id="L1291">            InverseStartV iv = inverseStart(sbet1, cbet1, dn1, sbet2, cbet2, dn2,</span>
                     lam12, slam12, clam12, c1a, c2a);
-<span class="fc" id="L1291">            sig12 = iv.mSig12;</span>
-<span class="fc" id="L1292">            salp1 = iv.mSalp1;</span>
-<span class="fc" id="L1293">            calp1 = iv.mCalp1;</span>
-<span class="fc" id="L1294">            salp2 = iv.mSalp2;</span>
-<span class="fc" id="L1295">            calp2 = iv.mCalp2;</span>
-<span class="fc" id="L1296">            dnm = iv.mDnm;</span>
+<span class="fc" id="L1293">            sig12 = iv.mSig12;</span>
+<span class="fc" id="L1294">            salp1 = iv.mSalp1;</span>
+<span class="fc" id="L1295">            calp1 = iv.mCalp1;</span>
+<span class="fc" id="L1296">            salp2 = iv.mSalp2;</span>
+<span class="fc" id="L1297">            calp2 = iv.mCalp2;</span>
+<span class="fc" id="L1298">            dnm = iv.mDnm;</span>
 
-<span class="pc bpc" id="L1298" title="1 of 2 branches missed.">            if (sig12 &gt;= 0) {</span>
+<span class="pc bpc" id="L1300" title="1 of 2 branches missed.">            if (sig12 &gt;= 0) {</span>
                 //short lines (inverseStart sets salp2, calp2, dnm)
-<span class="nc" id="L1300">                s12x = sig12 * mB * dnm;</span>
-<span class="nc" id="L1301">                m12x = GeoMath.sq(dnm) * mB * Math.sin(sig12 / dnm);</span>
-<span class="nc bnc" id="L1302" title="All 2 branches missed.">                if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
-<span class="nc" id="L1303">                    double value = Math.cos(sig12 / dnm);</span>
-<span class="nc" id="L1304">                    r.setScaleM12(value);</span>
-<span class="nc" id="L1305">                    r.setScaleM21(value);</span>
+<span class="nc" id="L1302">                s12x = sig12 * mB * dnm;</span>
+<span class="nc" id="L1303">                m12x = GeoMath.sq(dnm) * mB * Math.sin(sig12 / dnm);</span>
+<span class="nc bnc" id="L1304" title="All 2 branches missed.">                if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
+<span class="nc" id="L1305">                    double value = Math.cos(sig12 / dnm);</span>
+<span class="nc" id="L1306">                    r.setScaleM12(value);</span>
+<span class="nc" id="L1307">                    r.setScaleM21(value);</span>
                 }
-<span class="nc" id="L1307">                a12 = Math.toDegrees(sig12);</span>
-<span class="nc" id="L1308">                omg12 = lam12 / (mF1 * dnm);</span>
+<span class="nc" id="L1309">                a12 = Math.toDegrees(sig12);</span>
+<span class="nc" id="L1310">                omg12 = lam12 / (mF1 * dnm);</span>
             } else {
                 //Newton's method. This is a straightforward solution of f(alp1) =
                 //lambda12(alp1) - lam12 = 0 with one wrinkle. f(alp) has exactly one
@@ -1323,67 +1325,67 @@ public class Geodesic {
                 double csig2;
                 double eps;
                 double domg12;
-<span class="fc" id="L1326">                ssig1 = csig1 = ssig2 = csig2 = eps = domg12 = Double.NaN;</span>
-<span class="fc" id="L1327">                int numit = 0;</span>
+<span class="fc" id="L1328">                ssig1 = csig1 = ssig2 = csig2 = eps = domg12 = Double.NaN;</span>
+<span class="fc" id="L1329">                int numit = 0;</span>
                 //bracketing range
-<span class="fc" id="L1329">                double salp1a = TINY;</span>
-<span class="fc" id="L1330">                double calp1a = 1.0;</span>
-<span class="fc" id="L1331">                double salp1b = TINY;</span>
-<span class="fc" id="L1332">                double calp1b = -1.0;</span>
-<span class="pc bpc" id="L1333" title="1 of 2 branches missed.">                for (boolean tripn = false, tripb = false; numit &lt; MAXIT2; ++numit) {</span>
+<span class="fc" id="L1331">                double salp1a = TINY;</span>
+<span class="fc" id="L1332">                double calp1a = 1.0;</span>
+<span class="fc" id="L1333">                double salp1b = TINY;</span>
+<span class="fc" id="L1334">                double calp1b = -1.0;</span>
+<span class="pc bpc" id="L1335" title="1 of 2 branches missed.">                for (boolean tripn = false, tripb = false; numit &lt; MAXIT2; ++numit) {</span>
                     //the WGS84 test set: mean = 1.47, sd = 1.25, max = 16
                     //WGS84 and random input: mean = 2.85, sd = 0.60
                     double v;
                     double dv;
 
-<span class="pc bpc" id="L1339" title="1 of 2 branches missed.">                    Lambda12V w = lambda12(sbet1, cbet1, dn1, sbet2, cbet2, dn2, salp1, calp1,</span>
+<span class="pc bpc" id="L1341" title="1 of 2 branches missed.">                    Lambda12V w = lambda12(sbet1, cbet1, dn1, sbet2, cbet2, dn2, salp1, calp1,</span>
                             slam12, clam12, numit &lt; MAXIT1, c1a, c2a, c3a);
-<span class="fc" id="L1341">                    v = w.mLam12;</span>
-<span class="fc" id="L1342">                    salp2 = w.mSalp2;</span>
-<span class="fc" id="L1343">                    calp2 = w.mCalp2;</span>
-<span class="fc" id="L1344">                    sig12 = w.mSig12;</span>
-<span class="fc" id="L1345">                    ssig1 = w.mSsig1;</span>
-<span class="fc" id="L1346">                    csig1 = w.mCsig1;</span>
-<span class="fc" id="L1347">                    ssig2 = w.mSsig2;</span>
-<span class="fc" id="L1348">                    csig2 = w.mCsig2;</span>
-<span class="fc" id="L1349">                    eps = w.mEps;</span>
-<span class="fc" id="L1350">                    domg12 = w.mDomg12;</span>
-<span class="fc" id="L1351">                    dv = w.mDlam12;</span>
+<span class="fc" id="L1343">                    v = w.mLam12;</span>
+<span class="fc" id="L1344">                    salp2 = w.mSalp2;</span>
+<span class="fc" id="L1345">                    calp2 = w.mCalp2;</span>
+<span class="fc" id="L1346">                    sig12 = w.mSig12;</span>
+<span class="fc" id="L1347">                    ssig1 = w.mSsig1;</span>
+<span class="fc" id="L1348">                    csig1 = w.mCsig1;</span>
+<span class="fc" id="L1349">                    ssig2 = w.mSsig2;</span>
+<span class="fc" id="L1350">                    csig2 = w.mCsig2;</span>
+<span class="fc" id="L1351">                    eps = w.mEps;</span>
+<span class="fc" id="L1352">                    domg12 = w.mDomg12;</span>
+<span class="fc" id="L1353">                    dv = w.mDlam12;</span>
 
                     //2 * TOL0 is approximately 1 ulp for a number in [0, pi].
                     //reversed test to allow escape with NaNs
-<span class="fc bfc" id="L1355" title="All 2 branches covered.">                    double tmp = (tripn ? 8 : 1);</span>
-<span class="pc bpc" id="L1356" title="1 of 4 branches missed.">                    if (tripb || !(Math.abs(v) &gt;= tmp * TOL0)) {</span>
-<span class="fc" id="L1357">                        break;</span>
+<span class="fc bfc" id="L1357" title="All 2 branches covered.">                    double tmp = (tripn ? 8 : 1);</span>
+<span class="pc bpc" id="L1358" title="1 of 4 branches missed.">                    if (tripb || !(Math.abs(v) &gt;= tmp * TOL0)) {</span>
+<span class="fc" id="L1359">                        break;</span>
                     }
 
                     //update bracketing values
-<span class="pc bpc" id="L1361" title="2 of 6 branches missed.">                    if (v &gt; 0 &amp;&amp; (numit &gt; MAXIT1 || calp1 / salp1 &gt; calp1b / salp1b)) {</span>
-<span class="fc" id="L1362">                        salp1b = salp1;</span>
-<span class="fc" id="L1363">                        calp1b = calp1;</span>
-<span class="pc bpc" id="L1364" title="3 of 6 branches missed.">                    } else if (v &lt; 0 &amp;&amp; (numit &gt; MAXIT1 || calp1 / salp1 &lt; calp1a / salp1a)) {</span>
-<span class="fc" id="L1365">                        salp1a = salp1;</span>
-<span class="fc" id="L1366">                        calp1a = calp1;</span>
+<span class="pc bpc" id="L1363" title="2 of 6 branches missed.">                    if (v &gt; 0 &amp;&amp; (numit &gt; MAXIT1 || calp1 / salp1 &gt; calp1b / salp1b)) {</span>
+<span class="fc" id="L1364">                        salp1b = salp1;</span>
+<span class="fc" id="L1365">                        calp1b = calp1;</span>
+<span class="pc bpc" id="L1366" title="3 of 6 branches missed.">                    } else if (v &lt; 0 &amp;&amp; (numit &gt; MAXIT1 || calp1 / salp1 &lt; calp1a / salp1a)) {</span>
+<span class="fc" id="L1367">                        salp1a = salp1;</span>
+<span class="fc" id="L1368">                        calp1a = calp1;</span>
                     }
 
-<span class="pc bpc" id="L1369" title="1 of 4 branches missed.">                    if (numit &lt; MAXIT1 &amp;&amp; dv &gt; 0) {</span>
-<span class="fc" id="L1370">                        double dalp1 = -v /dv;</span>
-<span class="fc" id="L1371">                        double sdalp1 = Math.sin(dalp1);</span>
-<span class="fc" id="L1372">                        double cdalp1 = Math.cos(dalp1);</span>
-<span class="fc" id="L1373">                        double nsalp1 = salp1 * cdalp1 + calp1 * sdalp1;</span>
-<span class="pc bpc" id="L1374" title="2 of 4 branches missed.">                        if (nsalp1 &gt; 0 &amp;&amp; Math.abs(dalp1) &lt; Math.PI) {</span>
-<span class="fc" id="L1375">                            calp1 = calp1 * cdalp1 - salp1 * sdalp1;</span>
-<span class="fc" id="L1376">                            salp1 = nsalp1;</span>
+<span class="pc bpc" id="L1371" title="1 of 4 branches missed.">                    if (numit &lt; MAXIT1 &amp;&amp; dv &gt; 0) {</span>
+<span class="fc" id="L1372">                        double dalp1 = -v /dv;</span>
+<span class="fc" id="L1373">                        double sdalp1 = Math.sin(dalp1);</span>
+<span class="fc" id="L1374">                        double cdalp1 = Math.cos(dalp1);</span>
+<span class="fc" id="L1375">                        double nsalp1 = salp1 * cdalp1 + calp1 * sdalp1;</span>
+<span class="pc bpc" id="L1376" title="2 of 4 branches missed.">                        if (nsalp1 &gt; 0 &amp;&amp; Math.abs(dalp1) &lt; Math.PI) {</span>
+<span class="fc" id="L1377">                            calp1 = calp1 * cdalp1 - salp1 * sdalp1;</span>
+<span class="fc" id="L1378">                            salp1 = nsalp1;</span>
 
-<span class="fc" id="L1378">                            p = GeoMath.norm(salp1, calp1);</span>
-<span class="fc" id="L1379">                            salp1 = p.first;</span>
-<span class="fc" id="L1380">                            calp1 = p.second;</span>
+<span class="fc" id="L1380">                            p = GeoMath.norm(salp1, calp1);</span>
+<span class="fc" id="L1381">                            salp1 = p.getFirst();</span>
+<span class="fc" id="L1382">                            calp1 = p.getSecond();</span>
 
                             //in some regimes we don't get quadratic convergence because
                             //slope -&gt; 0. So use convergence conditions based on epsilon
                             //instead of sqrt(epsilon).
-<span class="fc bfc" id="L1385" title="All 2 branches covered.">                            tripn = Math.abs(v) &lt;= 16 * TOL0;</span>
-<span class="fc" id="L1386">                            continue;</span>
+<span class="fc bfc" id="L1387" title="All 2 branches covered.">                            tripn = Math.abs(v) &lt;= 16 * TOL0;</span>
+<span class="fc" id="L1388">                            continue;</span>
                         }
                     }
 
@@ -1394,156 +1396,156 @@ public class Geodesic {
                     //for the WGS84 test set with the starting guess set to alp1 = 90deg
                     //the WGS84 test set: mean = 5.21, sd = 3.93, max = 24
                     //WGS84 and random input: mean = 4.74, sd = 0.99
-<span class="fc" id="L1397">                    salp1 = (salp1a + salp1b) / 2;</span>
-<span class="fc" id="L1398">                    calp1 = (calp1a + calp1b) / 2;</span>
+<span class="fc" id="L1399">                    salp1 = (salp1a + salp1b) / 2;</span>
+<span class="fc" id="L1400">                    calp1 = (calp1a + calp1b) / 2;</span>
 
-<span class="fc" id="L1400">                    p = GeoMath.norm(salp1, calp1);</span>
-<span class="fc" id="L1401">                    salp1 = p.first;</span>
-<span class="fc" id="L1402">                    calp1 = p.second;</span>
+<span class="fc" id="L1402">                    p = GeoMath.norm(salp1, calp1);</span>
+<span class="fc" id="L1403">                    salp1 = p.getFirst();</span>
+<span class="fc" id="L1404">                    calp1 = p.getSecond();</span>
 
-<span class="fc" id="L1404">                    tripn = false;</span>
-<span class="pc bpc" id="L1405" title="1 of 2 branches missed.">                    tripb = (Math.abs(salp1a - salp1) + (calp1a - calp1) &lt; TOLB ||</span>
-<span class="pc bpc" id="L1406" title="1 of 2 branches missed.">                            Math.abs(salp1 - salp1b) + (calp1 - calp1b) &lt; TOLB);</span>
+<span class="fc" id="L1406">                    tripn = false;</span>
+<span class="pc bpc" id="L1407" title="1 of 2 branches missed.">                    tripb = (Math.abs(salp1a - salp1) + (calp1a - calp1) &lt; TOLB ||</span>
+<span class="pc bpc" id="L1408" title="1 of 2 branches missed.">                            Math.abs(salp1 - salp1b) + (calp1 - calp1b) &lt; TOLB);</span>
                 }
 
                 //ensure that the reduced length and geodesic scale are computed in a
                 //&quot;canonical&quot; way, with the I2 integral.
-<span class="fc" id="L1411">                int lengthmask = outmask | ((outmask &amp;</span>
-<span class="fc bfc" id="L1412" title="All 2 branches covered.">                        (GeodesicMask.REDUCED_LENGTH | GeodesicMask.GEODESIC_SCALE)) != 0 ?</span>
-<span class="fc" id="L1413">                        GeodesicMask.DISTANCE : GeodesicMask.NONE);</span>
-<span class="fc" id="L1414">                LengthsV v = lengths(eps, sig12, ssig1, csig1, dn1, ssig2, csig2, dn2, cbet1, cbet2,</span>
+<span class="fc" id="L1413">                int lengthmask = outmask | ((outmask &amp;</span>
+<span class="fc bfc" id="L1414" title="All 2 branches covered.">                        (GeodesicMask.REDUCED_LENGTH | GeodesicMask.GEODESIC_SCALE)) != 0 ?</span>
+<span class="fc" id="L1415">                        GeodesicMask.DISTANCE : GeodesicMask.NONE);</span>
+<span class="fc" id="L1416">                LengthsV v = lengths(eps, sig12, ssig1, csig1, dn1, ssig2, csig2, dn2, cbet1, cbet2,</span>
                         lengthmask, c1a, c2a);
-<span class="fc" id="L1416">                s12x = v.mS12b;</span>
-<span class="fc" id="L1417">                m12x = v.mM12b;</span>
-<span class="fc bfc" id="L1418" title="All 2 branches covered.">                if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
-<span class="fc" id="L1419">                    r.setScaleM12(v.mM12);</span>
-<span class="fc" id="L1420">                    r.setScaleM21(v.mM21);</span>
+<span class="fc" id="L1418">                s12x = v.mS12b;</span>
+<span class="fc" id="L1419">                m12x = v.mM12b;</span>
+<span class="fc bfc" id="L1420" title="All 2 branches covered.">                if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
+<span class="fc" id="L1421">                    r.setScaleM12(v.mM12);</span>
+<span class="fc" id="L1422">                    r.setScaleM21(v.mM21);</span>
                 }
 
-<span class="fc" id="L1423">                m12x *= mB;</span>
-<span class="fc" id="L1424">                s12x *= mB;</span>
-<span class="fc" id="L1425">                a12 = Math.toDegrees(sig12);</span>
-<span class="fc bfc" id="L1426" title="All 2 branches covered.">                if ((outmask &amp; GeodesicMask.AREA) != 0) {</span>
+<span class="fc" id="L1425">                m12x *= mB;</span>
+<span class="fc" id="L1426">                s12x *= mB;</span>
+<span class="fc" id="L1427">                a12 = Math.toDegrees(sig12);</span>
+<span class="fc bfc" id="L1428" title="All 2 branches covered.">                if ((outmask &amp; GeodesicMask.AREA) != 0) {</span>
                     //omg12 = lam12 - domg12
-<span class="fc" id="L1428">                    double sdomg12 = Math.sin(domg12);</span>
-<span class="fc" id="L1429">                    double cdomg12 = Math.cos(domg12);</span>
-<span class="fc" id="L1430">                    somg12 = slam12 * cdomg12 - clam12 * sdomg12;</span>
-<span class="fc" id="L1431">                    comg12 = clam12 * cdomg12 + slam12 * sdomg12;</span>
+<span class="fc" id="L1430">                    double sdomg12 = Math.sin(domg12);</span>
+<span class="fc" id="L1431">                    double cdomg12 = Math.cos(domg12);</span>
+<span class="fc" id="L1432">                    somg12 = slam12 * cdomg12 - clam12 * sdomg12;</span>
+<span class="fc" id="L1433">                    comg12 = clam12 * cdomg12 + slam12 * sdomg12;</span>
                 }
             }
         }
 
-<span class="fc bfc" id="L1436" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.DISTANCE) != 0) {</span>
+<span class="fc bfc" id="L1438" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.DISTANCE) != 0) {</span>
             //convert -0 to 0
-<span class="fc" id="L1438">            r.setS12(0.0 + s12x);</span>
+<span class="fc" id="L1440">            r.setS12(0.0 + s12x);</span>
         }
 
-<span class="fc bfc" id="L1441" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.REDUCED_LENGTH) != 0) {</span>
+<span class="fc bfc" id="L1443" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.REDUCED_LENGTH) != 0) {</span>
             //convert -0 to 0
-<span class="fc" id="L1443">            r.setM12(0.0 + m12x);</span>
+<span class="fc" id="L1445">            r.setM12(0.0 + m12x);</span>
         }
 
-<span class="fc bfc" id="L1446" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.AREA) != 0) {</span>
+<span class="fc bfc" id="L1448" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.AREA) != 0) {</span>
             //from lambda12: sin(alp1) * cos(bet1) = sin(alp0)
             //calp0 &gt; 0
-<span class="fc" id="L1449">            double salp0 = salp1 * cbet1;</span>
-<span class="fc" id="L1450">            double calp0 = GeoMath.hypot(calp1, salp1 * sbet1);</span>
+<span class="fc" id="L1451">            double salp0 = salp1 * cbet1;</span>
+<span class="fc" id="L1452">            double calp0 = GeoMath.hypot(calp1, salp1 * sbet1);</span>
             double alp12;
-<span class="fc bfc" id="L1452" title="All 4 branches covered.">            if (calp0 != 0 &amp;&amp; salp0 != 0) {</span>
+<span class="fc bfc" id="L1454" title="All 4 branches covered.">            if (calp0 != 0 &amp;&amp; salp0 != 0) {</span>
                 //from lambda12: tan(bet) = tan(sig) * cos(alp)
                 //multiplier = a^2 * e^2 * cos(alpha0) * sin(alpha0).
-<span class="fc" id="L1455">                double ssig1 = sbet1;</span>
-<span class="fc" id="L1456">                double csig1 = calp1 * cbet1;</span>
-<span class="fc" id="L1457">                double ssig2 = sbet2;</span>
-<span class="fc" id="L1458">                double csig2 = calp2 * cbet2;</span>
-<span class="fc" id="L1459">                double k2 = GeoMath.sq(calp0) * mEp2;</span>
-<span class="fc" id="L1460">                double eps = k2 / (2 * (1 + Math.sqrt(1 + k2)) + k2);</span>
-<span class="fc" id="L1461">                double a4 = GeoMath.sq(mA) * calp0 * salp0 * mE2;</span>
+<span class="fc" id="L1457">                double ssig1 = sbet1;</span>
+<span class="fc" id="L1458">                double csig1 = calp1 * cbet1;</span>
+<span class="fc" id="L1459">                double ssig2 = sbet2;</span>
+<span class="fc" id="L1460">                double csig2 = calp2 * cbet2;</span>
+<span class="fc" id="L1461">                double k2 = GeoMath.sq(calp0) * mEp2;</span>
+<span class="fc" id="L1462">                double eps = k2 / (2 * (1 + Math.sqrt(1 + k2)) + k2);</span>
+<span class="fc" id="L1463">                double a4 = GeoMath.sq(mA) * calp0 * salp0 * mE2;</span>
 
-<span class="fc" id="L1463">                p = GeoMath.norm(ssig1, csig1);</span>
-<span class="fc" id="L1464">                ssig1 = p.first;</span>
-<span class="fc" id="L1465">                csig1 = p.second;</span>
+<span class="fc" id="L1465">                p = GeoMath.norm(ssig1, csig1);</span>
+<span class="fc" id="L1466">                ssig1 = p.getFirst();</span>
+<span class="fc" id="L1467">                csig1 = p.getSecond();</span>
 
-<span class="fc" id="L1467">                p = GeoMath.norm(ssig2, csig2);</span>
-<span class="fc" id="L1468">                ssig2 = p.first;</span>
-<span class="fc" id="L1469">                csig2 = p.second;</span>
+<span class="fc" id="L1469">                p = GeoMath.norm(ssig2, csig2);</span>
+<span class="fc" id="L1470">                ssig2 = p.getFirst();</span>
+<span class="fc" id="L1471">                csig2 = p.getSecond();</span>
 
-<span class="fc" id="L1471">                double[] c4a = new double[NC4];</span>
-<span class="fc" id="L1472">                c4f(eps, c4a);</span>
-<span class="fc" id="L1473">                double b41 = sinCosSeries(false, ssig1, csig1, c4a);</span>
-<span class="fc" id="L1474">                double b42 = sinCosSeries(false, ssig2, csig2, c4a);</span>
-<span class="fc" id="L1475">                r.setAreaS12(a4 * (b42 - b41));</span>
-<span class="fc" id="L1476">            } else {</span>
+<span class="fc" id="L1473">                double[] c4a = new double[NC4];</span>
+<span class="fc" id="L1474">                c4f(eps, c4a);</span>
+<span class="fc" id="L1475">                double b41 = sinCosSeries(false, ssig1, csig1, c4a);</span>
+<span class="fc" id="L1476">                double b42 = sinCosSeries(false, ssig2, csig2, c4a);</span>
+<span class="fc" id="L1477">                r.setAreaS12(a4 * (b42 - b41));</span>
+<span class="fc" id="L1478">            } else {</span>
                 //avoid problems with indeterminate sig1, sig2 on equator
-<span class="fc" id="L1478">                r.setAreaS12(0.0);</span>
+<span class="fc" id="L1480">                r.setAreaS12(0.0);</span>
             }
 
-<span class="fc bfc" id="L1481" title="All 4 branches covered.">            if (!meridian &amp;&amp; somg12 &gt; 1) {</span>
-<span class="fc" id="L1482">                somg12 = Math.sin(omg12);</span>
-<span class="fc" id="L1483">                comg12 = Math.cos(omg12);</span>
+<span class="fc bfc" id="L1483" title="All 4 branches covered.">            if (!meridian &amp;&amp; somg12 &gt; 1) {</span>
+<span class="fc" id="L1484">                somg12 = Math.sin(omg12);</span>
+<span class="fc" id="L1485">                comg12 = Math.cos(omg12);</span>
             }
 
             //long difference not too big
             //lat difference not too big
-<span class="fc bfc" id="L1488" title="All 6 branches covered.">            if (!meridian &amp;&amp; comg12 &gt; -0.7071 &amp;&amp; sbet2 - sbet1 &lt; 1.75) {</span>
+<span class="fc bfc" id="L1490" title="All 6 branches covered.">            if (!meridian &amp;&amp; comg12 &gt; -0.7071 &amp;&amp; sbet2 - sbet1 &lt; 1.75) {</span>
                 //use tan(gamma/2) = tan(omg12/2) * (tan(bet1/2)+tan(bet2/2))/
                 //(1+tan(bet1/2)*tan(bet2/2)) with tan(x/2) = sin(x)/(1 + cos(x))
-<span class="fc" id="L1491">                double domg12 = 1 + comg12, dbet1 = 1 + cbet1, dbet2 = 1 + cbet2;</span>
-<span class="fc" id="L1492">                alp12 = 2 * Math.atan2(somg12 * (sbet1 * dbet2 + sbet2 * dbet1),</span>
+<span class="fc" id="L1493">                double domg12 = 1 + comg12;</span>
+<span class="fc" id="L1494">                double dbet1 = 1 + cbet1;</span>
+<span class="fc" id="L1495">                double dbet2 = 1 + cbet2;</span>
+<span class="fc" id="L1496">                alp12 = 2 * Math.atan2(somg12 * (sbet1 * dbet2 + sbet2 * dbet1),</span>
                         domg12 * (sbet1 * sbet2 + dbet1 * dbet2));
-<span class="fc" id="L1494">            } else {</span>
+<span class="fc" id="L1498">            } else {</span>
                 //alp12 = alp2 - alp1, used in atan2 so no need to normalize
-<span class="fc" id="L1496">                double salp12 = salp2 * calp1 - calp2 * salp1,</span>
-<span class="fc" id="L1497">                        calp12 = calp2 * calp1 + salp2 * salp1;</span>
+<span class="fc" id="L1500">                double salp12 = salp2 * calp1 - calp2 * salp1;</span>
+<span class="fc" id="L1501">                double calp12 = calp2 * calp1 + salp2 * salp1;</span>
 
                 //the right thing appears to happed if alp1 = +/-180 and alp2 = 0, viz
                 //salp12 = -0 and alp12 = -180. However this depends on the sign
                 //being attached to 0 correctly. The following ensures the correct
                 //behavior.
-<span class="fc bfc" id="L1503" title="All 4 branches covered.">                if (salp12 == 0 &amp;&amp; calp12 &lt; 0) {</span>
-<span class="fc" id="L1504">                    salp12 = TINY * calp1;</span>
-<span class="fc" id="L1505">                    calp12 = -1;</span>
+<span class="fc bfc" id="L1507" title="All 4 branches covered.">                if (salp12 == 0 &amp;&amp; calp12 &lt; 0) {</span>
+<span class="fc" id="L1508">                    salp12 = TINY * calp1;</span>
+<span class="fc" id="L1509">                    calp12 = -1;</span>
                 }
-<span class="fc" id="L1507">                alp12 = Math.atan2(salp12, calp12);</span>
+<span class="fc" id="L1511">                alp12 = Math.atan2(salp12, calp12);</span>
             }
-<span class="fc" id="L1509">            r.setAreaS12(r.getAreaS12() + mC2 * alp12);</span>
-<span class="fc" id="L1510">            r.setAreaS12(r.getAreaS12() * swapp * lonsign * latsign);</span>
+<span class="fc" id="L1513">            r.setAreaS12(r.getAreaS12() + mC2 * alp12);</span>
+<span class="fc" id="L1514">            r.setAreaS12(r.getAreaS12() * swapp * lonsign * latsign);</span>
 
             //convert -0 to 0
-<span class="fc" id="L1513">            r.setAreaS12(r.getAreaS12() + 0.0);</span>
+<span class="fc" id="L1517">            r.setAreaS12(r.getAreaS12() + 0.0);</span>
         }
 
         //convert calp, salp to azimuth accounting for lonsign, swapp, latsign
-<span class="fc bfc" id="L1517" title="All 2 branches covered.">        if (swapp &lt; 0) {</span>
-            {
-<span class="fc" id="L1519">                double t = salp1;</span>
-<span class="fc" id="L1520">                salp1 = salp2;</span>
-<span class="fc" id="L1521">                salp2 = t;</span>
-            }
-            {
-<span class="fc" id="L1524">                double t = calp1;</span>
-<span class="fc" id="L1525">                calp1 = calp2;</span>
-<span class="fc" id="L1526">                calp2 = t;</span>
-            }
-<span class="fc bfc" id="L1528" title="All 2 branches covered.">            if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
-<span class="fc" id="L1529">                double t = r.getScaleM12();</span>
-<span class="fc" id="L1530">                r.setScaleM12(r.getScaleM21());</span>
-<span class="fc" id="L1531">                r.setScaleM21(t);</span>
+<span class="fc bfc" id="L1521" title="All 2 branches covered.">        if (swapp &lt; 0) {</span>
+<span class="fc" id="L1522">            double t = salp1;</span>
+<span class="fc" id="L1523">            salp1 = salp2;</span>
+<span class="fc" id="L1524">            salp2 = t;</span>
+
+<span class="fc" id="L1526">            t = calp1;</span>
+<span class="fc" id="L1527">            calp1 = calp2;</span>
+<span class="fc" id="L1528">            calp2 = t;</span>
+
+<span class="fc bfc" id="L1530" title="All 2 branches covered.">            if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
+<span class="fc" id="L1531">                t = r.getScaleM12();</span>
+<span class="fc" id="L1532">                r.setScaleM12(r.getScaleM21());</span>
+<span class="fc" id="L1533">                r.setScaleM21(t);</span>
             }
         }
 
-<span class="fc" id="L1535">        salp1 *= swapp * lonsign;</span>
-<span class="fc" id="L1536">        calp1 *= swapp * latsign;</span>
-<span class="fc" id="L1537">        salp2 *= swapp * lonsign;</span>
-<span class="fc" id="L1538">        calp2 *= swapp * latsign;</span>
+<span class="fc" id="L1537">        salp1 *= swapp * lonsign;</span>
+<span class="fc" id="L1538">        calp1 *= swapp * latsign;</span>
+<span class="fc" id="L1539">        salp2 *= swapp * lonsign;</span>
+<span class="fc" id="L1540">        calp2 *= swapp * latsign;</span>
 
         //returned value in [0, 180]
-<span class="fc" id="L1541">        r.setA12(a12);</span>
-<span class="fc" id="L1542">        result.mSalp1 = salp1;</span>
-<span class="fc" id="L1543">        result.mCalp1 = calp1;</span>
-<span class="fc" id="L1544">        result.mSalp2 = salp2;</span>
-<span class="fc" id="L1545">        result.mCalp2 = calp2;</span>
-<span class="fc" id="L1546">        return result;</span>
+<span class="fc" id="L1543">        r.setA12(a12);</span>
+<span class="fc" id="L1544">        result.mSalp1 = salp1;</span>
+<span class="fc" id="L1545">        result.mCalp1 = calp1;</span>
+<span class="fc" id="L1546">        result.mSalp2 = salp2;</span>
+<span class="fc" id="L1547">        result.mCalp2 = calp2;</span>
+<span class="fc" id="L1548">        return result;</span>
     }
 
     /**
@@ -1555,9 +1557,9 @@ public class Geodesic {
     @SuppressWarnings(&quot;all&quot;)
     private static Geodesic safeInstance(double a, double f) {
         try {
-<span class="fc" id="L1558">            return new Geodesic(a, f);</span>
-<span class="nc" id="L1559">        } catch (GeodesicException e) {</span>
-<span class="nc" id="L1560">            return null;</span>
+<span class="fc" id="L1560">            return new Geodesic(a, f);</span>
+<span class="nc" id="L1561">        } catch (GeodesicException e) {</span>
+<span class="nc" id="L1562">            return null;</span>
         }
     }
 
@@ -1567,121 +1569,127 @@ public class Geodesic {
                              int outmask, double[] c1a, double[] c2a) {
         //return m12b = (reduced length)/mB; also calculate s12b = distance/mB,
         //and m0 = coefficient of secular term in expression for reduced length.
-<span class="fc" id="L1570">        outmask &amp;= GeodesicMask.OUT_MASK;</span>
+<span class="fc" id="L1572">        outmask &amp;= GeodesicMask.OUT_MASK;</span>
 
         //to hold s12b, m12b, m0, M12, M21
-<span class="fc" id="L1573">        LengthsV v = new LengthsV();</span>
+<span class="fc" id="L1575">        LengthsV v = new LengthsV();</span>
 
-<span class="fc" id="L1575">        double m0x = 0, j12 = 0, a1 = 0, a2 = 0;</span>
-<span class="fc bfc" id="L1576" title="All 2 branches covered.">        if ((outmask &amp; (GeodesicMask.DISTANCE | GeodesicMask.REDUCED_LENGTH |</span>
+<span class="fc" id="L1577">        double m0x = 0;</span>
+<span class="fc" id="L1578">        double j12 = 0;</span>
+<span class="fc" id="L1579">        double a1 = 0;</span>
+<span class="fc" id="L1580">        double a2 = 0;</span>
+<span class="fc bfc" id="L1581" title="All 2 branches covered.">        if ((outmask &amp; (GeodesicMask.DISTANCE | GeodesicMask.REDUCED_LENGTH |</span>
                 GeodesicMask.GEODESIC_SCALE)) != 0) {
-<span class="fc" id="L1578">            a1 = a1m1f(eps);</span>
-<span class="fc" id="L1579">            c1f(eps, c1a);</span>
-<span class="fc bfc" id="L1580" title="All 2 branches covered.">            if ((outmask &amp; (GeodesicMask.REDUCED_LENGTH | GeodesicMask.GEODESIC_SCALE)) != 0) {</span>
-<span class="fc" id="L1581">                a2 = a2m1f(eps);</span>
-<span class="fc" id="L1582">                c2f(eps, c2a);</span>
-<span class="fc" id="L1583">                m0x = a1 - a2;</span>
-<span class="fc" id="L1584">                a2 = 1 + a2;</span>
+<span class="fc" id="L1583">            a1 = a1m1f(eps);</span>
+<span class="fc" id="L1584">            c1f(eps, c1a);</span>
+<span class="fc bfc" id="L1585" title="All 2 branches covered.">            if ((outmask &amp; (GeodesicMask.REDUCED_LENGTH | GeodesicMask.GEODESIC_SCALE)) != 0) {</span>
+<span class="fc" id="L1586">                a2 = a2m1f(eps);</span>
+<span class="fc" id="L1587">                c2f(eps, c2a);</span>
+<span class="fc" id="L1588">                m0x = a1 - a2;</span>
+<span class="fc" id="L1589">                a2 = 1 + a2;</span>
             }
-<span class="fc" id="L1586">            a1 = 1 + a1;</span>
+<span class="fc" id="L1591">            a1 = 1 + a1;</span>
         }
 
-<span class="fc bfc" id="L1589" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.DISTANCE) != 0) {</span>
-<span class="fc" id="L1590">            double b1 = sinCosSeries(true, ssig2, csig2, c1a) -</span>
-<span class="fc" id="L1591">                    sinCosSeries(true, ssig1, csig1, c1a);</span>
+<span class="fc bfc" id="L1594" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.DISTANCE) != 0) {</span>
+<span class="fc" id="L1595">            double b1 = sinCosSeries(true, ssig2, csig2, c1a) -</span>
+<span class="fc" id="L1596">                    sinCosSeries(true, ssig1, csig1, c1a);</span>
             //missing a factor of mB
-<span class="fc" id="L1593">            v.mS12b = a1 * (sig12 + b1);</span>
-<span class="fc bfc" id="L1594" title="All 2 branches covered.">            if ((outmask &amp; (GeodesicMask.REDUCED_LENGTH | GeodesicMask.GEODESIC_SCALE)) != 0) {</span>
-<span class="fc" id="L1595">                double b2 = sinCosSeries(true, ssig2, csig2, c2a) -</span>
-<span class="fc" id="L1596">                        sinCosSeries(true, ssig1, csig1, c2a);</span>
-<span class="fc" id="L1597">                j12 = m0x * sig12 + (a1 * b1 - a2 * b2);</span>
+<span class="fc" id="L1598">            v.mS12b = a1 * (sig12 + b1);</span>
+<span class="fc bfc" id="L1599" title="All 2 branches covered.">            if ((outmask &amp; (GeodesicMask.REDUCED_LENGTH | GeodesicMask.GEODESIC_SCALE)) != 0) {</span>
+<span class="fc" id="L1600">                double b2 = sinCosSeries(true, ssig2, csig2, c2a) -</span>
+<span class="fc" id="L1601">                        sinCosSeries(true, ssig1, csig1, c2a);</span>
+<span class="fc" id="L1602">                j12 = m0x * sig12 + (a1 * b1 - a2 * b2);</span>
             }
-<span class="fc bfc" id="L1599" title="All 2 branches covered.">        } else if ((outmask &amp; (GeodesicMask.REDUCED_LENGTH | GeodesicMask.GEODESIC_SCALE)) != 0) {</span>
+<span class="fc bfc" id="L1604" title="All 2 branches covered.">        } else if ((outmask &amp; (GeodesicMask.REDUCED_LENGTH | GeodesicMask.GEODESIC_SCALE)) != 0) {</span>
             //assume here that NC1 &gt;= NC2
-<span class="fc bfc" id="L1601" title="All 2 branches covered.">            for (int l = 1; l &lt;= NC2; ++l) {</span>
-<span class="fc" id="L1602">                c2a[l] = a1 * c1a[l] - a2 * c2a[l];</span>
+<span class="fc bfc" id="L1606" title="All 2 branches covered.">            for (int l = 1; l &lt;= NC2; ++l) {</span>
+<span class="fc" id="L1607">                c2a[l] = a1 * c1a[l] - a2 * c2a[l];</span>
             }
-<span class="fc" id="L1604">            j12 = m0x * sig12 + (sinCosSeries(true, ssig2, csig2, c2a) -</span>
-<span class="fc" id="L1605">                    sinCosSeries(true, ssig1, csig1, c2a));</span>
+<span class="fc" id="L1609">            j12 = m0x * sig12 + (sinCosSeries(true, ssig2, csig2, c2a) -</span>
+<span class="fc" id="L1610">                    sinCosSeries(true, ssig1, csig1, c2a));</span>
         }
 
-<span class="fc bfc" id="L1608" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.REDUCED_LENGTH) != 0) {</span>
-<span class="fc" id="L1609">            v.mM0 = m0x;</span>
+<span class="fc bfc" id="L1613" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.REDUCED_LENGTH) != 0) {</span>
+<span class="fc" id="L1614">            v.mM0 = m0x;</span>
             //Missing a factor of mB.
             //Add parens around (csig1 * ssig2) and (ssig1 * csig2) to ensure
             //accurate cancellation in the case of coincident points
-<span class="fc" id="L1613">            v.mM12b = dn2 * (csig1 * ssig2) - dn1 * (ssig1 * csig2) - csig1 * csig2 * j12;</span>
+<span class="fc" id="L1618">            v.mM12b = dn2 * (csig1 * ssig2) - dn1 * (ssig1 * csig2) - csig1 * csig2 * j12;</span>
         }
 
-<span class="fc bfc" id="L1616" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
-<span class="fc" id="L1617">            double csig12 = csig1 * csig2 + ssig1 * ssig2;</span>
-<span class="fc" id="L1618">            double t = mEp2 * (cbet1 - cbet2) * (cbet1 + cbet2) / (dn1 + dn2);</span>
-<span class="fc" id="L1619">            v.mM12 = csig12 + (t * ssig2 - csig2 * j12) * ssig1 / dn1;</span>
-<span class="fc" id="L1620">            v.mM21 = csig12 - (t * ssig1 - csig1 * j12) * ssig2 / dn2;</span>
+<span class="fc bfc" id="L1621" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
+<span class="fc" id="L1622">            double csig12 = csig1 * csig2 + ssig1 * ssig2;</span>
+<span class="fc" id="L1623">            double t = mEp2 * (cbet1 - cbet2) * (cbet1 + cbet2) / (dn1 + dn2);</span>
+<span class="fc" id="L1624">            v.mM12 = csig12 + (t * ssig2 - csig2 * j12) * ssig1 / dn1;</span>
+<span class="fc" id="L1625">            v.mM21 = csig12 - (t * ssig1 - csig1 * j12) * ssig2 / dn2;</span>
         }
-<span class="fc" id="L1622">        return v;</span>
+<span class="fc" id="L1627">        return v;</span>
     }
 
     private static double astroid(double x, double y) {
         //solve k^4 + 2 * k^3 - (x^2 + y^2 - 1) * k^2 - 2 * y^2 * k - y^2 = 0 for positive root k.
         //this solution is adapted from Geocentric.reverse
         double k;
+<span class="fc" id="L1634">        double p = GeoMath.sq(x);</span>
         //noinspection all
-<span class="fc" id="L1630">        double p = GeoMath.sq(x), q = GeoMath.sq(y), r = (p + q - 1) / 6;</span>
+<span class="fc" id="L1636">        double q = GeoMath.sq(y);</span>
+<span class="fc" id="L1637">        double r = (p + q - 1) / 6;</span>
 
-<span class="pc bpc" id="L1632" title="3 of 4 branches missed.">        if (!(q == 0 &amp;&amp; r &lt;= 0)) {</span>
+<span class="pc bpc" id="L1639" title="3 of 4 branches missed.">        if (!(q == 0 &amp;&amp; r &lt;= 0)) {</span>
             //avoid possible division by zero when r = 0 by multiplying equations for s and t by
             //r^3 and r, resp.
 
             //s = r^3 * s
-<span class="fc" id="L1637">            double  s = p * q / 4, r2 = GeoMath.sq(r), r3 = r * r2,</span>
-                    //the discriminant of the quadratic equation for T3. This is zero on the
-                    //evolute curve p^(1/3) + q^(1/3) = 1
-<span class="fc" id="L1640">                    disc = s * (s + 2 * r3);</span>
-<span class="fc" id="L1641">            double u = r;</span>
-<span class="fc bfc" id="L1642" title="All 2 branches covered.">            if (disc &gt;= 0) {</span>
-<span class="fc" id="L1643">                double t3 = s + r3;</span>
+<span class="fc" id="L1644">            double  s = p * q / 4;</span>
+<span class="fc" id="L1645">            double r2 = GeoMath.sq(r), r3 = r * r2;</span>
+            //the discriminant of the quadratic equation for T3. This is zero on the
+            //evolute curve p^(1/3) + q^(1/3) = 1
+<span class="fc" id="L1648">            double disc = s * (s + 2 * r3);</span>
+<span class="fc" id="L1649">            double u = r;</span>
+<span class="fc bfc" id="L1650" title="All 2 branches covered.">            if (disc &gt;= 0) {</span>
+<span class="fc" id="L1651">                double t3 = s + r3;</span>
 
                 //pick the sign on the sqrt to mazimize abs(t3). This minimizes loss of precision
                 //due to cancellation. The result is unchanged because of the way the T is used in
                 //definition of u.
 
                 //t3 = (r * t)^3
-<span class="pc bpc" id="L1650" title="1 of 2 branches missed.">                t3 += t3 &lt; 0 ? -Math.sqrt(disc) : Math.sqrt(disc);</span>
+<span class="pc bpc" id="L1658" title="1 of 2 branches missed.">                t3 += t3 &lt; 0 ? -Math.sqrt(disc) : Math.sqrt(disc);</span>
 
                 //N.B. cbrt always returns the double root. cbrt(-8) = -2.
                 //t = r * t
-<span class="fc" id="L1654">                double t = GeoMath.cbrt(t3);</span>
+<span class="fc" id="L1662">                double t = GeoMath.cbrt(t3);</span>
 
                 //t can be zero; but then r2 / t -&gt; 0.
-<span class="pc bpc" id="L1657" title="1 of 2 branches missed.">                u += t + (t != 0 ? r2 / t : 0);</span>
-<span class="fc" id="L1658">            } else {</span>
+<span class="pc bpc" id="L1665" title="1 of 2 branches missed.">                u += t + (t != 0 ? r2 / t : 0);</span>
+<span class="fc" id="L1666">            } else {</span>
                 //t is complex, but the way u is defined the result is double.
-<span class="fc" id="L1660">                double ang = Math.atan2(Math.sqrt(-disc), -(s + r3));</span>
+<span class="fc" id="L1668">                double ang = Math.atan2(Math.sqrt(-disc), -(s + r3));</span>
                 //there are three possible cube roots. We choose the root which
                 //avoids cancellation. Note that disc &lt; 0 implies that r &lt; 0.
-<span class="fc" id="L1663">                u += 2 * r * Math.cos(ang / 3);</span>
+<span class="fc" id="L1671">                u += 2 * r * Math.cos(ang / 3);</span>
             }
 
             //guaranteed positive
-<span class="fc" id="L1667">            double v = Math.sqrt(GeoMath.sq(u) + q),</span>
-                    //avoid loss of accuracy when u &lt; 0
-                    //u + v, guardanteed positive
-<span class="pc bpc" id="L1670" title="1 of 2 branches missed.">                    uv = u &lt; 0 ? q / (v - u) : u + v,</span>
-                    //positive?
-<span class="fc" id="L1672">                    w = (uv - q) / (2 * v);</span>
+<span class="fc" id="L1675">            double v = Math.sqrt(GeoMath.sq(u) + q);</span>
+            //avoid loss of accuracy when u &lt; 0
+            //u + v, guaranteed positive
+<span class="pc bpc" id="L1678" title="1 of 2 branches missed.">            double uv = u &lt; 0 ? q / (v - u) : u + v;</span>
+            //positive?
+<span class="fc" id="L1680">            double w = (uv - q) / (2 * v);</span>
 
             //rearrange expression for k to avoid loss of accuracy due to subtraction. Division
             //by 0 not possible because uv &gt; 0, w &gt;= 0
 
             //guaranteed positive
-<span class="fc" id="L1678">            k = uv / (Math.sqrt(uv + GeoMath.sq(w)) + w);</span>
-<span class="fc" id="L1679">        } else {</span>
+<span class="fc" id="L1686">            k = uv / (Math.sqrt(uv + GeoMath.sq(w)) + w);</span>
+<span class="fc" id="L1687">        } else {</span>
             //y = 0 with |x| &lt;= 1. Handle this case directly
             //for y small, positive root is k = abs(y) / sqrt(1 - x ^2)
-<span class="nc" id="L1682">            k = 0;</span>
+<span class="nc" id="L1690">            k = 0;</span>
         }
-<span class="fc" id="L1684">        return k;</span>
+<span class="fc" id="L1692">        return k;</span>
     }
 
     private InverseStartV inverseStart(double sbet1, double cbet1, double dn1,
@@ -1695,106 +1703,108 @@ public class Geodesic {
         //value is sig12.
 
         //to hold sig12, salp1, calp1, salp2, calp2, dnm.
-<span class="fc" id="L1698">        InverseStartV w = new InverseStartV();</span>
+<span class="fc" id="L1706">        InverseStartV w = new InverseStartV();</span>
 
         //return value
-<span class="fc" id="L1701">        w.mSig12 = -1;</span>
+<span class="fc" id="L1709">        w.mSig12 = -1;</span>
 
         //bet12 = bet2 - bet1 in [0, pi); bet12a = bet2 + bet1 in (-pi, 0]
-<span class="fc" id="L1704">        double sbet12 = sbet2 * cbet1 - cbet2 * sbet1,</span>
-<span class="fc" id="L1705">                cbet12 = cbet2 * cbet1 + sbet2 * sbet1;</span>
-<span class="fc" id="L1706">        double sbet12a = sbet2 * cbet1 + cbet2 * sbet1;</span>
-<span class="fc bfc" id="L1707" title="All 6 branches covered.">        boolean shortline = cbet12 &gt;= 0 &amp;&amp; sbet12 &lt; 0.5 &amp;&amp;</span>
+<span class="fc" id="L1712">        double sbet12 = sbet2 * cbet1 - cbet2 * sbet1;</span>
+<span class="fc" id="L1713">        double cbet12 = cbet2 * cbet1 + sbet2 * sbet1;</span>
+<span class="fc" id="L1714">        double sbet12a = sbet2 * cbet1 + cbet2 * sbet1;</span>
+<span class="fc bfc" id="L1715" title="All 6 branches covered.">        boolean shortline = cbet12 &gt;= 0 &amp;&amp; sbet12 &lt; 0.5 &amp;&amp;</span>
                 cbet2 * lam12 &lt; 0.5;
-        double somg12, comg12;
-<span class="fc bfc" id="L1710" title="All 2 branches covered.">        if (shortline) {</span>
-<span class="fc" id="L1711">            double sbetm2 = GeoMath.sq(sbet1 + sbet2);</span>
+        double somg12;
+        double comg12;
+<span class="fc bfc" id="L1719" title="All 2 branches covered.">        if (shortline) {</span>
+<span class="fc" id="L1720">            double sbetm2 = GeoMath.sq(sbet1 + sbet2);</span>
 
             //sin((bet1 + bet2) / 2)^2
             //= (sbet1 + sbet2)^2 / ((sbet1 + sbet2)^2 + (cbet1 + cbet2)^2)
-<span class="fc" id="L1715">            sbetm2 /= sbetm2 + GeoMath.sq(cbet1 + cbet2);</span>
-<span class="fc" id="L1716">            w.mDnm = Math.sqrt(1 + mEp2 * sbetm2);</span>
-<span class="fc" id="L1717">            double omg12 = lam12 / (mF1 * w.mDnm);</span>
-<span class="fc" id="L1718">            somg12 = Math.sin(omg12);</span>
-<span class="fc" id="L1719">            comg12 = Math.cos(omg12);</span>
-<span class="fc" id="L1720">        } else {</span>
-<span class="fc" id="L1721">            somg12 = slam12;</span>
-<span class="fc" id="L1722">            comg12 = clam12;</span>
+<span class="fc" id="L1724">            sbetm2 /= sbetm2 + GeoMath.sq(cbet1 + cbet2);</span>
+<span class="fc" id="L1725">            w.mDnm = Math.sqrt(1 + mEp2 * sbetm2);</span>
+<span class="fc" id="L1726">            double omg12 = lam12 / (mF1 * w.mDnm);</span>
+<span class="fc" id="L1727">            somg12 = Math.sin(omg12);</span>
+<span class="fc" id="L1728">            comg12 = Math.cos(omg12);</span>
+<span class="fc" id="L1729">        } else {</span>
+<span class="fc" id="L1730">            somg12 = slam12;</span>
+<span class="fc" id="L1731">            comg12 = clam12;</span>
         }
 
-<span class="fc" id="L1725">        w.mSalp1 = cbet2 * somg12;</span>
-<span class="fc bfc" id="L1726" title="All 2 branches covered.">        w.mCalp1 = comg12 &gt;= 0 ?</span>
-<span class="fc" id="L1727">                sbet12 + cbet2 * sbet1 * GeoMath.sq(somg12) / (1 + comg12) :</span>
-<span class="fc" id="L1728">                sbet12a - cbet2 * sbet1 * GeoMath.sq(somg12) / (1 - comg12);</span>
+<span class="fc" id="L1734">        w.mSalp1 = cbet2 * somg12;</span>
+<span class="fc bfc" id="L1735" title="All 2 branches covered.">        w.mCalp1 = comg12 &gt;= 0 ?</span>
+<span class="fc" id="L1736">                sbet12 + cbet2 * sbet1 * GeoMath.sq(somg12) / (1 + comg12) :</span>
+<span class="fc" id="L1737">                sbet12a - cbet2 * sbet1 * GeoMath.sq(somg12) / (1 - comg12);</span>
 
-<span class="fc" id="L1730">        double ssig12 = GeoMath.hypot(w.mSalp1, w.mCalp1),</span>
-<span class="fc" id="L1731">                csig12 = sbet1 * sbet2 + cbet1 * cbet2 * comg12;</span>
+<span class="fc" id="L1739">        double ssig12 = GeoMath.hypot(w.mSalp1, w.mCalp1);</span>
+<span class="fc" id="L1740">        double csig12 = sbet1 * sbet2 + cbet1 * cbet2 * comg12;</span>
 
-<span class="pc bpc" id="L1733" title="1 of 4 branches missed.">        if (shortline &amp;&amp; ssig12 &lt; mEtol2) {</span>
+<span class="pc bpc" id="L1742" title="1 of 4 branches missed.">        if (shortline &amp;&amp; ssig12 &lt; mEtol2) {</span>
             //really short lines
-<span class="nc" id="L1735">            w.mSalp2 = cbet1 * somg12;</span>
-<span class="nc bnc" id="L1736" title="All 2 branches missed.">            w.mCalp2 = sbet12 - cbet1 * sbet2 * (comg12 &gt;= 0 ?</span>
-<span class="nc" id="L1737">                    GeoMath.sq(somg12) / (1 + comg12) : 1 - comg12);</span>
-            {
-<span class="nc" id="L1739">                Pair p = GeoMath.norm(w.mSalp2, w.mCalp2);</span>
-<span class="nc" id="L1740">                w.mSalp2 = p.first;</span>
-<span class="nc" id="L1741">                w.mCalp2 = p.second;</span>
-            }
+<span class="nc" id="L1744">            w.mSalp2 = cbet1 * somg12;</span>
+<span class="nc bnc" id="L1745" title="All 2 branches missed.">            w.mCalp2 = sbet12 - cbet1 * sbet2 * (comg12 &gt;= 0 ?</span>
+<span class="nc" id="L1746">                    GeoMath.sq(somg12) / (1 + comg12) : 1 - comg12);</span>
+
+<span class="nc" id="L1748">            Pair p = GeoMath.norm(w.mSalp2, w.mCalp2);</span>
+<span class="nc" id="L1749">            w.mSalp2 = p.getFirst();</span>
+<span class="nc" id="L1750">            w.mCalp2 = p.getSecond();</span>
 
             //set return value
-<span class="nc" id="L1745">            w.mSig12 = Math.atan2(ssig12, csig12);</span>
+<span class="nc" id="L1753">            w.mSig12 = Math.atan2(ssig12, csig12);</span>
             //skip astroid calc if too eccentric
-<span class="fc bfc" id="L1747" title="All 6 branches covered.">        } else if (!(Math.abs(mN) &gt; 0.1 || csig12 &gt;= 0 || ssig12 &gt;= 6 * Math.abs(mN) * Math.PI * GeoMath.sq(cbet1))) {</span>
+<span class="pc bfc" id="L1755" title="All 6 branches covered.">        } else if (!(Math.abs(mN) &gt; 0.1 || csig12 &gt;= 0 || ssig12 &gt;= 6 * Math.abs(mN) * Math.PI * GeoMath.sq(cbet1))) {</span>
             //scale lam12 and bet2 to x, y coordinate system where antipodal point is at origin and
             //singular point is at y = 0, x = -1
-            double y, lamscale, betscale;
+            double y;
+            double lamscale;
+            double betscale;
 
             //In C++ volatile declaration needed to fix inverse case
             //56.320923501171 0 -56.320923501171 179.664747671772880215
             double x;
             //lam12 - pi
-<span class="fc" id="L1756">            double lam12x = Math.atan2(-slam12, -clam12);</span>
-<span class="fc bfc" id="L1757" title="All 2 branches covered.">            if (mF &gt;= 0) {</span>
+<span class="fc" id="L1766">            double lam12x = Math.atan2(-slam12, -clam12);</span>
+<span class="fc bfc" id="L1767" title="All 2 branches covered.">            if (mF &gt;= 0) {</span>
                 //in fact f == 0 does not get here
 
                 //x = dlong, y = dlat
-                {
-<span class="fc" id="L1762">                    double k2 = GeoMath.sq(sbet1) * mEp2,</span>
-<span class="fc" id="L1763">                            eps = k2 / (2 * (1 + Math.sqrt(1 + k2)) + k2);</span>
-<span class="fc" id="L1764">                    lamscale = mF * cbet1 * a3f(eps) * Math.PI;</span>
-                }
-<span class="fc" id="L1766">                betscale = lamscale * cbet1;</span>
+<span class="fc" id="L1771">                double k2 = GeoMath.sq(sbet1) * mEp2;</span>
+<span class="fc" id="L1772">                double eps = k2 / (2 * (1 + Math.sqrt(1 + k2)) + k2);</span>
+<span class="fc" id="L1773">                lamscale = mF * cbet1 * a3f(eps) * Math.PI;</span>
 
-<span class="fc" id="L1768">                x = lam12x / lamscale;</span>
-<span class="fc" id="L1769">                y = sbet12a / betscale;</span>
-            } else {
+<span class="fc" id="L1775">                betscale = lamscale * cbet1;</span>
+
+<span class="fc" id="L1777">                x = lam12x / lamscale;</span>
+<span class="fc" id="L1778">                y = sbet12a / betscale;</span>
+<span class="fc" id="L1779">            } else {</span>
                 //mF &lt; 0
                 //x = dlat, y = dlong
-<span class="fc" id="L1773">                double cbet12a = cbet2 * cbet1 - sbet2 * sbet1,</span>
-<span class="fc" id="L1774">                        bet12a = Math.atan2(sbet12a, cbet12a);</span>
-                double m12b, m0;
+<span class="fc" id="L1782">                double cbet12a = cbet2 * cbet1 - sbet2 * sbet1;</span>
+<span class="fc" id="L1783">                double bet12a = Math.atan2(sbet12a, cbet12a);</span>
+                double m12b;
+                double m0;
 
                 //in the case of lon12 = 180, this repeats a calculation made in inverse
-<span class="fc" id="L1778">                LengthsV v = lengths(mN, Math.PI + bet12a, sbet1, -cbet1, dn1, sbet2, cbet2, dn2,</span>
+<span class="fc" id="L1788">                LengthsV v = lengths(mN, Math.PI + bet12a, sbet1, -cbet1, dn1, sbet2, cbet2, dn2,</span>
                         cbet1, cbet2, GeodesicMask.REDUCED_LENGTH, c1a, c2a);
-<span class="fc" id="L1780">                m12b = v.mM12b;</span>
-<span class="fc" id="L1781">                m0 = v.mM0;</span>
+<span class="fc" id="L1790">                m12b = v.mM12b;</span>
+<span class="fc" id="L1791">                m0 = v.mM0;</span>
 
-<span class="fc" id="L1783">                x = -1 + m12b / (cbet1 * cbet2 * m0 * Math.PI);</span>
-<span class="fc bfc" id="L1784" title="All 2 branches covered.">                betscale = x &lt; -0.01 ? sbet12a / x :</span>
-<span class="fc" id="L1785">                        - mF * GeoMath.sq(cbet1) * Math.PI;</span>
-<span class="fc" id="L1786">                lamscale = betscale / cbet1;</span>
-<span class="fc" id="L1787">                y = lam12x / lamscale;</span>
+<span class="fc" id="L1793">                x = -1 + m12b / (cbet1 * cbet2 * m0 * Math.PI);</span>
+<span class="fc bfc" id="L1794" title="All 2 branches covered.">                betscale = x &lt; -0.01 ? sbet12a / x :</span>
+<span class="fc" id="L1795">                        - mF * GeoMath.sq(cbet1) * Math.PI;</span>
+<span class="fc" id="L1796">                lamscale = betscale / cbet1;</span>
+<span class="fc" id="L1797">                y = lam12x / lamscale;</span>
             }
 
-<span class="pc bpc" id="L1790" title="1 of 4 branches missed.">            if (y &gt; -TOL1 &amp;&amp; x &gt; -1 - XTHRESH) {</span>
+<span class="pc bpc" id="L1800" title="1 of 4 branches missed.">            if (y &gt; -TOL1 &amp;&amp; x &gt; -1 - XTHRESH) {</span>
                 //strip near cut
-<span class="fc bfc" id="L1792" title="All 2 branches covered.">                if (mF &gt;= 0) {</span>
-<span class="fc" id="L1793">                    w.mSalp1 = Math.min(1.0, -x);</span>
-<span class="fc" id="L1794">                    w.mCalp1 = -Math.sqrt(1 - GeoMath.sq(w.mSalp1));</span>
+<span class="fc bfc" id="L1802" title="All 2 branches covered.">                if (mF &gt;= 0) {</span>
+<span class="fc" id="L1803">                    w.mSalp1 = Math.min(1.0, -x);</span>
+<span class="fc" id="L1804">                    w.mCalp1 = -Math.sqrt(1 - GeoMath.sq(w.mSalp1));</span>
                 } else {
-<span class="fc bfc" id="L1796" title="All 2 branches covered.">                    w.mCalp1 = Math.max(x &gt; -TOL1 ? 0.0 : -1.0, x);</span>
-<span class="fc" id="L1797">                    w.mSalp1 = Math.sqrt(1 - GeoMath.sq(w.mCalp1));</span>
+<span class="fc bfc" id="L1806" title="All 2 branches covered.">                    w.mCalp1 = Math.max(x &gt; -TOL1 ? 0.0 : -1.0, x);</span>
+<span class="fc" id="L1807">                    w.mSalp1 = Math.sqrt(1 - GeoMath.sq(w.mCalp1));</span>
                 }
             } else {
                 //estimate alp1, by solving the astroid problem
@@ -1829,29 +1839,27 @@ public class Geodesic {
                 //  6       56      0
 
                 //Because omg12 is near pi, estimate work with omg12a = pi - omg12
-<span class="fc" id="L1832">                double k = astroid(x, y);</span>
-<span class="pc bpc" id="L1833" title="1 of 2 branches missed.">                double omg12a = lamscale * (mF &gt;= 0 ? -x * k / (1 + k) : -y * (1 + k) / k);</span>
-<span class="fc" id="L1834">                somg12 = Math.sin(omg12a);</span>
-<span class="fc" id="L1835">                comg12 = -Math.cos(omg12a);</span>
+<span class="fc" id="L1842">                double k = astroid(x, y);</span>
+<span class="pc bpc" id="L1843" title="1 of 2 branches missed.">                double omg12a = lamscale * (mF &gt;= 0.0 ? -x * k / (1.0 + k) : -y * (1 + k) / k);</span>
+<span class="fc" id="L1844">                somg12 = Math.sin(omg12a);</span>
+<span class="fc" id="L1845">                comg12 = -Math.cos(omg12a);</span>
 
                 //update spherical estimate of alp1 using omg12 instead of lam12
-<span class="fc" id="L1838">                w.mSalp1 = cbet2 * somg12;</span>
-<span class="fc" id="L1839">                w.mCalp1 = sbet12a - cbet2 * sbet1 * GeoMath.sq(somg12) / (1 - comg12);</span>
+<span class="fc" id="L1848">                w.mSalp1 = cbet2 * somg12;</span>
+<span class="fc" id="L1849">                w.mCalp1 = sbet12a - cbet2 * sbet1 * GeoMath.sq(somg12) / (1 - comg12);</span>
             }
         }
 
         //sanity check on starting guess. Backwards check allows NaN through
-<span class="fc bfc" id="L1844" title="All 2 branches covered.">        if (!(w.mSalp1 &lt;= 0)) {</span>
-            {
-<span class="fc" id="L1846">                Pair p = GeoMath.norm(w.mSalp1, w.mCalp1);</span>
-<span class="fc" id="L1847">                w.mSalp1 = p.first;</span>
-<span class="fc" id="L1848">                w.mCalp1 = p.second;</span>
-<span class="fc" id="L1849">            }</span>
-        } else {
-<span class="fc" id="L1851">            w.mSalp1 = 1;</span>
-<span class="fc" id="L1852">            w.mCalp1 = 0;</span>
+<span class="fc bfc" id="L1854" title="All 2 branches covered.">        if (!(w.mSalp1 &lt;= 0.0)) {</span>
+<span class="fc" id="L1855">            Pair p = GeoMath.norm(w.mSalp1, w.mCalp1);</span>
+<span class="fc" id="L1856">            w.mSalp1 = p.getFirst();</span>
+<span class="fc" id="L1857">            w.mCalp1 = p.getSecond();</span>
+<span class="fc" id="L1858">        } else {</span>
+<span class="fc" id="L1859">            w.mSalp1 = 1;</span>
+<span class="fc" id="L1860">            w.mCalp1 = 0;</span>
         }
-<span class="fc" id="L1854">        return w;</span>
+<span class="fc" id="L1862">        return w;</span>
     }
 
     private Lambda12V lambda12(double sbet1, double cbet1, double dn1,
@@ -1862,89 +1870,93 @@ public class Geodesic {
                                //scratch areas of the right size
                                double[] c1a, double[] c2a, double[] c3a) {
         //object to hold lam12, salp2, calp2, sig12, ssig1, csig1, ssig2, csig2, eps, domg12, dlam12
-<span class="fc" id="L1865">        Lambda12V w = new Lambda12V();</span>
+<span class="fc" id="L1873">        Lambda12V w = new Lambda12V();</span>
 
-<span class="pc bpc" id="L1867" title="1 of 4 branches missed.">        if (sbet1 == 0 &amp;&amp; calp1 == 0) {</span>
+<span class="pc bpc" id="L1875" title="1 of 4 branches missed.">        if (sbet1 == 0 &amp;&amp; calp1 == 0) {</span>
             //break degeneracy of equatorial line. This case has already been handled
-<span class="nc" id="L1869">            calp1 = -TINY;</span>
+<span class="nc" id="L1877">            calp1 = -TINY;</span>
         }
 
         //sin(alp1) * cos(bet1) = sin(alp0)
-<span class="fc" id="L1873">        double salp0 = salp1 * cbet1,</span>
-                //calp0 &gt; 0
-<span class="fc" id="L1875">                calp0 = GeoMath.hypot(calp1, salp1 * sbet1);</span>
+<span class="fc" id="L1881">        double salp0 = salp1 * cbet1;</span>
+        //calp0 &gt; 0
+<span class="fc" id="L1883">        double calp0 = GeoMath.hypot(calp1, salp1 * sbet1);</span>
 
-        double somg1, comg1, somg2, comg2, somg12, comg12;
+        double somg1;
+        double comg1;
+        double somg2;
+        double comg2;
+        double somg12;
+        double comg12;
         //tan(bet1) = tan(sig1) * cos(alp1)
         //tan(omg1) = sin(alp0) * tan(sig1) = tan(omg1) = tan(alp1) * sin(bet1)
-<span class="fc" id="L1880">        w.mSsig1 = sbet1;</span>
-<span class="fc" id="L1881">        somg1 = salp0 * sbet1;</span>
-<span class="fc" id="L1882">        w.mCsig1 = comg1 = calp1 * cbet1;</span>
-        {
-<span class="fc" id="L1884">            Pair p = GeoMath.norm(w.mSsig1, w.mCsig1);</span>
-<span class="fc" id="L1885">            w.mSsig1 = p.first;</span>
-<span class="fc" id="L1886">            w.mCsig1 = p.second;</span>
-        }
+<span class="fc" id="L1893">        w.mSsig1 = sbet1;</span>
+<span class="fc" id="L1894">        somg1 = salp0 * sbet1;</span>
+<span class="fc" id="L1895">        w.mCsig1 = comg1 = calp1 * cbet1;</span>
+
+<span class="fc" id="L1897">        Pair p = GeoMath.norm(w.mSsig1, w.mCsig1);</span>
+<span class="fc" id="L1898">        w.mSsig1 = p.getFirst();</span>
+<span class="fc" id="L1899">        w.mCsig1 = p.getSecond();</span>
+
         //GeoMath.norm(somg1, comg1); -- don't need to normalize!
 
         //Enforce symmetries in the case abs(bet2) = -bet1. Need to be careful about this case,
         //since this can yield singularities in the Newton iteration.
         //sin(alp2) * cos(bet2) = sin(alp0)
-<span class="fc bfc" id="L1893" title="All 2 branches covered.">        w.mSalp2 = cbet2 != cbet1 ? salp0 / cbet2 : salp1;</span>
+<span class="fc bfc" id="L1906" title="All 2 branches covered.">        w.mSalp2 = cbet2 != cbet1 ? salp0 / cbet2 : salp1;</span>
         //calp2 = sqrt(1 - sq(salp2))
         //      = sqrt(sq(calp0) - sq(sbet2)) / cbet2
         //and subst for calp0 and rearrange to give (choose positive sqrt
         //to give alp2 in [0, pi/2]).
-<span class="pc bpc" id="L1898" title="1 of 4 branches missed.">        w.mCalp2 = cbet2 != cbet1 || Math.abs(sbet2) != -sbet1 ?</span>
-<span class="fc" id="L1899">                Math.sqrt(GeoMath.sq(calp1 * cbet1) +</span>
-<span class="fc bfc" id="L1900" title="All 2 branches covered.">                        (cbet1 &lt; -sbet1 ?</span>
-<span class="fc" id="L1901">                                (cbet2 - cbet1) * (cbet1 + cbet2) :</span>
-<span class="fc" id="L1902">                                (sbet1 - sbet2) * (sbet1 + sbet2))) / cbet2 :</span>
-<span class="fc" id="L1903">                Math.abs(calp1);</span>
+<span class="fc bfc" id="L1911" title="All 2 branches covered.">        double tmp = (cbet1 &lt; -sbet1 ? (cbet2 - cbet1) * (cbet1 + cbet2) :</span>
+<span class="fc" id="L1912">                (sbet1 - sbet2) * (sbet1 + sbet2));</span>
+<span class="pc bpc" id="L1913" title="1 of 4 branches missed.">        w.mCalp2 = cbet2 != cbet1 || Math.abs(sbet2) != -sbet1 ?</span>
+<span class="fc" id="L1914">                Math.sqrt(GeoMath.sq(calp1 * cbet1) + tmp) / cbet2 :</span>
+<span class="fc" id="L1915">                Math.abs(calp1);</span>
         //tan(bet2) = tan(sig2) * cos(alp2)
         //tan(omg2) = sin(alp0) * tan(sig2)
-<span class="fc" id="L1906">        w.mSsig2 = sbet2;</span>
-<span class="fc" id="L1907">        somg2 = salp0 * sbet2;</span>
-<span class="fc" id="L1908">        w.mCsig2 = comg2 = w.mCalp2 * cbet2;</span>
-        {
-<span class="fc" id="L1910">            Pair p = GeoMath.norm(w.mSsig2, w.mCsig2);</span>
-<span class="fc" id="L1911">            w.mSsig2 = p.first;</span>
-<span class="fc" id="L1912">            w.mCsig2 = p.second;</span>
-        }
+<span class="fc" id="L1918">        w.mSsig2 = sbet2;</span>
+<span class="fc" id="L1919">        somg2 = salp0 * sbet2;</span>
+<span class="fc" id="L1920">        w.mCsig2 = comg2 = w.mCalp2 * cbet2;</span>
+
+<span class="fc" id="L1922">        p = GeoMath.norm(w.mSsig2, w.mCsig2);</span>
+<span class="fc" id="L1923">        w.mSsig2 = p.getFirst();</span>
+<span class="fc" id="L1924">        w.mCsig2 = p.getSecond();</span>
+
         //GeoMath.norm(somg2, comg2); -- don't need to normalize!
 
         //sig12 = sig2 - sig1, limit to [0, pi]
-<span class="fc" id="L1917">        w.mSig12 = Math.atan2(Math.max(0.0, w.mCsig1 * w.mSsig2 - w.mSsig1 * w.mCsig2),</span>
-<span class="fc" id="L1918">                w.mCsig1 * w.mCsig2 + w.mSsig1 * w.mSsig2);</span>
+<span class="fc" id="L1929">        w.mSig12 = Math.atan2(Math.max(0.0, w.mCsig1 * w.mSsig2 - w.mSsig1 * w.mCsig2),</span>
+<span class="fc" id="L1930">                w.mCsig1 * w.mCsig2 + w.mSsig1 * w.mSsig2);</span>
 
         //omg12 = omg2 - omg1, limit to [0, pi]
-<span class="fc" id="L1921">        somg12 = Math.max(0.0, comg1 * somg2 - somg1 * comg2);</span>
-<span class="fc" id="L1922">        comg12 = comg1 * comg2 + somg1 * somg2;</span>
+<span class="fc" id="L1933">        somg12 = Math.max(0.0, comg1 * somg2 - somg1 * comg2);</span>
+<span class="fc" id="L1934">        comg12 = comg1 * comg2 + somg1 * somg2;</span>
         //eta = omg12 - lam120
-<span class="fc" id="L1924">        double eta = Math.atan2(somg12 * clam120 - comg12 * slam120,</span>
+<span class="fc" id="L1936">        double eta = Math.atan2(somg12 * clam120 - comg12 * slam120,</span>
                 comg12 * clam120 + somg12 * slam120);
 
         double b312;
-<span class="fc" id="L1928">        double k2 = GeoMath.sq(calp0) * mEp2;</span>
-<span class="fc" id="L1929">        w.mEps = k2 / (2 * (1 + Math.sqrt(1 + k2)) + k2);</span>
-<span class="fc" id="L1930">        c3f(w.mEps, c3a);</span>
-<span class="fc" id="L1931">        b312 = (sinCosSeries(true, w.mSsig2, w.mCsig2, c3a) -</span>
-<span class="fc" id="L1932">                sinCosSeries(true, w.mSsig1, w.mCsig1, c3a));</span>
-<span class="fc" id="L1933">        w.mDomg12 = -mF * a3f(w.mEps) * salp0 * (w.mSig12 + b312);</span>
-<span class="fc" id="L1934">        w.mLam12 = eta + w.mDomg12;</span>
+<span class="fc" id="L1940">        double k2 = GeoMath.sq(calp0) * mEp2;</span>
+<span class="fc" id="L1941">        w.mEps = k2 / (2 * (1 + Math.sqrt(1 + k2)) + k2);</span>
+<span class="fc" id="L1942">        c3f(w.mEps, c3a);</span>
+<span class="fc" id="L1943">        b312 = (sinCosSeries(true, w.mSsig2, w.mCsig2, c3a) -</span>
+<span class="fc" id="L1944">                sinCosSeries(true, w.mSsig1, w.mCsig1, c3a));</span>
+<span class="fc" id="L1945">        w.mDomg12 = -mF * a3f(w.mEps) * salp0 * (w.mSig12 + b312);</span>
+<span class="fc" id="L1946">        w.mLam12 = eta + w.mDomg12;</span>
 
-<span class="pc bpc" id="L1936" title="1 of 2 branches missed.">        if (diffp) {</span>
-<span class="fc bfc" id="L1937" title="All 2 branches covered.">            if (w.mCalp2 == 0) {</span>
-<span class="fc" id="L1938">                w.mDlam12 = -2 * mF1 * dn1 / sbet1;</span>
+<span class="pc bpc" id="L1948" title="1 of 2 branches missed.">        if (diffp) {</span>
+<span class="fc bfc" id="L1949" title="All 2 branches covered.">            if (w.mCalp2 == 0) {</span>
+<span class="fc" id="L1950">                w.mDlam12 = -2 * mF1 * dn1 / sbet1;</span>
             } else {
-<span class="fc" id="L1940">                LengthsV v = lengths(w.mEps, w.mSig12, w.mSsig1, w.mCsig1, dn1, w.mSsig2, w.mCsig2,</span>
+<span class="fc" id="L1952">                LengthsV v = lengths(w.mEps, w.mSig12, w.mSsig1, w.mCsig1, dn1, w.mSsig2, w.mCsig2,</span>
                         dn2, cbet1, cbet2, GeodesicMask.REDUCED_LENGTH, c1a, c2a);
-<span class="fc" id="L1942">                w.mDlam12 = v.mM12b;</span>
-<span class="fc" id="L1943">                w.mDlam12 *= mF1 / (w.mCalp2 * cbet2);</span>
+<span class="fc" id="L1954">                w.mDlam12 = v.mM12b;</span>
+<span class="fc" id="L1955">                w.mDlam12 *= mF1 / (w.mCalp2 * cbet2);</span>
             }
         }
 
-<span class="fc" id="L1947">        return w;</span>
+<span class="fc" id="L1959">        return w;</span>
     }
 
     private static class Lambda12V {
@@ -1960,10 +1972,10 @@ public class Geodesic {
         private double mDomg12;
         private double mDlam12;
 
-<span class="fc" id="L1963">        private Lambda12V() {</span>
-<span class="fc" id="L1964">            mLam12 = mSalp2 = mCalp2 = mSig12 = mSsig1 = mCsig1 = mSsig2 = mCsig2 =</span>
+<span class="fc" id="L1975">        private Lambda12V() {</span>
+<span class="fc" id="L1976">            mLam12 = mSalp2 = mCalp2 = mSig12 = mSsig1 = mCsig1 = mSsig2 = mCsig2 =</span>
                     mEps = mDomg12 = mDlam12 = Double.NaN;
-<span class="fc" id="L1966">        }</span>
+<span class="fc" id="L1978">        }</span>
     }
 
     private static class InverseStartV {
@@ -1978,9 +1990,9 @@ public class Geodesic {
         //only updated for short lines
         private double mDnm;
 
-<span class="fc" id="L1981">        private InverseStartV() {</span>
-<span class="fc" id="L1982">            mSig12 = mSalp1 = mCalp1 = mSalp2 = mCalp2 = mDnm = Double.NaN;</span>
-<span class="fc" id="L1983">        }</span>
+<span class="fc" id="L1993">        private InverseStartV() {</span>
+<span class="fc" id="L1994">            mSig12 = mSalp1 = mCalp1 = mSalp2 = mCalp2 = mDnm = Double.NaN;</span>
+<span class="fc" id="L1995">        }</span>
     }
 
     private static class LengthsV {
@@ -1990,9 +2002,9 @@ public class Geodesic {
         private double mM12;
         private double mM21;
 
-<span class="fc" id="L1993">        private LengthsV() {</span>
-<span class="fc" id="L1994">            mS12b = mM12b = mM0 = mM12 = mM21 = Double.NaN;</span>
-<span class="fc" id="L1995">        }</span>
+<span class="fc" id="L2005">        private LengthsV() {</span>
+<span class="fc" id="L2006">            mS12b = mM12b = mM0 = mM12 = mM21 = Double.NaN;</span>
+<span class="fc" id="L2007">        }</span>
     }
 
     private static class InverseData {
@@ -2002,10 +2014,10 @@ public class Geodesic {
         private double mSalp2;
         private double mCalp2;
 
-<span class="fc" id="L2005">        private InverseData() {</span>
-<span class="fc" id="L2006">            mG = new GeodesicData();</span>
-<span class="fc" id="L2007">            mSalp1 = mCalp1 = mSalp2 = mCalp2 = Double.NaN;</span>
-<span class="fc" id="L2008">        }</span>
+<span class="fc" id="L2017">        private InverseData() {</span>
+<span class="fc" id="L2018">            mG = new GeodesicData();</span>
+<span class="fc" id="L2019">            mSalp1 = mCalp1 = mSalp2 = mCalp2 = Double.NaN;</span>
+<span class="fc" id="L2020">        }</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
