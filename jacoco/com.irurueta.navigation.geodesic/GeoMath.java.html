@@ -65,8 +65,9 @@ public class GeoMath {
 <span class="fc" id="L65">        x = Math.abs(x);</span>
 <span class="fc" id="L66">        y = Math.abs(y);</span>
 
-<span class="fc bfc" id="L68" title="All 2 branches covered.">        double a = Math.max(x, y), b = Math.min(x, y) / (a != 0 ? a : 1);</span>
-<span class="fc" id="L69">        return a * Math.sqrt(1 + b * b);</span>
+<span class="fc" id="L68">        double a = Math.max(x, y);</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        double b = Math.min(x, y) / (a != 0 ? a : 1);</span>
+<span class="fc" id="L70">        return a * Math.sqrt(1 + b * b);</span>
         //For an alternative method see
         //C. Moler and D. Morrisin (1983) https://doi.org/10.1147/rd.276.0577
         //and A. A. Dubrulle (1983) https://doi.org/10.1147/rd.276.0582
@@ -85,11 +86,12 @@ public class GeoMath {
      * @return log(1 + &lt;i&gt;x&lt;/i&gt;).
      */
     public static double log1p(double x) {
-<span class="fc" id="L88">        double y = 1 + x, z = y - 1;</span>
+<span class="fc" id="L89">        double y = 1 + x;</span>
+<span class="fc" id="L90">        double z = y - 1;</span>
         //Here's the explanation for this magic: y = 1 + z, exactly, and z approx x, thus log(y)/z
         //(which is nearly constant near z = 0) returns a good approximation to the true log(1 + x)/x.
         //The multiplication of x * (log(y)/z) introduces little additional error.
-<span class="fc bfc" id="L92" title="All 2 branches covered.">        return z == 0 ? x : x * Math.log(y) / z;</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        return z == 0 ? x : x * Math.log(y) / z;</span>
     }
 
     /**
@@ -101,9 +103,9 @@ public class GeoMath {
      * @return atanh(&lt;i&gt;x&lt;/i&gt;).
      */
     public static double atanh(double x) {
-<span class="fc" id="L104">        double y = Math.abs(x); //Enforce odd parity</span>
-<span class="fc" id="L105">        y = Math.log1p(2 * y / (1 - y)) / 2;</span>
-<span class="fc bfc" id="L106" title="All 2 branches covered.">        return x &lt; 0 ? -y : y;</span>
+<span class="fc" id="L106">        double y = Math.abs(x); //Enforce odd parity</span>
+<span class="fc" id="L107">        y = Math.log1p(2 * y / (1 - y)) / 2;</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">        return x &lt; 0 ? -y : y;</span>
     }
 
     /**
@@ -113,7 +115,7 @@ public class GeoMath {
      * @return value with the magnitude of &lt;i&gt;x&lt;/i&gt; and with the sign of &lt;i&gt;y&lt;/i&gt;.
      */
     public static double copysign(double x, double y) {
-<span class="fc bfc" id="L116" title="All 6 branches covered.">        return Math.abs(x) * (y &lt; 0 || (y == 0 &amp;&amp; 1 / y &lt; 0) ? -1 : 1);</span>
+<span class="fc bfc" id="L118" title="All 4 branches covered.">        return Math.abs(x) * (y &lt; 0 || y == 0 ? -1 : 1);</span>
     }
 
     /**
@@ -122,8 +124,8 @@ public class GeoMath {
      * @return the real cube root of &lt;i&gt;x&lt;/i&gt;.
      */
     public static double cbrt(double x) {
-<span class="fc" id="L125">        double y = Math.pow(Math.abs(x), 1/3.0); //Return the real cube root</span>
-<span class="pc bpc" id="L126" title="1 of 2 branches missed.">        return x &lt; 0 ? -y : y;</span>
+<span class="fc" id="L127">        double y = Math.pow(Math.abs(x), 1/3.0); //Return the real cube root</span>
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">        return x &lt; 0 ? -y : y;</span>
     }
 
     /**
@@ -131,10 +133,16 @@ public class GeoMath {
      * @param sinx sinus of x.
      * @param cosx cosinus of x.
      * @return normalized values.
+     * @throws IllegalArgumentException if provided sinus and cosinus values have zero
+     * norm.
      */
-    public static Pair norm(double sinx, double cosx) {
-<span class="fc" id="L136">        double r = hypot(sinx, cosx);</span>
-<span class="fc" id="L137">        return new Pair(sinx/r, cosx/r);</span>
+    public static Pair norm(double sinx, double cosx) throws IllegalArgumentException {
+<span class="fc" id="L140">        double r = hypot(sinx, cosx);</span>
+<span class="fc bfc" id="L141" title="All 2 branches covered.">        if (r == 0.0) {</span>
+<span class="fc" id="L142">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L145">        return new Pair(sinx / r, cosx / r);</span>
     }
 
     /**
@@ -146,14 +154,14 @@ public class GeoMath {
      * &lt;i&gt;v&lt;/i&gt;) and &lt;i&gt;t&lt;/i&gt; = &lt;i&gt;u&lt;/i&gt; + &lt;i&gt;v&lt;/i&gt; - &lt;i&gt;s&lt;/i&gt;.
      */
     public static Pair sum(double u, double v) {
-<span class="fc" id="L149">        double s = u + v;</span>
-<span class="fc" id="L150">        double up = s - v;</span>
-<span class="fc" id="L151">        double vpp = s - up;</span>
-<span class="fc" id="L152">        up -= u;</span>
-<span class="fc" id="L153">        vpp -= v;</span>
-<span class="fc" id="L154">        double t = -(up + vpp);</span>
+<span class="fc" id="L157">        double s = u + v;</span>
+<span class="fc" id="L158">        double up = s - v;</span>
+<span class="fc" id="L159">        double vpp = s - up;</span>
+<span class="fc" id="L160">        up -= u;</span>
+<span class="fc" id="L161">        vpp -= v;</span>
+<span class="fc" id="L162">        double t = -(up + vpp);</span>
         //u + v = s + t = round(u + v) + t
-<span class="fc" id="L156">        return new Pair(s, t);</span>
+<span class="fc" id="L164">        return new Pair(s, t);</span>
     }
 
     /**
@@ -173,9 +181,9 @@ public class GeoMath {
      * @return the value of the polynomial.
      */
     public static double polyval(int n, double[] p, int s, double x) {
-<span class="pc bpc" id="L176" title="1 of 2 branches missed.">        double y = n &lt; 0 ? 0 : p[s++];</span>
-<span class="fc bfc" id="L177" title="All 2 branches covered.">        while (--n &gt;= 0) y = y * x + p[s++];</span>
-<span class="fc" id="L178">        return y;</span>
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">        double y = n &lt; 0 ? 0 : p[s++];</span>
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        while (--n &gt;= 0) y = y * x + p[s++];</span>
+<span class="fc" id="L186">        return y;</span>
     }
 
     /**
@@ -187,15 +195,15 @@ public class GeoMath {
      * @return rounded value.
      */
     public static double angRound(double x) {
-<span class="fc" id="L190">        final double z = 1/16.0;</span>
-<span class="fc bfc" id="L191" title="All 2 branches covered.">        if (x == 0) {</span>
-<span class="fc" id="L192">            return 0;</span>
+<span class="fc" id="L198">        final double z = 1/16.0;</span>
+<span class="fc bfc" id="L199" title="All 2 branches covered.">        if (x == 0) {</span>
+<span class="fc" id="L200">            return 0;</span>
         }
 
-<span class="fc" id="L195">        double y = Math.abs(x);</span>
+<span class="fc" id="L203">        double y = Math.abs(x);</span>
         //The compiler mustn't &quot;simplify&quot; z - (z - y) to y
-<span class="fc bfc" id="L197" title="All 2 branches covered.">        y = y &lt; z ? z - (z - y) : y;</span>
-<span class="fc bfc" id="L198" title="All 2 branches covered.">        return x &lt; 0 ? -y : y;</span>
+<span class="fc bfc" id="L205" title="All 2 branches covered.">        y = y &lt; z ? z - (z - y) : y;</span>
+<span class="fc bfc" id="L206" title="All 2 branches covered.">        return x &lt; 0 ? -y : y;</span>
     }
 
     /**
@@ -205,8 +213,12 @@ public class GeoMath {
      * @return the angle reduced to the range [&amp;minus;180&amp;deg;, 180&amp;deg;).
      */
     public static double angNormalize(double x) {
-<span class="fc" id="L208">        x = x % 360.0;</span>
-<span class="fc bfc" id="L209" title="All 4 branches covered.">        return x &lt;= -180 ? x + 360 : (x &lt;= 180 ? x : x - 360);</span>
+<span class="fc" id="L216">        x = x % 360.0;</span>
+<span class="fc bfc" id="L217" title="All 2 branches covered.">        if (x &lt;= -180 ) {</span>
+<span class="fc" id="L218">            return x + 360;</span>
+        } else {
+<span class="fc bfc" id="L220" title="All 2 branches covered.">            return x &lt;= 180 ? x : x - 360;</span>
+        }
     }
 
     /**
@@ -215,7 +227,7 @@ public class GeoMath {
      * @return x if it is in the range [&amp;minus;90&amp;deg;, 90&amp;deg;], otherwise return NaN.
      */
     public static double latFix(double x) {
-<span class="fc bfc" id="L218" title="All 2 branches covered.">        return Math.abs(x) &gt; 90 ? Double.NaN : x;</span>
+<span class="fc bfc" id="L230" title="All 2 branches covered.">        return Math.abs(x) &gt; 90 ? Double.NaN : x;</span>
     }
 
     /**
@@ -228,14 +240,15 @@ public class GeoMath {
      * @return Pair(&lt;i&gt;d&lt;/i&gt;, &lt;i&gt;e&lt;/i&gt;) with &lt;i&gt;d&lt;/i&gt; being the rounded difference and &lt;i&gt;e&lt;/i&gt; being the error.
      */
     public static Pair angDiff(double x, double y) {
-        double d, t;
+        double d;
+        double t;
 
         //noinspection all
-<span class="fc" id="L234">        Pair r = sum(angNormalize(-x), angNormalize(y));</span>
-<span class="fc" id="L235">        d = angNormalize(r.first);</span>
-<span class="fc" id="L236">        t = r.second;</span>
+<span class="fc" id="L247">        Pair r = sum(angNormalize(-x), angNormalize(y));</span>
+<span class="fc" id="L248">        d = angNormalize(r.first);</span>
+<span class="fc" id="L249">        t = r.second;</span>
 
-<span class="fc bfc" id="L238" title="All 4 branches covered.">        return sum(d == 180 &amp;&amp; t &gt; 0 ? -180 : d, t);</span>
+<span class="fc bfc" id="L251" title="All 4 branches covered.">        return sum(d == 180 &amp;&amp; t &gt; 0 ? -180 : d, t);</span>
     }
 
     /**
@@ -250,37 +263,39 @@ public class GeoMath {
         // before converting it to radians.
         double r;
         int q;
-<span class="fc" id="L253">        r = x % 360.0;</span>
-<span class="fc" id="L254">        q = (int)Math.floor(r / 90 + 0.5);</span>
-<span class="fc" id="L255">        r -= 90 * q;</span>
+<span class="fc" id="L266">        r = x % 360.0;</span>
+<span class="fc" id="L267">        q = (int)Math.floor(r / 90 + 0.5);</span>
+<span class="fc" id="L268">        r -= 90 * q;</span>
         //now abs(r) &lt;= 45
-<span class="fc" id="L257">        r = Math.toRadians(r);</span>
+<span class="fc" id="L270">        r = Math.toRadians(r);</span>
         //Possibly could call the gnu extension sincos
-<span class="fc" id="L259">        double s = Math.sin(r), c = Math.cos(r);</span>
-        double sinx, cosx;
-<span class="fc bfc" id="L261" title="All 4 branches covered.">        switch (q &amp; 3) {</span>
+<span class="fc" id="L272">        double s = Math.sin(r);</span>
+<span class="fc" id="L273">        double c = Math.cos(r);</span>
+        double sinx;
+        double cosx;
+<span class="fc bfc" id="L276" title="All 4 branches covered.">        switch (q &amp; 3) {</span>
             case 0:
-<span class="fc" id="L263">                sinx = s;</span>
-<span class="fc" id="L264">                cosx = c;</span>
-<span class="fc" id="L265">                break;</span>
+<span class="fc" id="L278">                sinx = s;</span>
+<span class="fc" id="L279">                cosx = c;</span>
+<span class="fc" id="L280">                break;</span>
             case 1:
-<span class="fc" id="L267">                sinx = c;</span>
-<span class="fc" id="L268">                cosx = -s;</span>
-<span class="fc" id="L269">                break;</span>
+<span class="fc" id="L282">                sinx = c;</span>
+<span class="fc" id="L283">                cosx = -s;</span>
+<span class="fc" id="L284">                break;</span>
             case 2:
-<span class="fc" id="L271">                sinx = -s;</span>
-<span class="fc" id="L272">                cosx = -c;</span>
-<span class="fc" id="L273">                break;</span>
+<span class="fc" id="L286">                sinx = -s;</span>
+<span class="fc" id="L287">                cosx = -c;</span>
+<span class="fc" id="L288">                break;</span>
             default:
                 //case 3
-<span class="fc" id="L276">                sinx = -c;</span>
-<span class="fc" id="L277">                cosx = s;</span>
+<span class="fc" id="L291">                sinx = -c;</span>
+<span class="fc" id="L292">                cosx = s;</span>
         }
-<span class="fc bfc" id="L279" title="All 2 branches covered.">        if (x != 0) {</span>
-<span class="fc" id="L280">            sinx += 0.0;</span>
-<span class="fc" id="L281">            cosx += 0.0;</span>
+<span class="fc bfc" id="L294" title="All 2 branches covered.">        if (x != 0) {</span>
+<span class="fc" id="L295">            sinx += 0.0;</span>
+<span class="fc" id="L296">            cosx += 0.0;</span>
         }
-<span class="fc" id="L283">        return new Pair(sinx, cosx);</span>
+<span class="fc" id="L298">        return new Pair(sinx, cosx);</span>
     }
 
     /**
@@ -295,36 +310,38 @@ public class GeoMath {
     public static double atan2d(double y, double x) {
         //In order to minimize round-off errors, this function rearranges the arguments so that result of atan2 is in
         // the range [-pi/4, pi/4] before converting it to degrees and mapping the result to the correct quadrant.
-<span class="fc" id="L298">        int q = 0;</span>
-<span class="fc bfc" id="L299" title="All 2 branches covered.">        if (Math.abs(y) &gt; Math.abs(x)) {</span>
+<span class="fc" id="L313">        int q = 0;</span>
+<span class="fc bfc" id="L314" title="All 2 branches covered.">        if (Math.abs(y) &gt; Math.abs(x)) {</span>
             double t;
-<span class="fc" id="L301">            t = x;</span>
+<span class="fc" id="L316">            t = x;</span>
             //noinspection all
-<span class="fc" id="L303">            x = y;</span>
-<span class="fc" id="L304">            y = t;</span>
-<span class="fc" id="L305">            q = 2;</span>
+<span class="fc" id="L318">            x = y;</span>
+<span class="fc" id="L319">            y = t;</span>
+<span class="fc" id="L320">            q = 2;</span>
         }
-<span class="fc bfc" id="L307" title="All 2 branches covered.">        if (x &lt; 0) {</span>
-<span class="fc" id="L308">            x = -x;</span>
-<span class="fc" id="L309">            ++q;</span>
+<span class="fc bfc" id="L322" title="All 2 branches covered.">        if (x &lt; 0) {</span>
+<span class="fc" id="L323">            x = -x;</span>
+<span class="fc" id="L324">            ++q;</span>
         }
         //here x &gt;= 0 and x &gt;= abs(y), so angle is in [-pi/4, pi/4]
-<span class="fc" id="L312">        double ang = Math.toDegrees(Math.atan2(y, x));</span>
-<span class="fc bfc" id="L313" title="All 4 branches covered.">        switch (q) {</span>
+<span class="fc" id="L327">        double ang = Math.toDegrees(Math.atan2(y, x));</span>
+<span class="fc bfc" id="L328" title="All 4 branches covered.">        switch (q) {</span>
             //Note that atan2d(-0.0, 1.0) will return -0. However, we expect that atan2d will not be called with y = -0.
-            //If need be, include case 0: ang = 0 + ang; break;
+            //If need be, include case 0: ang = 0 + ang; break
             //and handle mpfr as in angRound.
             case 1:
-<span class="fc bfc" id="L318" title="All 2 branches covered.">                ang = (y &gt;= 0 ? 180 : -180) - ang;</span>
-<span class="fc" id="L319">                break;</span>
+<span class="fc bfc" id="L333" title="All 2 branches covered.">                ang = (y &gt;= 0 ? 180 : -180) - ang;</span>
+<span class="fc" id="L334">                break;</span>
             case 2:
-<span class="fc" id="L321">                ang = 90 - ang;</span>
-<span class="fc" id="L322">                break;</span>
+<span class="fc" id="L336">                ang = 90 - ang;</span>
+<span class="fc" id="L337">                break;</span>
             case 3:
-<span class="fc" id="L324">                ang = -90 + ang;</span>
+<span class="fc" id="L339">                ang = -90 + ang;</span>
+<span class="fc" id="L340">                break;</span>
+            default:
                 break;
         }
-<span class="fc" id="L327">        return ang;</span>
+<span class="fc" id="L344">        return ang;</span>
     }
 
     /**
@@ -333,7 +350,7 @@ public class GeoMath {
      * @return true if number is finite, false if NaN or infinite.
      */
     public static boolean isFinite(double x) {
-<span class="fc bfc" id="L336" title="All 2 branches covered.">        return Math.abs(x) &lt;= Double.MAX_VALUE;</span>
+<span class="fc bfc" id="L353" title="All 2 branches covered.">        return Math.abs(x) &lt;= Double.MAX_VALUE;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

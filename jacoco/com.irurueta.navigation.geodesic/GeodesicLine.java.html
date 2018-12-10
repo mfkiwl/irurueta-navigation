@@ -338,15 +338,15 @@ public class GeodesicLine {
 <span class="nc" id="L338">            return r;</span>
         }
 
-<span class="fc" id="L341">        r.lat1 = mLat1;</span>
-<span class="fc" id="L342">        r.azi1 = mAzi1;</span>
-<span class="fc bfc" id="L343" title="All 2 branches covered.">        r.lon1 = ((outmask &amp; GeodesicMask.LONG_UNROLL) != 0) ? mLon1 : GeoMath.angNormalize(mLon1);</span>
+<span class="fc" id="L341">        r.setLat1(mLat1);</span>
+<span class="fc" id="L342">        r.setAzi1(mAzi1);</span>
+<span class="fc bfc" id="L343" title="All 2 branches covered.">        r.setLon1(((outmask &amp; GeodesicMask.LONG_UNROLL) != 0) ? mLon1 : GeoMath.angNormalize(mLon1));</span>
 
         //avoid warning about uninitialized b12
 <span class="fc" id="L346">        double sig12, ssig12, csig12, b12 = 0, ab1 = 0;</span>
 <span class="fc bfc" id="L347" title="All 2 branches covered.">        if (arcmode) {</span>
             //interpret s12A12 as spherical arc length
-<span class="fc" id="L349">            r.a12 = s12A12;</span>
+<span class="fc" id="L349">            r.setA12(s12A12);</span>
 <span class="fc" id="L350">            sig12 = Math.toRadians(s12A12);</span>
             {
 <span class="fc" id="L352">                Pair p = GeoMath.sincosd(s12A12);</span>
@@ -355,7 +355,7 @@ public class GeodesicLine {
 <span class="fc" id="L355">            }</span>
         } else {
             //interpret s12A12 as distance
-<span class="fc" id="L358">            r.s12 = s12A12;</span>
+<span class="fc" id="L358">            r.setS12(s12A12);</span>
 
 <span class="fc" id="L360">            double tau12 = s12A12 / (mB * (1 + mA1m1)),</span>
 <span class="fc" id="L361">                    s = Math.sin(tau12),</span>
@@ -400,7 +400,7 @@ public class GeodesicLine {
 <span class="fc" id="L400">                csig12 = Math.cos(sig12);</span>
                 //update b12 below
             }
-<span class="fc" id="L403">            r.a12 = Math.toDegrees(sig12);</span>
+<span class="fc" id="L403">            r.setA12(Math.toDegrees(sig12));</span>
         }
 
         double ssig2, csig2, sbet2, cbet2, salp2, calp2;
@@ -432,7 +432,7 @@ public class GeodesicLine {
 <span class="fc" id="L432">        calp2 = mCalp0 * csig2;</span>
 
 <span class="fc bfc" id="L434" title="All 4 branches covered.">        if ((outmask &amp; GeodesicMask.DISTANCE) != 0 &amp;&amp; arcmode) {</span>
-<span class="fc" id="L435">            r.s12 = mB * ((1 + mA1m1) * sig12 + ab1);</span>
+<span class="fc" id="L435">            r.setS12(mB * ((1 + mA1m1) * sig12 + ab1));</span>
         }
 
 <span class="fc bfc" id="L438" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.LONGITUDE) != 0) {</span>
@@ -454,16 +454,16 @@ public class GeodesicLine {
 <span class="fc" id="L454">            double lam12 = omg12 + mA3c * (sig12 +</span>
 <span class="fc" id="L455">                    (Geodesic.sinCosSeries(true, ssig2, csig2, mC3a) - mB31));</span>
 <span class="fc" id="L456">            double lon12 = Math.toDegrees(lam12);</span>
-<span class="fc bfc" id="L457" title="All 2 branches covered.">            r.lon2 = ((outmask &amp; GeodesicMask.LONG_UNROLL) != 0) ? mLon1 + lon12 :</span>
-<span class="fc" id="L458">                    GeoMath.angNormalize(r.lon1 + GeoMath.angNormalize(lon12));</span>
+<span class="fc bfc" id="L457" title="All 2 branches covered.">            r.setLon2(((outmask &amp; GeodesicMask.LONG_UNROLL) != 0) ? mLon1 + lon12 :</span>
+<span class="fc" id="L458">                    GeoMath.angNormalize(r.getLon1() + GeoMath.angNormalize(lon12)));</span>
         }
 
 <span class="fc bfc" id="L461" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.LATITUDE) != 0) {</span>
-<span class="fc" id="L462">            r.lat2 = GeoMath.atan2d(sbet2, mF1 * cbet2);</span>
+<span class="fc" id="L462">            r.setLat2(GeoMath.atan2d(sbet2, mF1 * cbet2));</span>
         }
 
 <span class="fc bfc" id="L465" title="All 2 branches covered.">        if ((outmask &amp; GeodesicMask.AZIMUTH) != 0) {</span>
-<span class="fc" id="L466">            r.azi2 = GeoMath.atan2d(salp2, calp2);</span>
+<span class="fc" id="L466">            r.setAzi2(GeoMath.atan2d(salp2, calp2));</span>
         }
 
 <span class="fc bfc" id="L469" title="All 2 branches covered.">        if ((outmask &amp; (GeodesicMask.REDUCED_LENGTH | GeodesicMask.GEODESIC_SCALE)) != 0) {</span>
@@ -473,13 +473,13 @@ public class GeodesicLine {
 <span class="pc bpc" id="L473" title="1 of 2 branches missed.">            if ((outmask &amp; GeodesicMask.REDUCED_LENGTH) != 0) {</span>
                 //add parens around (mCsig1 * ssig2) and (mSsig1 * csig2) to ensure
                 //accurate cancellation in the case of coincident points
-<span class="fc" id="L476">                r.m12 = mB * ((dn2 * (mCsig1 * ssig2) - mDn1 * (mSsig1 * csig2)) -</span>
-                        mCsig1 * csig2 * j12);
+<span class="fc" id="L476">                r.setM12(mB * ((dn2 * (mCsig1 * ssig2) - mDn1 * (mSsig1 * csig2)) -</span>
+                        mCsig1 * csig2 * j12));
             }
 <span class="pc bpc" id="L479" title="1 of 2 branches missed.">            if ((outmask &amp; GeodesicMask.GEODESIC_SCALE) != 0) {</span>
 <span class="fc" id="L480">                double t = mK2 * (ssig2 - mSsig1) * (ssig2 + mSsig1) / (mDn1 + dn2);</span>
-<span class="fc" id="L481">                r.M12 = csig12 + (t * ssig2 - csig2 * j12) * mSsig1 / mDn1;</span>
-<span class="fc" id="L482">                r.M21 = csig12 - (t * mSsig1 - mCsig1 * j12) * ssig2 / dn2;</span>
+<span class="fc" id="L481">                r.setScaleM12(csig12 + (t * ssig2 - csig2 * j12) * mSsig1 / mDn1);</span>
+<span class="fc" id="L482">                r.setScaleM21(csig12 - (t * mSsig1 - mCsig1 * j12) * ssig2 / dn2);</span>
             }
         }
 
@@ -504,7 +504,7 @@ public class GeodesicLine {
 <span class="fc" id="L504">                        ssig12 * (mCsig1 * ssig12 / (1 + csig12) + mSsig1));</span>
 <span class="fc" id="L505">                calp12 = GeoMath.sq(mSalp0) + GeoMath.sq(mCalp0) * mCsig1 * csig2;</span>
             }
-<span class="fc" id="L507">            r.S12 = mC2 * Math.atan2(salp12, calp12) + mA4 * (b42 - mB41);</span>
+<span class="fc" id="L507">            r.setAreaS12(mC2 * Math.atan2(salp12, calp12) + mA4 * (b42 - mB41));</span>
         }
 
 <span class="fc" id="L510">        return r;</span>
@@ -519,7 +519,7 @@ public class GeodesicLine {
     public void setDistance(double s13) {
 <span class="fc" id="L520">        mS13 = s13;</span>
 <span class="fc" id="L521">        GeodesicData g = position(false, mS13, 0);</span>
-<span class="fc" id="L522">        mA13 = g.a12;</span>
+<span class="fc" id="L522">        mA13 = g.getA12();</span>
 <span class="fc" id="L523">    }</span>
 
     /**
@@ -673,7 +673,7 @@ public class GeodesicLine {
     void setArc(double a13) {
 <span class="fc" id="L674">        mA13 = a13;</span>
 <span class="fc" id="L675">        GeodesicData g = position(true, mA13, GeodesicMask.DISTANCE);</span>
-<span class="fc" id="L676">        mS13 = g.s12;</span>
+<span class="fc" id="L676">        mS13 = g.getS12();</span>
 <span class="fc" id="L677">    }</span>
 
     /**

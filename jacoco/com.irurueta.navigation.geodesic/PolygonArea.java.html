@@ -129,9 +129,9 @@ public class PolygonArea {
 <span class="fc" id="L129">            mLon0 = mLon1 = lon;</span>
         } else {
 <span class="fc" id="L131">            GeodesicData g = mEarth.inverse(mLat1, mLon1, lat, lon, mMask);</span>
-<span class="fc" id="L132">            mPerimetersum.add(g.s12);</span>
+<span class="fc" id="L132">            mPerimetersum.add(g.getS12());</span>
 <span class="fc bfc" id="L133" title="All 2 branches covered.">            if (!mPolyline) {</span>
-<span class="fc" id="L134">                mAreasum.add(g.S12);</span>
+<span class="fc" id="L134">                mAreasum.add(g.getAreaS12());</span>
 <span class="fc" id="L135">                mCrossings += transit(mLon1, lon);</span>
             }
 <span class="fc" id="L137">            mLat1 = lat;</span>
@@ -151,13 +151,13 @@ public class PolygonArea {
         //do nothing if mNum is zero
 <span class="pc bpc" id="L152" title="1 of 2 branches missed.">        if (mNum &gt; 0) {</span>
 <span class="fc" id="L153">            GeodesicData g = mEarth.direct(mLat1, mLon1, azi, s, mMask);</span>
-<span class="fc" id="L154">            mPerimetersum.add(g.s12);</span>
+<span class="fc" id="L154">            mPerimetersum.add(g.getS12());</span>
 <span class="fc bfc" id="L155" title="All 2 branches covered.">            if (!mPolyline) {</span>
-<span class="fc" id="L156">                mAreasum.add(g.S12);</span>
-<span class="fc" id="L157">                mCrossings += transitDirect(mLon1, g.lon2);</span>
+<span class="fc" id="L156">                mAreasum.add(g.getAreaS12());</span>
+<span class="fc" id="L157">                mCrossings += transitDirect(mLon1, g.getLon2());</span>
             }
-<span class="fc" id="L159">            mLat1 = g.lat2;</span>
-<span class="fc" id="L160">            mLon1 = g.lon2;</span>
+<span class="fc" id="L159">            mLat1 = g.getLat2();</span>
+<span class="fc" id="L160">            mLon1 = g.getLon2();</span>
 <span class="fc" id="L161">            ++mNum;</span>
         }
 <span class="fc" id="L163">    }</span>
@@ -198,7 +198,7 @@ public class PolygonArea {
 
 <span class="fc" id="L199">        GeodesicData g = mEarth.inverse(mLat1, mLon1, mLat0, mLon0, mMask);</span>
 <span class="fc" id="L200">        Accumulator tempsum = new Accumulator(mAreasum);</span>
-<span class="fc" id="L201">        tempsum.add(g.S12);</span>
+<span class="fc" id="L201">        tempsum.add(g.getAreaS12());</span>
 <span class="fc" id="L202">        int crossings = mCrossings + transit(mLon1, mLon0);</span>
 <span class="fc bfc" id="L203" title="All 2 branches covered.">        if ((crossings &amp; 1) != 0) {</span>
 <span class="fc bfc" id="L204" title="All 2 branches covered.">            tempsum.add((tempsum.getSum() &lt; 0 ? 1 : -1) * mArea0 / 2);</span>
@@ -223,7 +223,7 @@ public class PolygonArea {
 <span class="fc" id="L223">                tempsum.add(+mArea0);</span>
             }
         }
-<span class="fc" id="L226">        return new PolygonResult(mNum, mPerimetersum.sum(g.s12), 0 + tempsum.getSum());</span>
+<span class="fc" id="L226">        return new PolygonResult(mNum, mPerimetersum.sum(g.getS12()), 0 + tempsum.getSum());</span>
     }
 
     /**
@@ -259,9 +259,9 @@ public class PolygonArea {
 <span class="fc bfc" id="L259" title="All 2 branches covered.">                    i == 0 ? mLon1 : lon,</span>
 <span class="fc bfc" id="L260" title="All 2 branches covered.">                    i != 0 ? mLat0 : lat,</span>
 <span class="fc bfc" id="L261" title="All 2 branches covered.">                    i != 0 ? mLon0 : lon, mMask);</span>
-<span class="fc" id="L262">            perimeter += g.s12;</span>
+<span class="fc" id="L262">            perimeter += g.getS12();</span>
 <span class="fc bfc" id="L263" title="All 2 branches covered.">            if (!mPolyline) {</span>
-<span class="fc" id="L264">                tempsum += g.S12;</span>
+<span class="fc" id="L264">                tempsum += g.getAreaS12();</span>
 <span class="fc bfc" id="L265" title="All 4 branches covered.">                crossings += transit(i == 0 ? mLon1 : lon, i != 0 ? mLon0 : lon);</span>
             }
         }
@@ -329,12 +329,12 @@ public class PolygonArea {
 <span class="fc" id="L329">        int crossings = mCrossings;</span>
 
 <span class="fc" id="L331">        GeodesicData g = mEarth.direct(mLat1, mLon1, azi, false, s, mMask);</span>
-<span class="fc" id="L332">        tempsum += g.S12;</span>
-<span class="fc" id="L333">        crossings += transitDirect(mLon1, g.lon2);</span>
-<span class="fc" id="L334">        g = mEarth.inverse(g.lat2, g.lon2, mLat0, mLon0, mMask);</span>
-<span class="fc" id="L335">        perimeter += g.s12;</span>
-<span class="fc" id="L336">        tempsum += g.S12;</span>
-<span class="fc" id="L337">        crossings += transit(g.lon2, mLon0);</span>
+<span class="fc" id="L332">        tempsum += g.getAreaS12();</span>
+<span class="fc" id="L333">        crossings += transitDirect(mLon1, g.getLon2());</span>
+<span class="fc" id="L334">        g = mEarth.inverse(g.getLat2(), g.getLon2(), mLat0, mLon0, mMask);</span>
+<span class="fc" id="L335">        perimeter += g.getS12();</span>
+<span class="fc" id="L336">        tempsum += g.getAreaS12();</span>
+<span class="fc" id="L337">        crossings += transit(g.getLon2(), mLon0);</span>
 
 <span class="pc bpc" id="L339" title="1 of 2 branches missed.">        if ((crossings &amp; 1) != 0) {</span>
 <span class="nc bnc" id="L340" title="All 2 branches missed.">            tempsum += (tempsum &lt; 0 ? 1 : -1) * mArea0/2;</span>
