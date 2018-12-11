@@ -399,199 +399,6 @@ com.irurueta:irurueta-navigation
 <th>File</th>
 <th>Line</th></tr>
 <tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L820">820</a></td></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L820">820</a></td></tr>
-<tr class="b"><td colspan='2'>
-<div>
-<pre>            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
-            throws IllegalArgumentException {
-        super(readings, initialPosition, initialTransmittedPowerdBm,
-                initialPathLossExponent, listener);
-        internalSetQualityScores(qualityScores);
-    }
-
-    /**
-     * Gets threshold to determine whether samples are inliers or not when testing possible solutions.
-     * The threshold refers to the amount of error on distance between estimated position and distances
-     * provided for each sample.
-     * @return threshold to determine whether samples are inliers or not.
-     */
-    public double getThreshold() {
-        return mThreshold;
-    }
-
-    /**
-     * Sets threshold to determine whether samples are inliers or not when testing possible solutions.
-     * The threshold refers to the amount of error on distance between estimated position and distances
-     * provided for each sample.
-     * @param threshold threshold to determine whether samples are inliers or not.
-     * @throws IllegalArgumentException if provided value is equal or less than zero.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setThreshold(double threshold)
-            throws IllegalArgumentException, LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        if (threshold &lt;= MIN_THRESHOLD) {
-            throw new IllegalArgumentException();
-        }
-        mThreshold = threshold;
-    }
-
-    /**
-     * Returns quality scores corresponding to each pair of
-     * positions and distances (i.e. sample).
-     * The larger the score value the better the quality of the sample.
-     * This implementation always returns null.
-     * Subclasses using quality scores must implement proper behavior.
-     * @return quality scores corresponding to each sample.
-     */
-    @Override
-    public double[] getQualityScores() {
-        return mQualityScores;
-    }
-
-    /**
-     * Sets quality scores corresponding to each pair of positions and
-     * distances (i.e. sample).
-     * The larger the score value the better the quality of the sample.
-     * This implementation makes no action.
-     * Subclasses using quality scores must implement proper behaviour.
-     * @param qualityScores quality scores corresponding to each pair of
-     *                      matched points.
-     * @throws IllegalArgumentException if provided quality scores length
-     * is smaller than minimum required samples.
-     * @throws LockedException if robust solver is locked because an
-     * estimation is already in progress.
-     */
-    public void setQualityScores(double[] qualityScores)
-            throws IllegalArgumentException, LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        internalSetQualityScores(qualityScores);
-    }
-
-    /**
-     * Indicates whether solver is ready to find a solution.
-     * @return true if solver is ready, false otherwise.
-     */
-    @Override
-    public boolean isReady() {
-        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
-                mQualityScores.length == mReadings.size();
-    }
-
-    /**
-     * Indicates whether inliers must be computed and kept.
-     * @return true if inliers must be computed and kept, false if inliers
-     * only need to be computed but not kept.
-     */
-    public boolean isComputeAndKeepInliersEnabled() {
-        return mComputeAndKeepInliers;
-    }
-
-    /**
-     * Specifies whether inliers must be computed and kept.
-     * @param computeAndKeepInliers true if inliers must be computed and kept,
-     *                              false if inliers only need to be computed but not kept.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
-            throws LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        mComputeAndKeepInliers = computeAndKeepInliers;
-    }
-
-    /**
-     * Indicates whether residuals must be computed and kept.
-     * @return true if residuals must be computed and kept, false if residuals
-     * only need to be computed but not kept.
-     */
-    public boolean isComputeAndKeepResidualsEnabled() {
-        return mComputeAndKeepResiduals;
-    }
-
-    /**
-     * Specifies whether residuals must be computed and kept.
-     * @param computeAndKeepResiduals true if residuals must be computed and kept,
-     *                                false if residuals only need to be computed but not kept.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
-            throws LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        mComputeAndKeepResiduals = computeAndKeepResiduals;
-    }
-
-    /**
-     * Robustly estimates position, transmitted power and pathloss exponent for a
-     * radio source.
-     * @throws LockedException if instance is busy during estimation.
-     * @throws NotReadyException if estimator is not ready.
-     * @throws RobustEstimatorException if estimation fails for any reason
-     * (i.e. numerical instability, no solution available, etc).
-     */
-    @Override
-    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        if (!isReady()) {
-            throw new NotReadyException();
-        }
-
-        PROSACRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =
-                new PROSACRobustEstimator&lt;&gt;(
-                        new PROSACRobustEstimatorListener&lt;Solution&lt;Point2D&gt;&gt;() {
-
-                    @Override
-                    public double[] getQualityScores() {
-                        return mQualityScores;
-                    }
-
-                    @Override
-                    public double getThreshold() {
-                        return mThreshold;
-                    }
-
-                    @Override
-                    public int getTotalSamples() {
-                        return mReadings.size();
-                    }
-
-                    @Override
-                    public int getSubsetSize() {
-                        return getMinReadings();
-                    }
-
-                    @Override
-                    public void estimatePreliminarSolutions(int[] samplesIndices,
-                            List&lt;Solution&lt;Point2D&gt;&gt; solutions) {
-                        solvePreliminarSolutions(samplesIndices, solutions);
-                    }
-
-                    @Override
-                    public double computeResidual(Solution&lt;Point2D&gt; currentEstimation, int i) {
-                        return residual(currentEstimation, i);
-                    }
-
-                    @Override
-                    public boolean isReady() {
-                        return PROSACRobustRangingAndRssiRadioSourceEstimator2D.this.isReady();</pre></div></td></tr></table>
-<table border="0" class="bodyTable">
-<tr class="a">
-<th>File</th>
-<th>Line</th></tr>
-<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.html#L820">820</a></td></tr>
 <tr class="a">
@@ -1083,16 +890,15 @@ com.irurueta:irurueta-navigation
 <th>Line</th></tr>
 <tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L823">823</a></td></tr>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L794">794</a></td></tr>
 <tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.html#L318">318</a></td></tr>
-<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L823">823</a></td></tr>
-<tr class="a"><td colspan='2'>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L799">799</a></td></tr>
+<tr class="b"><td colspan='2'>
 <div>
-<pre>                initialPathLossExponent, listener);
+<pre>            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+        super(readings, initialPosition, initialTransmittedPowerdBm,
+                initialPathLossExponent, listener);
         internalSetQualityScores(qualityScores);
     }
 
@@ -1114,8 +920,7 @@ com.irurueta:irurueta-navigation
      * @throws IllegalArgumentException if provided value is equal or less than zero.
      * @throws LockedException if this solver is locked.
      */
-    public void setThreshold(double threshold)
-            throws IllegalArgumentException, LockedException {
+    public void setThreshold(double threshold) throws LockedException {
         if (isLocked()) {
             throw new LockedException();
         }
@@ -1151,8 +956,7 @@ com.irurueta:irurueta-navigation
      * @throws LockedException if robust solver is locked because an
      * estimation is already in progress.
      */
-    public void setQualityScores(double[] qualityScores)
-            throws IllegalArgumentException, LockedException {
+    public void setQualityScores(double[] qualityScores) throws LockedException {
         if (isLocked()) {
             throw new LockedException();
         }
@@ -1271,19 +1075,19 @@ com.irurueta:irurueta-navigation
                     public boolean isReady() {
                         return PROSACRobustRangingAndRssiRadioSourceEstimator2D.this.isReady();</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.html#L823">823</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.html#L318">318</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.html#L823">823</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                initialPathLossExponent, listener);
         internalSetQualityScores(qualityScores);
@@ -1464,16 +1268,16 @@ com.irurueta:irurueta-navigation
                             public boolean isReady() {
                                 return PROSACRobustRangingAndRssiRadioSourceEstimator3D.this.isReady();</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.html#L2798">2798</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator3D.html#L2797">2797</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        Point2D initialPosition = result.getEstimatedPosition();
         double initialTransmittedPowerdBm =
@@ -1582,16 +1386,16 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.html#L2794">2794</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.html#L2779">2779</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        Point2D initialPosition = result.getEstimatedPosition();
         double initialTransmittedPowerdBm =
@@ -1698,19 +1502,18 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.html#L813">813</a></td></tr>
 <tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L824">824</a></td></tr>
-<tr class="b"><td colspan='2'>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.html#L792">792</a></td></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L803">803</a></td></tr>
+<tr class="a"><td colspan='2'>
 <div>
-<pre>            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener)
-            throws IllegalArgumentException {
+<pre>            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
         super(readings, initialPosition, initialTransmittedPowerdBm,
                 initialPathLossExponent, listener);
         internalSetQualityScores(qualityScores);
@@ -1758,8 +1561,7 @@ com.irurueta:irurueta-navigation
      * @throws IllegalArgumentException if provided value is zero or negative.
      * @throws LockedException if this solver is locked.
      */
-    public void setStopThreshold(double stopThreshold)
-            throws IllegalArgumentException, LockedException {
+    public void setStopThreshold(double stopThreshold) throws LockedException {
         if (isLocked()) {
             throw new LockedException();
         }
@@ -1796,8 +1598,7 @@ com.irurueta:irurueta-navigation
      * @throws LockedException if robust solver is locked because an
      * estimation is already in progress.
      */
-    public void setQualityScores(double[] qualityScores)
-            throws IllegalArgumentException, LockedException {
+    public void setQualityScores(double[] qualityScores) throws LockedException {
         if (isLocked()) {
             throw new LockedException();
         }
@@ -1831,55 +1632,55 @@ com.irurueta:irurueta-navigation
             throw new NotReadyException();
         }
 
-        PROMedSRobustEstimator&lt;Solution&lt;Point3D&gt;&gt; innerEstimator =
+        PROMedSRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =
                 new PROMedSRobustEstimator&lt;&gt;(
-                        new PROMedSRobustEstimatorListener&lt;Solution&lt;Point3D&gt;&gt;() {
+                        new PROMedSRobustEstimatorListener&lt;Solution&lt;Point2D&gt;&gt;() {
 
-                            @Override
-                            public double[] getQualityScores() {
-                                return mQualityScores;
-                            }
+                    @Override
+                    public double[] getQualityScores() {
+                        return mQualityScores;
+                    }
 
-                            @Override
-                            public double getThreshold() {
-                                return mStopThreshold;
-                            }
+                    @Override
+                    public double getThreshold() {
+                        return mStopThreshold;
+                    }
 
-                            @Override
-                            public int getTotalSamples() {
-                                return mReadings.size();
-                            }
+                    @Override
+                    public int getTotalSamples() {
+                        return mReadings.size();
+                    }
 
-                            @Override
-                            public int getSubsetSize() {
-                                return getMinReadings();
-                            }
+                    @Override
+                    public int getSubsetSize() {
+                        return getMinReadings();
+                    }
 
-                            @Override
-                            public void estimatePreliminarSolutions(int[] samplesIndices,
-                                                                    List&lt;Solution&lt;Point3D&gt;&gt; solutions) {
-                                solvePreliminarSolutions(samplesIndices, solutions);
-                            }
+                    @Override
+                    public void estimatePreliminarSolutions(int[] samplesIndices,
+                            List&lt;Solution&lt;Point2D&gt;&gt; solutions) {
+                        solvePreliminarSolutions(samplesIndices, solutions);
+                    }
 
-                            @Override
-                            public double computeResidual(Solution&lt;Point3D&gt; currentEstimation, int i) {
-                                return residual(currentEstimation, i);
-                            }
+                    @Override
+                    public double computeResidual(Solution&lt;Point2D&gt; currentEstimation, int i) {
+                        return residual(currentEstimation, i);
+                    }
 
-                            @Override
-                            public boolean isReady() {
-                                return PROMedSRobustRangingAndRssiRadioSourceEstimator3D.this.isReady();</pre></div></td></tr></table>
+                    @Override
+                    public boolean isReady() {
+                        return PROMedSRobustRangingAndRssiRadioSourceEstimator2D.this.isReady();</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.html#L2686">2686</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.html#L2694">2694</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings = getReadings();
         if (readings == null || readings.isEmpty()) {
@@ -1957,178 +1758,6 @@ com.irurueta:irurueta-navigation
             mInnerEstimator.setTransmittedPowerEstimationEnabled(
                     mTransmittedPowerEstimationEnabled);
             mInnerEstimator.setPathLossEstimationEnabled(mPathLossEstimationEnabled);</pre></div></td></tr></table>
-<table border="0" class="bodyTable">
-<tr class="a">
-<th>File</th>
-<th>Line</th></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.html#L816">816</a></td></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L322">322</a></td></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L827">827</a></td></tr>
-<tr class="a"><td colspan='2'>
-<div>
-<pre>                initialPathLossExponent, listener);
-        internalSetQualityScores(qualityScores);
-    }
-
-    /**
-     * Returns threshold to be used to keep the algorithm iterating in case that
-     * best estimated threshold using median of residuals is not small enough.
-     * Once a solution is found that generates a threshold below this value, the
-     * algorithm will stop.
-     * The stop threshold can be used to prevent the LMedS algrithm to iterate
-     * too many times in cases where samples have a very similar accuracy.
-     * For instance, in cases where proportion of outliers is very small (close
-     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
-     * iterate for a long time trying to find the best solution when indeed
-     * there is no need to do that if a reasonable threshold has already been
-     * reached.
-     * Because of this behaviour the stop threshold can be set to a value much
-     * lower than the one typically used in RANSAC, and yet the algorithm could
-     * still produce even smaller thresholds in estimated results.
-     * @return stop threshold to stop the algorithm prematurely when a certain
-     * accuracy has been reached.
-     */
-    public double getStopThreshold() {
-        return mStopThreshold;
-    }
-
-    /**
-     * Sets threshold to be used to keep the algorithm iterating in case that
-     * best estimated threshold using median of residuals is not small enough.
-     * Once a solution is found that generates a threshold below this value,
-     * the algorithm will stop.
-     * The stop threshold can be used to prevent the LMedS algorithm to iterate
-     * too many times in cases where samples have a very similar accuracy.
-     * For instance, in cases where proportion of outliers is very small (close
-     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
-     * iterate for a long time trying to find the best solution when indeed
-     * there is no need to do that if a reasonable threshold has already been
-     * reached.
-     * Because of this behaviour the stop threshold can be set to a value much
-     * lower than the one typically used in RANSAC, and yet the algorithm could
-     * still produce even smaller thresholds in estimated results.
-     * @param stopThreshold stop threshold to stop the algorithm prematurely
-     *                      when a certain accuracy has been reached.
-     * @throws IllegalArgumentException if provided value is zero or negative.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setStopThreshold(double stopThreshold)
-            throws IllegalArgumentException, LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        if (stopThreshold &lt;= MIN_STOP_THRESHOLD) {
-            throw new IllegalArgumentException();
-        }
-
-        mStopThreshold = stopThreshold;
-    }
-
-    /**
-     * Returns quality scores corresponding to each pair of
-     * positions and distances (i.e. sample).
-     * The larger the score value the better the quality of the sample.
-     * This implementation always returns null.
-     * Subclasses using quality scores must implement proper behavior.
-     * @return quality scores corresponding to each sample.
-     */
-    @Override
-    public double[] getQualityScores() {
-        return mQualityScores;
-    }
-
-    /**
-     * Sets quality scores corresponding to each pair of positions and
-     * distances (i.e. sample).
-     * The larger the score value the better the quality of the sample.
-     * This implementation makes no action.
-     * Subclasses using quality scores must implement proper behaviour.
-     * @param qualityScores quality scores corresponding to each pair of
-     *                      matched points.
-     * @throws IllegalArgumentException if provided quality scores length
-     * is smaller than minimum required samples.
-     * @throws LockedException if robust solver is locked because an
-     * estimation is already in progress.
-     */
-    public void setQualityScores(double[] qualityScores)
-            throws IllegalArgumentException, LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        internalSetQualityScores(qualityScores);
-    }
-
-    /**
-     * Indicates whether solver is ready to find a solution.
-     * @return true if solver is ready, false otherwise.
-     */
-    @Override
-    public boolean isReady() {
-        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
-                mQualityScores.length == mReadings.size();
-    }
-
-    /**
-     * Robustly estimates position, transmitted power and pathloss exponent for a
-     * radio source.
-     * @throws LockedException if instance is busy during estimation.
-     * @throws NotReadyException if estimator is not ready.
-     * @throws RobustEstimatorException if estimation fails for any reason
-     * (i.e. numerical instability, no solution available, etc).
-     */
-    @Override
-    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        if (!isReady()) {
-            throw new NotReadyException();
-        }
-
-        PROMedSRobustEstimator&lt;Solution&lt;Point3D&gt;&gt; innerEstimator =
-                new PROMedSRobustEstimator&lt;&gt;(
-                        new PROMedSRobustEstimatorListener&lt;Solution&lt;Point3D&gt;&gt;() {
-
-                            @Override
-                            public double[] getQualityScores() {
-                                return mQualityScores;
-                            }
-
-                            @Override
-                            public double getThreshold() {
-                                return mStopThreshold;
-                            }
-
-                            @Override
-                            public int getTotalSamples() {
-                                return mReadings.size();
-                            }
-
-                            @Override
-                            public int getSubsetSize() {
-                                return getMinReadings();
-                            }
-
-                            @Override
-                            public void estimatePreliminarSolutions(int[] samplesIndices,
-                                                                    List&lt;Solution&lt;Point3D&gt;&gt; solutions) {
-                                solvePreliminarSolutions(samplesIndices, solutions);
-                            }
-
-                            @Override
-                            public double computeResidual(Solution&lt;Point3D&gt; currentEstimation, int i) {
-                                return residual(currentEstimation, i);
-                            }
-
-                            @Override
-                            public boolean isReady() {
-                                return PROMedSRobustRangingAndRssiRadioSourceEstimator3D.this.isReady();</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
 <tr class="b">
 <th>File</th>
@@ -2517,7 +2146,10 @@ com.irurueta:irurueta-navigation
 <tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.html#L314">314</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L805">805</a></td></tr>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>                initialPathLossExponent, listener);
         internalSetQualityScores(qualityScores);
@@ -2674,6 +2306,305 @@ com.irurueta:irurueta-navigation
                     @Override
                     public boolean isReady() {
                         return PROMedSRobustRangingAndRssiRadioSourceEstimator2D.this.isReady();</pre></div></td></tr></table>
+<table border="0" class="bodyTable">
+<tr class="a">
+<th>File</th>
+<th>Line</th></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L314">314</a></td></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L805">805</a></td></tr>
+<tr class="b"><td colspan='2'>
+<div>
+<pre>        super(readings, initialPosition, listener);
+        internalSetQualityScores(qualityScores);
+    }
+
+    /**
+     * Returns threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value, the
+     * algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algrithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @return stop threshold to stop the algorithm prematurely when a certain
+     * accuracy has been reached.
+     */
+    public double getStopThreshold() {
+        return mStopThreshold;
+    }
+
+    /**
+     * Sets threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value,
+     * the algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algorithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @param stopThreshold stop threshold to stop the algorithm prematurely
+     *                      when a certain accuracy has been reached.
+     * @throws IllegalArgumentException if provided value is zero or negative.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setStopThreshold(double stopThreshold) throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        if (stopThreshold &lt;= MIN_STOP_THRESHOLD) {
+            throw new IllegalArgumentException();
+        }
+
+        mStopThreshold = stopThreshold;
+    }
+
+    /**
+     * Returns quality scores corresponding to each pair of
+     * positions and distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * This implementation always returns null.
+     * Subclasses using quality scores must implement proper behavior.
+     * @return quality scores corresponding to each sample.
+     */
+    @Override
+    public double[] getQualityScores() {
+        return mQualityScores;
+    }
+
+    /**
+     * Sets quality scores corresponding to each pair of positions and
+     * distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * This implementation makes no action.
+     * Subclasses using quality scores must implement proper behaviour.
+     * @param qualityScores quality scores corresponding to each pair of
+     *                      matched points.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than minimum required samples.
+     * @throws LockedException if robust solver is locked because an
+     * estimation is already in progress.
+     */
+    public void setQualityScores(double[] qualityScores) throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        internalSetQualityScores(qualityScores);
+    }
+
+    /**
+     * Indicates whether solver is ready to find a solution.
+     * @return true if solver is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
+                mQualityScores.length == mReadings.size();
+    }
+
+    /**
+     * Robustly estimates position for a radio source.
+     * @throws LockedException if instance is busy during estimation.
+     * @throws NotReadyException if estimator is not ready.
+     * @throws RobustEstimatorException if estimation fails for any reason
+     * (i.e. numerical instability, no solution available, etc).
+     */
+    @Override
+    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        if (!isReady()) {
+            throw new NotReadyException();
+        }
+
+        PROMedSRobustEstimator&lt;Solution&lt;Point3D&gt;&gt; innerEstimator =
+                new PROMedSRobustEstimator&lt;&gt;(
+                        new PROMedSRobustEstimatorListener&lt;Solution&lt;Point3D&gt;&gt;() {
+
+                    @Override
+                    public double[] getQualityScores() {
+                        return mQualityScores;
+                    }
+
+                    @Override
+                    public double getThreshold() {
+                        return mStopThreshold;
+                    }
+
+                    @Override
+                    public int getTotalSamples() {
+                        return mReadings.size();
+                    }
+
+                    @Override
+                    public int getSubsetSize() {
+                        return getMinReadings();
+                    }
+
+                    @Override
+                    public void estimatePreliminarSolutions(int[] samplesIndices,
+                            List&lt;Solution&lt;Point3D&gt;&gt; solutions) {
+                        solvePreliminarSolutions(samplesIndices, solutions);
+                    }
+
+                    @Override
+                    public double computeResidual(Solution&lt;Point3D&gt; currentEstimation, int i) {
+                        return residual(currentEstimation, i);
+                    }
+
+                    @Override
+                    public boolean isReady() {
+                        return PROMedSRobustRangingRadioSourceEstimator3D.this.isReady();</pre></div></td></tr></table>
+<table border="0" class="bodyTable">
+<tr class="a">
+<th>File</th>
+<th>Line</th></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L854">854</a></td></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.html#L378">378</a></td></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L859">859</a></td></tr>
+<tr class="a"><td colspan='2'>
+<div>
+<pre>    public void setQualityScores(double[] qualityScores) throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        internalSetQualityScores(qualityScores);
+    }
+
+    /**
+     * Indicates whether solver is ready to find a solution.
+     * @return true if solver is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
+                mQualityScores.length == mReadings.size();
+    }
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     * @return true if inliers must be computed and kept, false if inliers
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepInliersEnabled() {
+        return mComputeAndKeepInliers;
+    }
+
+    /**
+     * Specifies whether inliers must be computed and kept.
+     * @param computeAndKeepInliers true if inliers must be computed and kept,
+     *                              false if inliers only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
+            throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        mComputeAndKeepInliers = computeAndKeepInliers;
+    }
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     * @return true if residuals must be computed and kept, false if residuals
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepResidualsEnabled() {
+        return mComputeAndKeepResiduals;
+    }
+
+    /**
+     * Specifies whether residuals must be computed and kept.
+     * @param computeAndKeepResiduals true if residuals must be computed and kept,
+     *                                false if residuals only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
+            throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        mComputeAndKeepResiduals = computeAndKeepResiduals;
+    }
+
+    /**
+     * Robustly estimates position, transmitted power and pathloss exponent for a
+     * radio source.
+     * @throws LockedException if instance is busy during estimation.
+     * @throws NotReadyException if estimator is not ready.
+     * @throws RobustEstimatorException if estimation fails for any reason
+     * (i.e. numerical instability, no solution available, etc).
+     */
+    @Override
+    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        if (!isReady()) {
+            throw new NotReadyException();
+        }
+
+        PROSACRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =
+                new PROSACRobustEstimator&lt;&gt;(
+                        new PROSACRobustEstimatorListener&lt;Solution&lt;Point2D&gt;&gt;() {
+
+                    @Override
+                    public double[] getQualityScores() {
+                        return mQualityScores;
+                    }
+
+                    @Override
+                    public double getThreshold() {
+                        return mThreshold;
+                    }
+
+                    @Override
+                    public int getTotalSamples() {
+                        return mReadings.size();
+                    }
+
+                    @Override
+                    public int getSubsetSize() {
+                        return getMinReadings();
+                    }
+
+                    @Override
+                    public void estimatePreliminarSolutions(int[] samplesIndices,
+                            List&lt;Solution&lt;Point2D&gt;&gt; solutions) {
+                        solvePreliminarSolutions(samplesIndices, solutions);
+                    }
+
+                    @Override
+                    public double computeResidual(Solution&lt;Point2D&gt; currentEstimation, int i) {
+                        return residual(currentEstimation, i);
+                    }
+
+                    @Override
+                    public boolean isReady() {
+                        return PROSACRobustRangingAndRssiRadioSourceEstimator2D.this.isReady();</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
 <tr class="b">
 <th>File</th>
@@ -3420,168 +3351,6 @@ com.irurueta:irurueta-navigation
 <th>File</th>
 <th>Line</th></tr>
 <tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L820">820</a></td></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.html#L820">820</a></td></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L820">820</a></td></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.html#L820">820</a></td></tr>
-<tr class="b"><td colspan='2'>
-<div>
-<pre>            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
-            throws IllegalArgumentException {
-        super(readings, initialPosition, initialTransmittedPowerdBm,
-                initialPathLossExponent, listener);
-        internalSetQualityScores(qualityScores);
-    }
-
-    /**
-     * Gets threshold to determine whether samples are inliers or not when testing possible solutions.
-     * The threshold refers to the amount of error on distance between estimated position and distances
-     * provided for each sample.
-     * @return threshold to determine whether samples are inliers or not.
-     */
-    public double getThreshold() {
-        return mThreshold;
-    }
-
-    /**
-     * Sets threshold to determine whether samples are inliers or not when testing possible solutions.
-     * The threshold refers to the amount of error on distance between estimated position and distances
-     * provided for each sample.
-     * @param threshold threshold to determine whether samples are inliers or not.
-     * @throws IllegalArgumentException if provided value is equal or less than zero.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setThreshold(double threshold)
-            throws IllegalArgumentException, LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        if (threshold &lt;= MIN_THRESHOLD) {
-            throw new IllegalArgumentException();
-        }
-        mThreshold = threshold;
-    }
-
-    /**
-     * Returns quality scores corresponding to each pair of
-     * positions and distances (i.e. sample).
-     * The larger the score value the better the quality of the sample.
-     * This implementation always returns null.
-     * Subclasses using quality scores must implement proper behavior.
-     * @return quality scores corresponding to each sample.
-     */
-    @Override
-    public double[] getQualityScores() {
-        return mQualityScores;
-    }
-
-    /**
-     * Sets quality scores corresponding to each pair of positions and
-     * distances (i.e. sample).
-     * The larger the score value the better the quality of the sample.
-     * This implementation makes no action.
-     * Subclasses using quality scores must implement proper behaviour.
-     * @param qualityScores quality scores corresponding to each pair of
-     *                      matched points.
-     * @throws IllegalArgumentException if provided quality scores length
-     * is smaller than minimum required samples.
-     * @throws LockedException if robust solver is locked because an
-     * estimation is already in progress.
-     */
-    public void setQualityScores(double[] qualityScores)
-            throws IllegalArgumentException, LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        internalSetQualityScores(qualityScores);
-    }
-
-    /**
-     * Indicates whether solver is ready to find a solution.
-     * @return true if solver is ready, false otherwise.
-     */
-    @Override
-    public boolean isReady() {
-        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
-                mQualityScores.length == mReadings.size();
-    }
-
-    /**
-     * Indicates whether inliers must be computed and kept.
-     * @return true if inliers must be computed and kept, false if inliers
-     * only need to be computed but not kept.
-     */
-    public boolean isComputeAndKeepInliersEnabled() {
-        return mComputeAndKeepInliers;
-    }
-
-    /**
-     * Specifies whether inliers must be computed and kept.
-     * @param computeAndKeepInliers true if inliers must be computed and kept,
-     *                              false if inliers only need to be computed but not kept.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
-            throws LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        mComputeAndKeepInliers = computeAndKeepInliers;
-    }
-
-    /**
-     * Indicates whether residuals must be computed and kept.
-     * @return true if residuals must be computed and kept, false if residuals
-     * only need to be computed but not kept.
-     */
-    public boolean isComputeAndKeepResidualsEnabled() {
-        return mComputeAndKeepResiduals;
-    }
-
-    /**
-     * Specifies whether residuals must be computed and kept.
-     * @param computeAndKeepResiduals true if residuals must be computed and kept,
-     *                                false if residuals only need to be computed but not kept.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
-            throws LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        mComputeAndKeepResiduals = computeAndKeepResiduals;
-    }
-
-    /**
-     * Robustly estimates position, transmitted power and pathloss exponent for a
-     * radio source.
-     * @throws LockedException if instance is busy during estimation.
-     * @throws NotReadyException if estimator is not ready.
-     * @throws RobustEstimatorException if estimation fails for any reason
-     * (i.e. numerical instability, no solution available, etc).
-     */
-    @Override
-    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        if (!isReady()) {
-            throw new NotReadyException();
-        }
-
-        PROSACRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
-<table border="0" class="bodyTable">
-<tr class="a">
-<th>File</th>
-<th>Line</th></tr>
-<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.html#L2685">2685</a></td></tr>
 <tr class="a">
@@ -4155,171 +3924,15 @@ com.irurueta:irurueta-navigation
 <th>File</th>
 <th>Line</th></tr>
 <tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L823">823</a></td></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.html#L318">318</a></td></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L823">823</a></td></tr>
-<tr class="a"><td colspan='2'>
-<div>
-<pre>                initialPathLossExponent, listener);
-        internalSetQualityScores(qualityScores);
-    }
-
-    /**
-     * Gets threshold to determine whether samples are inliers or not when testing possible solutions.
-     * The threshold refers to the amount of error on distance between estimated position and distances
-     * provided for each sample.
-     * @return threshold to determine whether samples are inliers or not.
-     */
-    public double getThreshold() {
-        return mThreshold;
-    }
-
-    /**
-     * Sets threshold to determine whether samples are inliers or not when testing possible solutions.
-     * The threshold refers to the amount of error on distance between estimated position and distances
-     * provided for each sample.
-     * @param threshold threshold to determine whether samples are inliers or not.
-     * @throws IllegalArgumentException if provided value is equal or less than zero.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setThreshold(double threshold)
-            throws IllegalArgumentException, LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        if (threshold &lt;= MIN_THRESHOLD) {
-            throw new IllegalArgumentException();
-        }
-        mThreshold = threshold;
-    }
-
-    /**
-     * Returns quality scores corresponding to each pair of
-     * positions and distances (i.e. sample).
-     * The larger the score value the better the quality of the sample.
-     * This implementation always returns null.
-     * Subclasses using quality scores must implement proper behavior.
-     * @return quality scores corresponding to each sample.
-     */
-    @Override
-    public double[] getQualityScores() {
-        return mQualityScores;
-    }
-
-    /**
-     * Sets quality scores corresponding to each pair of positions and
-     * distances (i.e. sample).
-     * The larger the score value the better the quality of the sample.
-     * This implementation makes no action.
-     * Subclasses using quality scores must implement proper behaviour.
-     * @param qualityScores quality scores corresponding to each pair of
-     *                      matched points.
-     * @throws IllegalArgumentException if provided quality scores length
-     * is smaller than minimum required samples.
-     * @throws LockedException if robust solver is locked because an
-     * estimation is already in progress.
-     */
-    public void setQualityScores(double[] qualityScores)
-            throws IllegalArgumentException, LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        internalSetQualityScores(qualityScores);
-    }
-
-    /**
-     * Indicates whether solver is ready to find a solution.
-     * @return true if solver is ready, false otherwise.
-     */
-    @Override
-    public boolean isReady() {
-        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
-                mQualityScores.length == mReadings.size();
-    }
-
-    /**
-     * Indicates whether inliers must be computed and kept.
-     * @return true if inliers must be computed and kept, false if inliers
-     * only need to be computed but not kept.
-     */
-    public boolean isComputeAndKeepInliersEnabled() {
-        return mComputeAndKeepInliers;
-    }
-
-    /**
-     * Specifies whether inliers must be computed and kept.
-     * @param computeAndKeepInliers true if inliers must be computed and kept,
-     *                              false if inliers only need to be computed but not kept.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
-            throws LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        mComputeAndKeepInliers = computeAndKeepInliers;
-    }
-
-    /**
-     * Indicates whether residuals must be computed and kept.
-     * @return true if residuals must be computed and kept, false if residuals
-     * only need to be computed but not kept.
-     */
-    public boolean isComputeAndKeepResidualsEnabled() {
-        return mComputeAndKeepResiduals;
-    }
-
-    /**
-     * Specifies whether residuals must be computed and kept.
-     * @param computeAndKeepResiduals true if residuals must be computed and kept,
-     *                                false if residuals only need to be computed but not kept.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
-            throws LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        mComputeAndKeepResiduals = computeAndKeepResiduals;
-    }
-
-    /**
-     * Robustly estimates position, transmitted power and pathloss exponent for a
-     * radio source.
-     * @throws LockedException if instance is busy during estimation.
-     * @throws NotReadyException if estimator is not ready.
-     * @throws RobustEstimatorException if estimation fails for any reason
-     * (i.e. numerical instability, no solution available, etc).
-     */
-    @Override
-    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        if (!isReady()) {
-            throw new NotReadyException();
-        }
-
-        PROSACRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
-<table border="0" class="bodyTable">
-<tr class="b">
-<th>File</th>
-<th>Line</th></tr>
-<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.html#L823">823</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.html#L318">318</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.html#L823">823</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                initialPathLossExponent, listener);
         internalSetQualityScores(qualityScores);
@@ -4463,16 +4076,16 @@ com.irurueta:irurueta-navigation
 
         PROSACRobustEstimator&lt;Solution&lt;Point3D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.html#L2694">2694</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator2D.html#L788">788</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        List&lt;? extends RssiReadingLocated&lt;S, Point2D&gt;&gt; readings = getReadings();
         if (readings == null || readings.isEmpty()) {
@@ -4531,19 +4144,19 @@ com.irurueta:irurueta-navigation
     @Override
     protected void solvePreliminarSolutions(int[] samplesIndices,</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.html#L2686">2686</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RssiRadioSourceEstimator2D.html#L421">421</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator2D.html#L788">788</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>        List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point2D&gt;&gt; readings = getReadings();
         if (readings == null || readings.isEmpty()) {
@@ -4594,19 +4207,19 @@ com.irurueta:irurueta-navigation
         }
     }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.html#L2671">2671</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator3D.html#L2694">2694</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator3D.html#L788">788</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings = getReadings();
         if (readings == null || readings.isEmpty()) {
@@ -4657,16 +4270,16 @@ com.irurueta:irurueta-navigation
         }
     }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator2D.html#L353">353</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator2D.html#L364">364</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
         super(readings, initialPosition, initialTransmittedPowerdBm,
@@ -4749,16 +4362,16 @@ com.irurueta:irurueta-navigation
                     public boolean isReady() {
                         return MSACRobustRangingAndRssiRadioSourceEstimator2D.this.isReady();</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator3D.html#L353">353</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator3D.html#L364">364</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener) {
         super(readings, initialPosition, initialTransmittedPowerdBm,
@@ -4841,16 +4454,16 @@ com.irurueta:irurueta-navigation
                             public boolean isReady() {
                                 return MSACRobustRangingAndRssiRadioSourceEstimator3D.this.isReady();</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator.html#L566">566</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RangingAndRssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RangingAndRssiRadioSourceEstimator.html#L564">564</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>            throws LockedException {
         if (isLocked()) {
@@ -5015,21 +4628,21 @@ com.irurueta:irurueta-navigation
         mUseReadingPositionCovariances = useReadingPositionCovariances;
     }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.html#L877">877</a></td></tr>
 <tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.html#L398">398</a></td></tr>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.html#L901">901</a></td></tr>
 <tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L912">912</a></td></tr>
-<tr class="a"><td colspan='2'>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L397">397</a></td></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L888">888</a></td></tr>
+<tr class="b"><td colspan='2'>
 <div>
-<pre>    public void setQualityScores(double[] qualityScores) throws LockedException {
+<pre>            throws IllegalArgumentException, LockedException {
         if (isLocked()) {
             throw new LockedException();
         }
@@ -5063,58 +4676,58 @@ com.irurueta:irurueta-navigation
             throw new NotReadyException();
         }
 
-        PROMedSRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =
+        PROMedSRobustEstimator&lt;Solution&lt;Point3D&gt;&gt; innerEstimator =
                 new PROMedSRobustEstimator&lt;&gt;(
-                        new PROMedSRobustEstimatorListener&lt;Solution&lt;Point2D&gt;&gt;() {
+                        new PROMedSRobustEstimatorListener&lt;Solution&lt;Point3D&gt;&gt;() {
 
-                    @Override
-                    public double[] getQualityScores() {
-                        return mQualityScores;
-                    }
+                            @Override
+                            public double[] getQualityScores() {
+                                return mQualityScores;
+                            }
 
-                    @Override
-                    public double getThreshold() {
-                        return mStopThreshold;
-                    }
+                            @Override
+                            public double getThreshold() {
+                                return mStopThreshold;
+                            }
 
-                    @Override
-                    public int getTotalSamples() {
-                        return mReadings.size();
-                    }
+                            @Override
+                            public int getTotalSamples() {
+                                return mReadings.size();
+                            }
 
-                    @Override
-                    public int getSubsetSize() {
-                        return getMinReadings();
-                    }
+                            @Override
+                            public int getSubsetSize() {
+                                return getMinReadings();
+                            }
 
-                    @Override
-                    public void estimatePreliminarSolutions(int[] samplesIndices,
-                            List&lt;Solution&lt;Point2D&gt;&gt; solutions) {
-                        solvePreliminarSolutions(samplesIndices, solutions);
-                    }
+                            @Override
+                            public void estimatePreliminarSolutions(int[] samplesIndices,
+                                                                    List&lt;Solution&lt;Point3D&gt;&gt; solutions) {
+                                solvePreliminarSolutions(samplesIndices, solutions);
+                            }
 
-                    @Override
-                    public double computeResidual(Solution&lt;Point2D&gt; currentEstimation, int i) {
-                        return residual(currentEstimation, i);
-                    }
+                            @Override
+                            public double computeResidual(Solution&lt;Point3D&gt; currentEstimation, int i) {
+                                return residual(currentEstimation, i);
+                            }
 
-                    @Override
-                    public boolean isReady() {
-                        return PROMedSRobustRangingAndRssiRadioSourceEstimator2D.this.isReady();</pre></div></td></tr></table>
+                            @Override
+                            public boolean isReady() {
+                                return PROMedSRobustRangingAndRssiRadioSourceEstimator3D.this.isReady();</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator.html#L453">453</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator.html#L1477">1477</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator.html#L1459">1459</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>    }
 
@@ -5279,16 +4892,16 @@ com.irurueta:irurueta-navigation
      */
     public boolean isPositionEstimationEnabled() {</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RangingAndRssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RangingAndRssiRadioSourceEstimator.html#L484">484</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RssiRadioSourceEstimator.html#L493">493</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>            RangingAndRssiRadioSourceEstimatorListener&lt;S, P&gt; listener)
             throws IllegalArgumentException {
@@ -5458,16 +5071,16 @@ com.irurueta:irurueta-navigation
      */
     public double getInitialPathLossExponent() {</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/trilateration/PROSACRobustTrilateration2DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/PROSACRobustTrilateration2DSolver.html#L394">394</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/trilateration/PROSACRobustTrilateration3DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/PROSACRobustTrilateration3DSolver.html#L394">394</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        super(circles, distanceStandardDeviations, listener);
         internalSetQualityScores(qualityScores);
@@ -5600,16 +5213,16 @@ com.irurueta:irurueta-navigation
     @Override
     public Point2D solve() throws LockedException, NotReadyException,</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/trilateration/RobustTrilateration2DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/RobustTrilateration2DSolver.html#L1246">1246</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/trilateration/RobustTrilateration3DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/RobustTrilateration3DSolver.html#L1252">1252</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>            Point2D[] inlierPositions = new Point2D[nInliers];
             double[] inlierDistances = new double[nInliers];
@@ -5667,16 +5280,16 @@ com.irurueta:irurueta-navigation
      */
     protected void solvePreliminarSolutions(int[] samplesIndices, List&lt;Point2D&gt; solutions) {</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator.html#L751">751</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator.html#L748">748</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        RangingAndRssiReadingLocated&lt;S, P&gt; reading = mReadings.get(i);
         double frequency = reading.getSource().getFrequency();
@@ -5771,16 +5384,16 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RangingRadioSourceEstimator2D.html#L176">176</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingRadioSourceEstimator2D.html#L665">665</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>    public RadioSourceLocated&lt;Point2D&gt; getEstimatedRadioSource() {
         List&lt;? extends RangingReadingLocated&lt;S, Point2D&gt;&gt; readings = getReadings();
@@ -5820,16 +5433,16 @@ com.irurueta:irurueta-navigation
     @Override
     protected void buildLinearSolverIfNeeded() {</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RangingRadioSourceEstimator3D.html#L176">176</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingRadioSourceEstimator3D.html#L666">666</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>    public RadioSourceLocated&lt;Point3D&gt; getEstimatedRadioSource() {
         List&lt;? extends RangingReadingLocated&lt;S, Point3D&gt;&gt; readings = getReadings();
@@ -5869,16 +5482,16 @@ com.irurueta:irurueta-navigation
     @Override
     protected void buildLinearSolverIfNeeded() {</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator.html#L1053">1053</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator.html#L2179">2179</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>    private RangingReadingLocated&lt;S, P&gt; createRangingReading(RangingAndRssiReadingLocated&lt;S, P&gt; reading) {
         return new RangingReadingLocated&lt;&gt;(reading.getSource(),
@@ -5928,22 +5541,21 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.html#L813">813</a></td></tr>
 <tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L824">824</a></td></tr>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.html#L792">792</a></td></tr>
 <tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L803">803</a></td></tr>
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L824">824</a></td></tr>
-<tr class="a"><td colspan='2'>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L803">803</a></td></tr>
+<tr class="b"><td colspan='2'>
 <div>
-<pre>            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point3D&gt; listener)
-            throws IllegalArgumentException {
+<pre>            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
         super(readings, initialPosition, initialTransmittedPowerdBm,
                 initialPathLossExponent, listener);
         internalSetQualityScores(qualityScores);
@@ -5991,8 +5603,7 @@ com.irurueta:irurueta-navigation
      * @throws IllegalArgumentException if provided value is zero or negative.
      * @throws LockedException if this solver is locked.
      */
-    public void setStopThreshold(double stopThreshold)
-            throws IllegalArgumentException, LockedException {
+    public void setStopThreshold(double stopThreshold) throws LockedException {
         if (isLocked()) {
             throw new LockedException();
         }
@@ -6029,8 +5640,7 @@ com.irurueta:irurueta-navigation
      * @throws LockedException if robust solver is locked because an
      * estimation is already in progress.
      */
-    public void setQualityScores(double[] qualityScores)
-            throws IllegalArgumentException, LockedException {
+    public void setQualityScores(double[] qualityScores) throws LockedException {
         if (isLocked()) {
             throw new LockedException();
         }
@@ -6064,24 +5674,24 @@ com.irurueta:irurueta-navigation
             throw new NotReadyException();
         }
 
-        PROMedSRobustEstimator&lt;Solution&lt;Point3D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
+        PROMedSRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator2D.html#L384">384</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator3D.html#L384">384</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator2D.html#L395">395</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator3D.html#L395">395</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>            RobustRangingAndRssiRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
             throws IllegalArgumentException {
@@ -6186,16 +5796,16 @@ com.irurueta:irurueta-navigation
 
         RANSACRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator2D.html#L359">359</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator2D.html#L787">787</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>    public RadioSourceLocated&lt;Point2D&gt; getEstimatedRadioSource() {
         List&lt;? extends ReadingLocated&lt;Point2D&gt;&gt; readings = getReadings();
@@ -6228,16 +5838,16 @@ com.irurueta:irurueta-navigation
         Double transmittedPowerStandardDeviation = transmittedPowerVariance != null ?
                 Math.sqrt(transmittedPowerVariance) : null;</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator3D.html#L359">359</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator3D.html#L787">787</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>    public RadioSourceLocated&lt;Point3D&gt; getEstimatedRadioSource() {
         List&lt;? extends ReadingLocated&lt;Point3D&gt;&gt; readings = getReadings();
@@ -6270,16 +5880,16 @@ com.irurueta:irurueta-navigation
         Double transmittedPowerStandardDeviation = transmittedPowerVariance != null ?
                 Math.sqrt(transmittedPowerVariance) : null;</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.html#L2767">2767</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.html#L2771">2771</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>                    mUseReadingPositionCovariances);
 
@@ -6334,16 +5944,16 @@ com.irurueta:irurueta-navigation
                         mTransmittedPowerEstimationEnabled);
                 mInnerEstimator.setPathLossEstimationEnabled(</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.html#L2752">2752</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator3D.html#L2770">2770</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>                    mUseReadingPositionCovariances);
 
@@ -6398,16 +6008,147 @@ com.irurueta:irurueta-navigation
                         mTransmittedPowerEstimationEnabled);
                 mInnerEstimator.setPathLossEstimationEnabled(</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.html#L313">313</a></td></tr>
 <tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L313">313</a></td></tr>
+<tr class="b"><td colspan='2'>
+<div>
+<pre>            RobustRangingRadioSourceEstimatorListener&lt;S, Point2D&gt; listener) {
+        super(readings, initialPosition, listener);
+        internalSetQualityScores(qualityScores);
+    }
+
+    /**
+     * Returns threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value, the
+     * algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algrithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @return stop threshold to stop the algorithm prematurely when a certain
+     * accuracy has been reached.
+     */
+    public double getStopThreshold() {
+        return mStopThreshold;
+    }
+
+    /**
+     * Sets threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value,
+     * the algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algorithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @param stopThreshold stop threshold to stop the algorithm prematurely
+     *                      when a certain accuracy has been reached.
+     * @throws IllegalArgumentException if provided value is zero or negative.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setStopThreshold(double stopThreshold)
+            throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        if (stopThreshold &lt;= MIN_STOP_THRESHOLD) {
+            throw new IllegalArgumentException();
+        }
+
+        mStopThreshold = stopThreshold;
+    }
+
+    /**
+     * Returns quality scores corresponding to each pair of
+     * positions and distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * This implementation always returns null.
+     * Subclasses using quality scores must implement proper behavior.
+     * @return quality scores corresponding to each sample.
+     */
+    @Override
+    public double[] getQualityScores() {
+        return mQualityScores;
+    }
+
+    /**
+     * Sets quality scores corresponding to each pair of positions and
+     * distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * This implementation makes no action.
+     * Subclasses using quality scores must implement proper behaviour.
+     * @param qualityScores quality scores corresponding to each pair of
+     *                      matched points.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than minimum required samples.
+     * @throws LockedException if robust solver is locked because an
+     * estimation is already in progress.
+     */
+    public void setQualityScores(double[] qualityScores) throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        internalSetQualityScores(qualityScores);
+    }
+
+    /**
+     * Indicates whether solver is ready to find a solution.
+     * @return true if solver is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
+                mQualityScores.length == mReadings.size();
+    }
+
+    /**
+     * Robustly estimates position for a radio source.
+     * @throws LockedException if instance is busy during estimation.
+     * @throws NotReadyException if estimator is not ready.
+     * @throws RobustEstimatorException if estimation fails for any reason
+     * (i.e. numerical instability, no solution available, etc).
+     */
+    @Override
+    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        if (!isReady()) {
+            throw new NotReadyException();
+        }
+
+        PROMedSRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
+<table border="0" class="bodyTable">
+<tr class="a">
+<th>File</th>
+<th>Line</th></tr>
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator2D.html#L167">167</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator3D.html#L167">167</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>            RobustRangingRadioSourceEstimatorListener&lt;S, Point2D&gt; listener)
             throws IllegalArgumentException {
@@ -6506,147 +6247,16 @@ com.irurueta:irurueta-navigation
 
         RANSACRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L322">322</a></td></tr>
 <tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L827">827</a></td></tr>
-<tr class="a"><td colspan='2'>
-<div>
-<pre>        super(readings, initialPosition, listener);
-        internalSetQualityScores(qualityScores);
-    }
-
-    /**
-     * Returns threshold to be used to keep the algorithm iterating in case that
-     * best estimated threshold using median of residuals is not small enough.
-     * Once a solution is found that generates a threshold below this value, the
-     * algorithm will stop.
-     * The stop threshold can be used to prevent the LMedS algrithm to iterate
-     * too many times in cases where samples have a very similar accuracy.
-     * For instance, in cases where proportion of outliers is very small (close
-     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
-     * iterate for a long time trying to find the best solution when indeed
-     * there is no need to do that if a reasonable threshold has already been
-     * reached.
-     * Because of this behaviour the stop threshold can be set to a value much
-     * lower than the one typically used in RANSAC, and yet the algorithm could
-     * still produce even smaller thresholds in estimated results.
-     * @return stop threshold to stop the algorithm prematurely when a certain
-     * accuracy has been reached.
-     */
-    public double getStopThreshold() {
-        return mStopThreshold;
-    }
-
-    /**
-     * Sets threshold to be used to keep the algorithm iterating in case that
-     * best estimated threshold using median of residuals is not small enough.
-     * Once a solution is found that generates a threshold below this value,
-     * the algorithm will stop.
-     * The stop threshold can be used to prevent the LMedS algorithm to iterate
-     * too many times in cases where samples have a very similar accuracy.
-     * For instance, in cases where proportion of outliers is very small (close
-     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
-     * iterate for a long time trying to find the best solution when indeed
-     * there is no need to do that if a reasonable threshold has already been
-     * reached.
-     * Because of this behaviour the stop threshold can be set to a value much
-     * lower than the one typically used in RANSAC, and yet the algorithm could
-     * still produce even smaller thresholds in estimated results.
-     * @param stopThreshold stop threshold to stop the algorithm prematurely
-     *                      when a certain accuracy has been reached.
-     * @throws IllegalArgumentException if provided value is zero or negative.
-     * @throws LockedException if this solver is locked.
-     */
-    public void setStopThreshold(double stopThreshold)
-            throws IllegalArgumentException, LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        if (stopThreshold &lt;= MIN_STOP_THRESHOLD) {
-            throw new IllegalArgumentException();
-        }
-
-        mStopThreshold = stopThreshold;
-    }
-
-    /**
-     * Returns quality scores corresponding to each pair of
-     * positions and distances (i.e. sample).
-     * The larger the score value the better the quality of the sample.
-     * This implementation always returns null.
-     * Subclasses using quality scores must implement proper behavior.
-     * @return quality scores corresponding to each sample.
-     */
-    @Override
-    public double[] getQualityScores() {
-        return mQualityScores;
-    }
-
-    /**
-     * Sets quality scores corresponding to each pair of positions and
-     * distances (i.e. sample).
-     * The larger the score value the better the quality of the sample.
-     * This implementation makes no action.
-     * Subclasses using quality scores must implement proper behaviour.
-     * @param qualityScores quality scores corresponding to each pair of
-     *                      matched points.
-     * @throws IllegalArgumentException if provided quality scores length
-     * is smaller than minimum required samples.
-     * @throws LockedException if robust solver is locked because an
-     * estimation is already in progress.
-     */
-    public void setQualityScores(double[] qualityScores)
-            throws IllegalArgumentException, LockedException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        internalSetQualityScores(qualityScores);
-    }
-
-    /**
-     * Indicates whether solver is ready to find a solution.
-     * @return true if solver is ready, false otherwise.
-     */
-    @Override
-    public boolean isReady() {
-        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
-                mQualityScores.length == mReadings.size();
-    }
-
-    /**
-     * Robustly estimates position for a radio source.
-     * @throws LockedException if instance is busy during estimation.
-     * @throws NotReadyException if estimator is not ready.
-     * @throws RobustEstimatorException if estimation fails for any reason
-     * (i.e. numerical instability, no solution available, etc).
-     */
-    @Override
-    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
-        if (isLocked()) {
-            throw new LockedException();
-        }
-        if (!isReady()) {
-            throw new NotReadyException();
-        }
-
-        PROMedSRobustEstimator&lt;Solution&lt;Point3D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
-<table border="0" class="bodyTable">
-<tr class="b">
-<th>File</th>
-<th>Line</th></tr>
-<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingRadioSourceEstimator2D.html#L748">748</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingRadioSourceEstimator3D.html#L749">749</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>        Point2D initialPosition = result.getEstimatedPosition();
 
@@ -6699,6 +6309,269 @@ com.irurueta:irurueta-navigation
         }
     }
 }</pre></div></td></tr></table>
+<table border="0" class="bodyTable">
+<tr class="a">
+<th>File</th>
+<th>Line</th></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.html#L794">794</a></td></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L314">314</a></td></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L805">805</a></td></tr>
+<tr class="a"><td colspan='2'>
+<div>
+<pre>                initialPathLossExponent, listener);
+        internalSetQualityScores(qualityScores);
+    }
+
+    /**
+     * Returns threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value, the
+     * algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algrithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @return stop threshold to stop the algorithm prematurely when a certain
+     * accuracy has been reached.
+     */
+    public double getStopThreshold() {
+        return mStopThreshold;
+    }
+
+    /**
+     * Sets threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value,
+     * the algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algorithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @param stopThreshold stop threshold to stop the algorithm prematurely
+     *                      when a certain accuracy has been reached.
+     * @throws IllegalArgumentException if provided value is zero or negative.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setStopThreshold(double stopThreshold) throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        if (stopThreshold &lt;= MIN_STOP_THRESHOLD) {
+            throw new IllegalArgumentException();
+        }
+
+        mStopThreshold = stopThreshold;
+    }
+
+    /**
+     * Returns quality scores corresponding to each pair of
+     * positions and distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * This implementation always returns null.
+     * Subclasses using quality scores must implement proper behavior.
+     * @return quality scores corresponding to each sample.
+     */
+    @Override
+    public double[] getQualityScores() {
+        return mQualityScores;
+    }
+
+    /**
+     * Sets quality scores corresponding to each pair of positions and
+     * distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * This implementation makes no action.
+     * Subclasses using quality scores must implement proper behaviour.
+     * @param qualityScores quality scores corresponding to each pair of
+     *                      matched points.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than minimum required samples.
+     * @throws LockedException if robust solver is locked because an
+     * estimation is already in progress.
+     */
+    public void setQualityScores(double[] qualityScores) throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        internalSetQualityScores(qualityScores);
+    }
+
+    /**
+     * Indicates whether solver is ready to find a solution.
+     * @return true if solver is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
+                mQualityScores.length == mReadings.size();
+    }
+
+    /**
+     * Robustly estimates position, transmitted power and pathloss exponent for a
+     * radio source.
+     * @throws LockedException if instance is busy during estimation.
+     * @throws NotReadyException if estimator is not ready.
+     * @throws RobustEstimatorException if estimation fails for any reason
+     * (i.e. numerical instability, no solution available, etc).
+     */
+    @Override
+    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        if (!isReady()) {
+            throw new NotReadyException();
+        }
+
+        PROMedSRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
+<table border="0" class="bodyTable">
+<tr class="b">
+<th>File</th>
+<th>Line</th></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.html#L314">314</a></td></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L805">805</a></td></tr>
+<tr class="a"><td colspan='2'>
+<div>
+<pre>        super(readings, initialPosition, listener);
+        internalSetQualityScores(qualityScores);
+    }
+
+    /**
+     * Returns threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value, the
+     * algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algrithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @return stop threshold to stop the algorithm prematurely when a certain
+     * accuracy has been reached.
+     */
+    public double getStopThreshold() {
+        return mStopThreshold;
+    }
+
+    /**
+     * Sets threshold to be used to keep the algorithm iterating in case that
+     * best estimated threshold using median of residuals is not small enough.
+     * Once a solution is found that generates a threshold below this value,
+     * the algorithm will stop.
+     * The stop threshold can be used to prevent the LMedS algorithm to iterate
+     * too many times in cases where samples have a very similar accuracy.
+     * For instance, in cases where proportion of outliers is very small (close
+     * to 0%), and samples are very accurate (i.e. 1e-6), the algorithm would
+     * iterate for a long time trying to find the best solution when indeed
+     * there is no need to do that if a reasonable threshold has already been
+     * reached.
+     * Because of this behaviour the stop threshold can be set to a value much
+     * lower than the one typically used in RANSAC, and yet the algorithm could
+     * still produce even smaller thresholds in estimated results.
+     * @param stopThreshold stop threshold to stop the algorithm prematurely
+     *                      when a certain accuracy has been reached.
+     * @throws IllegalArgumentException if provided value is zero or negative.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setStopThreshold(double stopThreshold)
+            throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        if (stopThreshold &lt;= MIN_STOP_THRESHOLD) {
+            throw new IllegalArgumentException();
+        }
+
+        mStopThreshold = stopThreshold;
+    }
+
+    /**
+     * Returns quality scores corresponding to each pair of
+     * positions and distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * This implementation always returns null.
+     * Subclasses using quality scores must implement proper behavior.
+     * @return quality scores corresponding to each sample.
+     */
+    @Override
+    public double[] getQualityScores() {
+        return mQualityScores;
+    }
+
+    /**
+     * Sets quality scores corresponding to each pair of positions and
+     * distances (i.e. sample).
+     * The larger the score value the better the quality of the sample.
+     * This implementation makes no action.
+     * Subclasses using quality scores must implement proper behaviour.
+     * @param qualityScores quality scores corresponding to each pair of
+     *                      matched points.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than minimum required samples.
+     * @throws LockedException if robust solver is locked because an
+     * estimation is already in progress.
+     */
+    public void setQualityScores(double[] qualityScores) throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        internalSetQualityScores(qualityScores);
+    }
+
+    /**
+     * Indicates whether solver is ready to find a solution.
+     * @return true if solver is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
+                mQualityScores.length == mReadings.size();
+    }
+
+    /**
+     * Robustly estimates position for a radio source.
+     * @throws LockedException if instance is busy during estimation.
+     * @throws NotReadyException if estimator is not ready.
+     * @throws RobustEstimatorException if estimation fails for any reason
+     * (i.e. numerical instability, no solution available, etc).
+     */
+    @Override
+    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        if (!isReady()) {
+            throw new NotReadyException();
+        }
+
+        PROMedSRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
 <tr class="b">
 <th>File</th>
@@ -6994,85 +6867,15 @@ com.irurueta:irurueta-navigation
 <th>File</th>
 <th>Line</th></tr>
 <tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L1031">1031</a></td></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.html#L525">525</a></td></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L1031">1031</a></td></tr>
-<tr class="b"><td colspan='2'>
-<div>
-<pre>                                    PROSACRobustRangingAndRssiRadioSourceEstimator2D.this, progress);
-                        }
-                    }
-                });
-
-        try {
-            mLocked = true;
-            mInliersData = null;
-            innerEstimator.setComputeAndKeepInliersEnabled(
-                    mComputeAndKeepInliers || mRefineResult);
-            innerEstimator.setComputeAndKeepResidualsEnabled(
-                    mComputeAndKeepResiduals || mRefineResult);
-            innerEstimator.setConfidence(mConfidence);
-            innerEstimator.setMaxIterations(mMaxIterations);
-            innerEstimator.setProgressDelta(mProgressDelta);
-            Solution&lt;Point2D&gt; result = innerEstimator.estimate();
-            mInliersData = innerEstimator.getInliersData();
-            attemptRefine(result);
-
-        } catch (com.irurueta.numerical.LockedException e) {
-            throw new LockedException(e);
-        } catch (com.irurueta.numerical.NotReadyException e) {
-            throw new NotReadyException(e);
-        } finally {
-            mLocked = false;
-        }
-    }
-
-    /**
-     * Returns method being used for robust estimation.
-     * @return method being used for robust estimation.
-     */
-    @Override
-    public RobustEstimatorMethod getMethod() {
-        return RobustEstimatorMethod.PROSAC;
-    }
-
-    /**
-     * Sets quality scores corresponding to each provided sample.
-     * This method is used internally and does not check whether instance is
-     * locked or not.
-     * @param qualityScores quality scores to be set.
-     * @throws IllegalArgumentException if provided quality scores length
-     * is smaller than required minimum.
-     */
-    private void internalSetQualityScores(double[] qualityScores)
-            throws IllegalArgumentException {
-        if (qualityScores == null ||
-                qualityScores.length &lt; getMinReadings()) {
-            throw new IllegalArgumentException();
-        }
-
-        mQualityScores = qualityScores;
-    }
-}</pre></div></td></tr></table>
-<table border="0" class="bodyTable">
-<tr class="a">
-<th>File</th>
-<th>Line</th></tr>
-<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.html#L1031">1031</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.html#L525">525</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.html#L1031">1031</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>                                            PROSACRobustRangingAndRssiRadioSourceEstimator3D.this, progress);
                                 }
@@ -7130,19 +6933,85 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L1002">1002</a></td></tr>
 <tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L1007">1007</a></td></tr>
+<tr class="b"><td colspan='2'>
+<div>
+<pre>                                    PROSACRobustRangingAndRssiRadioSourceEstimator2D.this, progress);
+                        }
+                    }
+                });
+
+        try {
+            mLocked = true;
+            mInliersData = null;
+            innerEstimator.setComputeAndKeepInliersEnabled(
+                    mComputeAndKeepInliers || mRefineResult);
+            innerEstimator.setComputeAndKeepResidualsEnabled(
+                    mComputeAndKeepResiduals || mRefineResult);
+            innerEstimator.setConfidence(mConfidence);
+            innerEstimator.setMaxIterations(mMaxIterations);
+            innerEstimator.setProgressDelta(mProgressDelta);
+            Solution&lt;Point2D&gt; result = innerEstimator.estimate();
+            mInliersData = innerEstimator.getInliersData();
+            attemptRefine(result);
+
+        } catch (com.irurueta.numerical.LockedException e) {
+            throw new LockedException(e);
+        } catch (com.irurueta.numerical.NotReadyException e) {
+            throw new NotReadyException(e);
+        } finally {
+            mLocked = false;
+        }
+    }
+
+    /**
+     * Returns method being used for robust estimation.
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+        return RobustEstimatorMethod.PROSAC;
+    }
+
+    /**
+     * Sets quality scores corresponding to each provided sample.
+     * This method is used internally and does not check whether instance is
+     * locked or not.
+     * @param qualityScores quality scores to be set.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than required minimum.
+     */
+    private void internalSetQualityScores(double[] qualityScores) {
+        if (qualityScores == null ||
+                qualityScores.length &lt; getMinReadings()) {
+            throw new IllegalArgumentException();
+        }
+
+        mQualityScores = qualityScores;
+    }
+}</pre></div></td></tr></table>
+<table border="0" class="bodyTable">
+<tr class="a">
+<th>File</th>
+<th>Line</th></tr>
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator2D.html#L355">355</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator2D.html#L144">144</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator2D.html#L366">366</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                initialPathLossExponent, listener);
     }
@@ -7211,19 +7080,19 @@ com.irurueta:irurueta-navigation
                     @Override
                     public void estimatePreliminarSolutions(int[] samplesIndices,</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator3D.html#L355">355</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator3D.html#L144">144</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator3D.html#L366">366</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>                initialPathLossExponent, listener);
     }
@@ -7292,24 +7161,126 @@ com.irurueta:irurueta-navigation
                             @Override
                             public void estimatePreliminarSolutions(int[] samplesIndices,</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
+<tr class="a">
+<th>File</th>
+<th>Line</th></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L854">854</a></td></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.html#L883">883</a></td></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.html#L378">378</a></td></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L859">859</a></td></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.html#L883">883</a></td></tr>
+<tr class="a"><td colspan='2'>
+<div>
+<pre>    public void setQualityScores(double[] qualityScores) throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        internalSetQualityScores(qualityScores);
+    }
+
+    /**
+     * Indicates whether solver is ready to find a solution.
+     * @return true if solver is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;
+                mQualityScores.length == mReadings.size();
+    }
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     * @return true if inliers must be computed and kept, false if inliers
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepInliersEnabled() {
+        return mComputeAndKeepInliers;
+    }
+
+    /**
+     * Specifies whether inliers must be computed and kept.
+     * @param computeAndKeepInliers true if inliers must be computed and kept,
+     *                              false if inliers only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
+            throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        mComputeAndKeepInliers = computeAndKeepInliers;
+    }
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     * @return true if residuals must be computed and kept, false if residuals
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepResidualsEnabled() {
+        return mComputeAndKeepResiduals;
+    }
+
+    /**
+     * Specifies whether residuals must be computed and kept.
+     * @param computeAndKeepResiduals true if residuals must be computed and kept,
+     *                                false if residuals only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
+            throws LockedException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        mComputeAndKeepResiduals = computeAndKeepResiduals;
+    }
+
+    /**
+     * Robustly estimates position, transmitted power and pathloss exponent for a
+     * radio source.
+     * @throws LockedException if instance is busy during estimation.
+     * @throws NotReadyException if estimator is not ready.
+     * @throws RobustEstimatorException if estimation fails for any reason
+     * (i.e. numerical instability, no solution available, etc).
+     */
+    @Override
+    public void estimate() throws LockedException, NotReadyException, RobustEstimatorException {
+        if (isLocked()) {
+            throw new LockedException();
+        }
+        if (!isReady()) {
+            throw new NotReadyException();
+        }
+
+        PROSACRobustEstimator&lt;Solution&lt;Point2D&gt;&gt; innerEstimator =</pre></div></td></tr></table>
+<table border="0" class="bodyTable">
 <tr class="b">
 <th>File</th>
 <th>Line</th></tr>
 <tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.html#L1003">1003</a></td></tr>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.html#L979">979</a></td></tr>
 <tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L508">508</a></td></tr>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.html#L499">499</a></td></tr>
 <tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L1014">1014</a></td></tr>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L990">990</a></td></tr>
 <tr class="b"><td colspan='2'>
 <div>
-<pre>                                            PROMedSRobustRangingAndRssiRadioSourceEstimator3D.this, progress);
-                                }
-                            }
-                        });
+<pre>                                    PROMedSRobustRangingAndRssiRadioSourceEstimator2D.this, progress);
+                        }
+                    }
+                });
 
         try {
             mLocked = true;
@@ -7321,7 +7292,7 @@ com.irurueta:irurueta-navigation
             innerEstimator.setConfidence(mConfidence);
             innerEstimator.setMaxIterations(mMaxIterations);
             innerEstimator.setProgressDelta(mProgressDelta);
-            Solution&lt;Point3D&gt; result = innerEstimator.estimate();
+            Solution&lt;Point2D&gt; result = innerEstimator.estimate();
             mInliersData = innerEstimator.getInliersData();
             attemptRefine(result);
 
@@ -7351,8 +7322,7 @@ com.irurueta:irurueta-navigation
      * @throws IllegalArgumentException if provided quality scores length
      * is smaller than 3 samples.
      */
-    private void internalSetQualityScores(double[] qualityScores)
-            throws IllegalArgumentException {
+    private void internalSetQualityScores(double[] qualityScores) {
         if (qualityScores == null ||
                 qualityScores.length &lt; getMinReadings()) {
             throw new IllegalArgumentException();
@@ -7366,14 +7336,14 @@ com.irurueta:irurueta-navigation
 <th>File</th>
 <th>Line</th></tr>
 <tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.html#L979">979</a></td></tr>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L498">498</a></td></tr>
 <tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.html#L499">499</a></td></tr>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L990">990</a></td></tr>
 <tr class="b"><td colspan='2'>
 <div>
-<pre>                                    PROMedSRobustRangingAndRssiRadioSourceEstimator2D.this, progress);
+<pre>                                    PROMedSRobustRangingRadioSourceEstimator3D.this, progress);
                         }
                     }
                 });
@@ -7382,13 +7352,13 @@ com.irurueta:irurueta-navigation
             mLocked = true;
             mInliersData = null;
 
-            //inlier thresholds are disabled to obtain a less restrictive amount of inliers
+            //inlier thresholds are disable to obtain a less restrictive amount of inliers
             innerEstimator.setUseInlierThresholds(false);
 
             innerEstimator.setConfidence(mConfidence);
             innerEstimator.setMaxIterations(mMaxIterations);
             innerEstimator.setProgressDelta(mProgressDelta);
-            Solution&lt;Point2D&gt; result = innerEstimator.estimate();
+            Solution&lt;Point3D&gt; result = innerEstimator.estimate();
             mInliersData = innerEstimator.getInliersData();
             attemptRefine(result);
 
@@ -7965,18 +7935,79 @@ com.irurueta:irurueta-navigation
 <th>File</th>
 <th>Line</th></tr>
 <tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L1002">1002</a></td></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.html#L525">525</a></td></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L1007">1007</a></td></tr>
+<tr class="a"><td colspan='2'>
+<div>
+<pre>                                    PROSACRobustRangingAndRssiRadioSourceEstimator2D.this, progress);
+                        }
+                    }
+                });
+
+        try {
+            mLocked = true;
+            mInliersData = null;
+            innerEstimator.setComputeAndKeepInliersEnabled(
+                    mComputeAndKeepInliers || mRefineResult);
+            innerEstimator.setComputeAndKeepResidualsEnabled(
+                    mComputeAndKeepResiduals || mRefineResult);
+            innerEstimator.setConfidence(mConfidence);
+            innerEstimator.setMaxIterations(mMaxIterations);
+            innerEstimator.setProgressDelta(mProgressDelta);
+            Solution&lt;Point2D&gt; result = innerEstimator.estimate();
+            mInliersData = innerEstimator.getInliersData();
+            attemptRefine(result);
+
+        } catch (com.irurueta.numerical.LockedException e) {
+            throw new LockedException(e);
+        } catch (com.irurueta.numerical.NotReadyException e) {
+            throw new NotReadyException(e);
+        } finally {
+            mLocked = false;
+        }
+    }
+
+    /**
+     * Returns method being used for robust estimation.
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+        return RobustEstimatorMethod.PROSAC;
+    }
+
+    /**
+     * Sets quality scores corresponding to each provided sample.
+     * This method is used internally and does not check whether instance is
+     * locked or not.
+     * @param qualityScores quality scores to be set.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than required minimum.
+     */
+    private void internalSetQualityScores(double[] qualityScores) {</pre></div></td></tr></table>
+<table border="0" class="bodyTable">
+<tr class="b">
+<th>File</th>
+<th>Line</th></tr>
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.html#L2844">2844</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.html#L2829">2829</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.html#L2850">2850</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator3D.html#L2849">2849</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                    if (mTransmittedPowerEstimationEnabled) {
                         //transmitted power estimation enabled
@@ -8033,16 +8064,16 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator.html#L2030">2030</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator.html#L1936">1936</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        }
 
@@ -8072,16 +8103,16 @@ com.irurueta:irurueta-navigation
                 if (mListener != null) {
                     mListener.onEstimateProgressChange(</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/trilateration/NonLinearLeastSquaresTrilateration2DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/NonLinearLeastSquaresTrilateration2DSolver.html#L273">273</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/trilateration/RobustTrilateration2DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/RobustTrilateration2DSolver.html#L215">215</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>    }
 
@@ -8133,16 +8164,16 @@ com.irurueta:irurueta-navigation
         internalSetCirclesAndStandardDeviations(circles, radiusStandardDeviations);
     }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/trilateration/NonLinearLeastSquaresTrilateration3DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/NonLinearLeastSquaresTrilateration3DSolver.html#L273">273</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/trilateration/RobustTrilateration3DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/RobustTrilateration3DSolver.html#L222">222</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>    }
 
@@ -8194,16 +8225,16 @@ com.irurueta:irurueta-navigation
         internalSetSpheresAndStandardDeviations(spheres, radiusStandardDeviations);
     }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/trilateration/PROMedSRobustTrilateration2DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/PROMedSRobustTrilateration2DSolver.html#L398">398</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/trilateration/PROMedSRobustTrilateration3DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/PROMedSRobustTrilateration3DSolver.html#L398">398</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        super(circles, distanceStandardDeviations, listener);
         internalSetQualityScores(qualityScores);
@@ -8315,16 +8346,16 @@ com.irurueta:irurueta-navigation
     @Override
     public Point2D solve() throws LockedException, NotReadyException,</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator.html#L65">65</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator.html#L64">64</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>public abstract class SequentialRobustMixedRadioSourceEstimator&lt;S extends RadioSource,
         P extends Point&gt; {
@@ -8438,16 +8469,16 @@ com.irurueta:irurueta-navigation
      */
     protected Double mRssiThreshold;</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/LMedSRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/LMedSRobustRangingRadioSourceEstimator2D.html#L217">217</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/LMedSRobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/LMedSRobustRssiRadioSourceEstimator2D.html#L435">435</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>            throws IllegalArgumentException, LockedException {
         if (isLocked()) {
@@ -8493,16 +8524,16 @@ com.irurueta:irurueta-navigation
                     @Override
                     public void estimatePreliminarSolutions(int[] sampleIndices,</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator2D.html#L410">410</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RangingAndRssiRadioSourceEstimator2D.html#L397">397</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        } else if (source instanceof Beacon) {
             Beacon beacon = (Beacon)source;
@@ -8537,16 +8568,16 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator3D.html#L410">410</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RangingAndRssiRadioSourceEstimator3D.html#L397">397</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        } else if (source instanceof Beacon) {
             Beacon beacon = (Beacon)source;
@@ -8581,19 +8612,19 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator2D.html#L547">547</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator2D.html#L324">324</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator2D.html#L558">558</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>                                    RANSACRobustRangingAndRssiRadioSourceEstimator2D.this, progress);
                         }
@@ -8633,19 +8664,19 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator3D.html#L547">547</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator3D.html#L324">324</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator3D.html#L557">557</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                                            RANSACRobustRangingAndRssiRadioSourceEstimator3D.this, progress);
                                 }
@@ -8685,16 +8716,16 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/trilateration/RANSACRobustTrilateration2DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/RANSACRobustTrilateration2DSolver.html#L200">200</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/trilateration/RANSACRobustTrilateration3DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/RANSACRobustTrilateration3DSolver.html#L200">200</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        super(circles, distanceStandardDeviations, listener);
     }
@@ -8785,16 +8816,16 @@ com.irurueta:irurueta-navigation
     @Override
     public Point2D solve() throws LockedException, NotReadyException, RobustEstimatorException {</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/RadioSourceKNearestFinder.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/RadioSourceKNearestFinder.html#L182">182</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/RadioSourceNoMeanKNearestFinder.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/RadioSourceNoMeanKNearestFinder.html#L186">186</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>            double sqrDist = f.sqrDistanceTo(fingerprint);
             if (sqrDist &lt; maxSqrDist || nearestSqrDistances.size() &lt; k) {
@@ -8832,24 +8863,24 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.html#L979">979</a></td></tr>
 <tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.html#L499">499</a></td></tr>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.html#L1003">1003</a></td></tr>
 <tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L1014">1014</a></td></tr>
-<tr class="a"><td colspan='2'>
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L498">498</a></td></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L990">990</a></td></tr>
+<tr class="b"><td colspan='2'>
 <div>
-<pre>                                    PROMedSRobustRangingAndRssiRadioSourceEstimator2D.this, progress);
-                        }
-                    }
-                });
+<pre>                                            PROMedSRobustRangingAndRssiRadioSourceEstimator3D.this, progress);
+                                }
+                            }
+                        });
 
         try {
             mLocked = true;
@@ -8861,7 +8892,7 @@ com.irurueta:irurueta-navigation
             innerEstimator.setConfidence(mConfidence);
             innerEstimator.setMaxIterations(mMaxIterations);
             innerEstimator.setProgressDelta(mProgressDelta);
-            Solution&lt;Point2D&gt; result = innerEstimator.estimate();
+            Solution&lt;Point3D&gt; result = innerEstimator.estimate();
             mInliersData = innerEstimator.getInliersData();
             attemptRefine(result);
 
@@ -8891,30 +8922,30 @@ com.irurueta:irurueta-navigation
      * @throws IllegalArgumentException if provided quality scores length
      * is smaller than 3 samples.
      */
-    private void internalSetQualityScores(double[] qualityScores) {</pre></div></td></tr></table>
+    private void internalSetQualityScores(double[] qualityScores)</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L1031">1031</a></td></tr>
 <tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L1002">1002</a></td></tr>
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.html#L525">525</a></td></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L1031">1031</a></td></tr>
 <tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L1007">1007</a></td></tr>
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator2D.html#L547">547</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator2D.html#L324">324</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator2D.html#L558">558</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>                                    PROSACRobustRangingAndRssiRadioSourceEstimator2D.this, progress);
                         }
@@ -8952,28 +8983,28 @@ com.irurueta:irurueta-navigation
     public RobustEstimatorMethod getMethod() {
         return RobustEstimatorMethod.PROSAC;</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.html#L1031">1031</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.html#L525">525</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.html#L1031">1031</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator3D.html#L547">547</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingRadioSourceEstimator3D.html#L324">324</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRssiRadioSourceEstimator3D.html#L557">557</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>                                            PROSACRobustRangingAndRssiRadioSourceEstimator3D.this, progress);
                                 }
@@ -9011,19 +9042,19 @@ com.irurueta:irurueta-navigation
     public RobustEstimatorMethod getMethod() {
         return RobustEstimatorMethod.PROSAC;</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.html#L2671">2671</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RssiRadioSourceEstimator3D.html#L418">418</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator3D.html#L788">788</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        List&lt;? extends RangingAndRssiReadingLocated&lt;S, Point3D&gt;&gt; readings = getReadings();
         if (readings == null || readings.isEmpty()) {
@@ -9052,16 +9083,16 @@ com.irurueta:irurueta-navigation
             WifiAccessPoint accessPoint = (WifiAccessPoint) source;
             return new WifiAccessPointWithPowerAndLocated3D(accessPoint.getBssid(),</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/trilateration/PROSACRobustTrilateration2DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/PROSACRobustTrilateration2DSolver.html#L594">594</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/trilateration/RANSACRobustTrilateration2DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/RANSACRobustTrilateration2DSolver.html#L353">353</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                            mListener.onSolveProgressChange(PROSACRobustTrilateration2DSolver.this,
                                     progress);
@@ -9099,16 +9130,16 @@ com.irurueta:irurueta-navigation
     public RobustEstimatorMethod getMethod() {
         return RobustEstimatorMethod.PROSAC;</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/trilateration/PROSACRobustTrilateration3DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/PROSACRobustTrilateration3DSolver.html#L594">594</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/trilateration/RANSACRobustTrilateration3DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/RANSACRobustTrilateration3DSolver.html#L353">353</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                            mListener.onSolveProgressChange(PROSACRobustTrilateration3DSolver.this,
                                     progress);
@@ -9146,16 +9177,16 @@ com.irurueta:irurueta-navigation
     public RobustEstimatorMethod getMethod() {
         return RobustEstimatorMethod.PROSAC;</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MixedRadioSourceEstimator.html#L566">566</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RssiRadioSourceEstimator.html#L573">573</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>            throws LockedException {
         if (isLocked()) {
@@ -9245,16 +9276,16 @@ com.irurueta:irurueta-navigation
      */
     public double getInitialPathLossExponent() {</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/position/PositionEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/position/PositionEstimator.html#L68">68</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/position/RobustPositionEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/position/RobustPositionEstimator.html#L113">113</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>    }
 
@@ -9311,22 +9342,22 @@ com.irurueta:irurueta-navigation
      */
     public PositionEstimatorListener&lt;P&gt; getListener() {</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RangingAndRssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RangingAndRssiRadioSourceEstimator.html#L488">488</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RssiRadioSourceEstimator.html#L497">497</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustMixedRadioSourceEstimator.html#L1477">1477</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/SequentialRobustRangingAndRssiRadioSourceEstimator.html#L1459">1459</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>    }
 
@@ -9425,16 +9456,16 @@ com.irurueta:irurueta-navigation
      */
     public boolean isTransmittedPowerEstimationEnabled() {</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/LMedSRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/LMedSRobustRangingRadioSourceEstimator2D.html#L299">299</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/LMedSRobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/LMedSRobustRssiRadioSourceEstimator2D.html#L520">520</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                            mListener.onEstimateProgressChange(LMedSRobustRangingRadioSourceEstimator2D.this,
                                     progress);
@@ -9471,16 +9502,16 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/LMedSRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/LMedSRobustRangingRadioSourceEstimator3D.html#L295">295</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/LMedSRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/LMedSRobustRssiRadioSourceEstimator3D.html#L520">520</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                            mListener.onEstimateProgressChange(LMedSRobustRangingRadioSourceEstimator3D.this,
                                 progress);
@@ -9517,19 +9548,19 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator2D.html#L463">463</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator2D.html#L254">254</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator2D.html#L474">474</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>                                    MSACRobustRangingAndRssiRadioSourceEstimator2D.this, progress);
                         }
@@ -9565,19 +9596,19 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator3D.html#L463">463</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator3D.html#L254">254</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator3D.html#L474">474</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                                            MSACRobustRangingAndRssiRadioSourceEstimator3D.this, progress);
                                 }
@@ -9613,16 +9644,16 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator2D.html#L2794">2794</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator3D.html#L2797">2797</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        Point2D initialPosition = result.getEstimatedPosition();
         double initialTransmittedPowerdBm =
@@ -9650,16 +9681,16 @@ com.irurueta:irurueta-navigation
                         mTransmittedPowerEstimationEnabled);
                 mInnerEstimator.setPathLossEstimationEnabled(</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRangingAndRssiRadioSourceEstimator3D.html#L2779">2779</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RobustRssiRadioSourceEstimator2D.html#L2798">2798</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>        Point3D initialPosition = result.getEstimatedPosition();
         double initialTransmittedPowerdBm =
@@ -9687,70 +9718,9 @@ com.irurueta:irurueta-navigation
                         mTransmittedPowerEstimationEnabled);
                 mInnerEstimator.setPathLossEstimationEnabled(</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator3D.html#L1018">1018</a></td></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L523">523</a></td></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L1029">1029</a></td></tr>
-<tr class="a">
-<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L1029">1029</a></td></tr>
-<tr class="b"><td colspan='2'>
-<div>
-<pre>            Solution&lt;Point3D&gt; result = innerEstimator.estimate();
-            mInliersData = innerEstimator.getInliersData();
-            attemptRefine(result);
-
-        } catch (com.irurueta.numerical.LockedException e) {
-            throw new LockedException(e);
-        } catch (com.irurueta.numerical.NotReadyException e) {
-            throw new NotReadyException(e);
-        } finally {
-            mLocked = false;
-        }
-    }
-
-    /**
-     * Returns method being used for robust estimation.
-     * @return method being used for robust estimation.
-     */
-    @Override
-    public RobustEstimatorMethod getMethod() {
-        return RobustEstimatorMethod.PROMedS;
-    }
-
-    /**
-     * Sets quality scores corresponding to each provided sample.
-     * This method is used internally and does not check whether instance is
-     * locked or not.
-     * @param qualityScores quality scores to be set.
-     * @throws IllegalArgumentException if provided quality scores length
-     * is smaller than 3 samples.
-     */
-    private void internalSetQualityScores(double[] qualityScores)
-            throws IllegalArgumentException {
-        if (qualityScores == null ||
-                qualityScores.length &lt; getMinReadings()) {
-            throw new IllegalArgumentException();
-        }
-
-        mQualityScores = qualityScores;
-    }
-}</pre></div></td></tr></table>
-<table border="0" class="bodyTable">
-<tr class="a">
-<th>File</th>
-<th>Line</th></tr>
-<tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L1046">1046</a></td></tr>
 <tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.html#L1046">1046</a></td></tr>
@@ -9761,14 +9731,11 @@ com.irurueta:irurueta-navigation
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.html#L540">540</a></td></tr>
 <tr class="b">
-<td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L1046">1046</a></td></tr>
-<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.html#L1046">1046</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
-<pre>            Solution&lt;Point2D&gt; result = innerEstimator.estimate();
+<pre>            Solution&lt;Point3D&gt; result = innerEstimator.estimate();
             mInliersData = innerEstimator.getInliersData();
             attemptRefine(result);
 
@@ -9809,16 +9776,16 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/trilateration/PROMedSRobustTrilateration2DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/PROMedSRobustTrilateration2DSolver.html#L590">590</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/trilateration/PROMedSRobustTrilateration3DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/PROMedSRobustTrilateration3DSolver.html#L590">590</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>            Point2D result = innerEstimator.estimate();
             mInliersData = innerEstimator.getInliersData();
@@ -9860,16 +9827,16 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/trilateration/PROSACRobustTrilateration2DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/PROSACRobustTrilateration2DSolver.html#L610">610</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/trilateration/PROSACRobustTrilateration3DSolver.java</td>
 <td><a href="./xref/com/irurueta/navigation/trilateration/PROSACRobustTrilateration3DSolver.html#L610">610</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>            Point2D result = innerEstimator.estimate();
             mInliersData = innerEstimator.getInliersData();
@@ -9911,25 +9878,25 @@ com.irurueta:irurueta-navigation
     }
 }</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="a">
+<tr class="b">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/LMedSRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/LMedSRobustRangingRadioSourceEstimator2D.html#L299">299</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/LMedSRobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/LMedSRobustRssiRadioSourceEstimator2D.html#L520">520</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator2D.html#L463">463</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator2D.html#L254">254</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator2D.html#L474">474</a></td></tr>
-<tr class="a"><td colspan='2'>
+<tr class="b"><td colspan='2'>
 <div>
 <pre>                            mListener.onEstimateProgressChange(LMedSRobustRangingRadioSourceEstimator2D.this,
                                     progress);
@@ -9964,25 +9931,25 @@ com.irurueta:irurueta-navigation
     public RobustEstimatorMethod getMethod() {
         return RobustEstimatorMethod.LMedS;</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
-<tr class="b">
+<tr class="a">
 <th>File</th>
 <th>Line</th></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/LMedSRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/LMedSRobustRangingRadioSourceEstimator3D.html#L295">295</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/LMedSRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/LMedSRobustRssiRadioSourceEstimator3D.html#L520">520</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingAndRssiRadioSourceEstimator3D.html#L463">463</a></td></tr>
-<tr class="b">
+<tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRangingRadioSourceEstimator3D.html#L254">254</a></td></tr>
-<tr class="a">
+<tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator3D.html#L474">474</a></td></tr>
-<tr class="b"><td colspan='2'>
+<tr class="a"><td colspan='2'>
 <div>
 <pre>                            mListener.onEstimateProgressChange(LMedSRobustRangingRadioSourceEstimator3D.this,
                                 progress);
@@ -10017,12 +9984,72 @@ com.irurueta:irurueta-navigation
     public RobustEstimatorMethod getMethod() {
         return RobustEstimatorMethod.LMedS;</pre></div></td></tr></table>
 <table border="0" class="bodyTable">
+<tr class="b">
+<th>File</th>
+<th>Line</th></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingAndRssiRadioSourceEstimator2D.html#L994">994</a></td></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator2D.html#L514">514</a></td></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRangingRadioSourceEstimator3D.html#L513">513</a></td></tr>
+<tr class="b">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator2D.html#L1005">1005</a></td></tr>
+<tr class="a">
+<td>com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.java</td>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROMedSRobustRssiRadioSourceEstimator3D.html#L1005">1005</a></td></tr>
+<tr class="b"><td colspan='2'>
+<div>
+<pre>            Solution&lt;Point2D&gt; result = innerEstimator.estimate();
+            mInliersData = innerEstimator.getInliersData();
+            attemptRefine(result);
+
+        } catch (com.irurueta.numerical.LockedException e) {
+            throw new LockedException(e);
+        } catch (com.irurueta.numerical.NotReadyException e) {
+            throw new NotReadyException(e);
+        } finally {
+            mLocked = false;
+        }
+    }
+
+    /**
+     * Returns method being used for robust estimation.
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+        return RobustEstimatorMethod.PROMedS;
+    }
+
+    /**
+     * Sets quality scores corresponding to each provided sample.
+     * This method is used internally and does not check whether instance is
+     * locked or not.
+     * @param qualityScores quality scores to be set.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than 3 samples.
+     */
+    private void internalSetQualityScores(double[] qualityScores) {
+        if (qualityScores == null ||
+                qualityScores.length &lt; getMinReadings()) {
+            throw new IllegalArgumentException();
+        }
+
+        mQualityScores = qualityScores;
+    }
+}</pre></div></td></tr></table>
+<table border="0" class="bodyTable">
 <tr class="a">
 <th>File</th>
 <th>Line</th></tr>
 <tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L898">898</a></td></tr>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L869">869</a></td></tr>
 <tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator3D.html#L898">898</a></td></tr>
@@ -10034,7 +10061,7 @@ com.irurueta:irurueta-navigation
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator3D.html#L393">393</a></td></tr>
 <tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L898">898</a></td></tr>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L874">874</a></td></tr>
 <tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator3D.html#L898">898</a></td></tr>
@@ -12056,13 +12083,13 @@ com.irurueta:irurueta-navigation
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/MSACRobustRssiRadioSourceEstimator2D.html#L415">415</a></td></tr>
 <tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L972">972</a></td></tr>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingAndRssiRadioSourceEstimator2D.html#L943">943</a></td></tr>
 <tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRangingRadioSourceEstimator2D.html#L466">466</a></td></tr>
 <tr class="b">
 <td>com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.java</td>
-<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L972">972</a></td></tr>
+<td><a href="./xref/com/irurueta/navigation/indoor/radiosource/PROSACRobustRssiRadioSourceEstimator2D.html#L948">948</a></td></tr>
 <tr class="a">
 <td>com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator2D.java</td>
 <td><a href="./xref/com/irurueta/navigation/indoor/radiosource/RANSACRobustRangingAndRssiRadioSourceEstimator2D.html#L488">488</a></td></tr>
