@@ -77,7 +77,7 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @param value value to use.
      * @throws NullPointerException if provided value is null.
      */
-<span class="fc" id="L80">    protected BeaconIdentifier(byte[] value) throws NullPointerException {</span>
+<span class="fc" id="L80">    protected BeaconIdentifier(byte[] value) {</span>
 <span class="fc bfc" id="L81" title="All 2 branches covered.">        if (value == null) {</span>
 <span class="fc" id="L82">            throw new NullPointerException(</span>
                     &quot;Identifiers cannot be constructed from null pointers but \&quot;value\&quot; is null.&quot;);
@@ -117,39 +117,38 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @throws NullPointerException if string value is null.
      * @throws IllegalArgumentException if parsing fails for some other reason (invalid format, etc).
      */
-    public static BeaconIdentifier parse(String stringValue, int desiredByteLength) throws NullPointerException,
-            IllegalArgumentException {
-<span class="fc bfc" id="L122" title="All 2 branches covered.">        if (stringValue == null) {</span>
-<span class="fc" id="L123">            throw new NullPointerException(</span>
+    public static BeaconIdentifier parse(String stringValue, int desiredByteLength) {
+<span class="fc bfc" id="L121" title="All 2 branches covered.">        if (stringValue == null) {</span>
+<span class="fc" id="L122">            throw new NullPointerException(</span>
                     &quot;Identifiers cannot be constructed from null pointers but \&quot;stringValue\&quot; is null.&quot;);
         }
 
-<span class="fc bfc" id="L127" title="All 2 branches covered.">        if (HEX_PATTERN.matcher(stringValue).matches()) {</span>
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        if (HEX_PATTERN.matcher(stringValue).matches()) {</span>
             //parse hexadecimal format
-<span class="fc" id="L129">            return parseHex(stringValue.substring(2), desiredByteLength);</span>
+<span class="fc" id="L128">            return parseHex(stringValue.substring(2), desiredByteLength);</span>
         }
 
-<span class="fc bfc" id="L132" title="All 2 branches covered.">        if (UUID_PATTERN.matcher(stringValue).matches()) {</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">        if (UUID_PATTERN.matcher(stringValue).matches()) {</span>
             //parse UUID format
-<span class="fc" id="L134">            return parseHex(stringValue.replace(&quot;-&quot;, &quot;&quot;), desiredByteLength);</span>
+<span class="fc" id="L133">            return parseHex(stringValue.replace(&quot;-&quot;, &quot;&quot;), desiredByteLength);</span>
         }
 
-<span class="fc bfc" id="L137" title="All 2 branches covered.">        if (DECIMAL_PATTERN.matcher(stringValue).matches()) {</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">        if (DECIMAL_PATTERN.matcher(stringValue).matches()) {</span>
             //parse decimal format
-<span class="fc" id="L139">            int value = Integer.valueOf(stringValue);</span>
-<span class="pc bpc" id="L140" title="1 of 4 branches missed.">            if (desiredByteLength &lt;= 0 || desiredByteLength == 2) {</span>
-<span class="fc" id="L141">                return fromInt(value);</span>
+<span class="fc" id="L138">            int value = Integer.parseInt(stringValue);</span>
+<span class="pc bpc" id="L139" title="1 of 4 branches missed.">            if (desiredByteLength &lt;= 0 || desiredByteLength == 2) {</span>
+<span class="fc" id="L140">                return fromInt(value);</span>
             } else {
-<span class="fc" id="L143">                return fromLong(value, desiredByteLength);</span>
+<span class="fc" id="L142">                return fromLong(value, desiredByteLength);</span>
             }
         }
 
-<span class="fc bfc" id="L147" title="All 2 branches covered.">        if (HEX_PATTERN_NO_PREFIX.matcher(stringValue).matches()) {</span>
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        if (HEX_PATTERN_NO_PREFIX.matcher(stringValue).matches()) {</span>
             //parse hexadecimal format without prefix
-<span class="fc" id="L149">            return parseHex(stringValue, desiredByteLength);</span>
+<span class="fc" id="L148">            return parseHex(stringValue, desiredByteLength);</span>
         }
 
-<span class="fc" id="L152">        throw new IllegalArgumentException(&quot;Unable to parse identifier&quot;);</span>
+<span class="fc" id="L151">        throw new IllegalArgumentException(&quot;Unable to parse identifier&quot;);</span>
     }
 
     /**
@@ -159,17 +158,16 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @return the parsed identifier.
      * @throws IllegalArgumentException if desired number of bytes is negative.
      */
-    public static BeaconIdentifier fromLong(long longValue, int desiredByteLength)
-            throws IllegalArgumentException {
-<span class="fc bfc" id="L164" title="All 2 branches covered.">        if (desiredByteLength &lt; 0) {</span>
-<span class="fc" id="L165">            throw new IllegalArgumentException(&quot;identifier length must be &gt; 0&quot;);</span>
+    public static BeaconIdentifier fromLong(long longValue, int desiredByteLength) {
+<span class="fc bfc" id="L162" title="All 2 branches covered.">        if (desiredByteLength &lt; 0) {</span>
+<span class="fc" id="L163">            throw new IllegalArgumentException(&quot;identifier length must be &gt; 0&quot;);</span>
         }
-<span class="fc" id="L167">        byte[] newValue = new byte[desiredByteLength];</span>
-<span class="fc bfc" id="L168" title="All 2 branches covered.">        for (int i = desiredByteLength - 1; i &gt;= 0; i--) {</span>
-<span class="fc" id="L169">            newValue[i] = (byte) (longValue &amp; 0xff);</span>
-<span class="fc" id="L170">            longValue = longValue &gt;&gt; 8;</span>
+<span class="fc" id="L165">        byte[] newValue = new byte[desiredByteLength];</span>
+<span class="fc bfc" id="L166" title="All 2 branches covered.">        for (int i = desiredByteLength - 1; i &gt;= 0; i--) {</span>
+<span class="fc" id="L167">            newValue[i] = (byte) (longValue &amp; 0xff);</span>
+<span class="fc" id="L168">            longValue = longValue &gt;&gt; 8;</span>
         }
-<span class="fc" id="L172">        return new BeaconIdentifier(newValue);</span>
+<span class="fc" id="L170">        return new BeaconIdentifier(newValue);</span>
     }
 
     /**
@@ -178,18 +176,18 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @return an identifier with the specified value.
      * @throws IllegalArgumentException if provided value is out of valid range (from 0 to 65535).
      */
-    public static BeaconIdentifier fromInt(int intValue) throws IllegalArgumentException {
-<span class="fc bfc" id="L182" title="All 4 branches covered.">        if (intValue &lt; 0 || intValue &gt; MAX_INTEGER) {</span>
-<span class="fc" id="L183">            throw new IllegalArgumentException(</span>
+    public static BeaconIdentifier fromInt(int intValue) {
+<span class="fc bfc" id="L180" title="All 4 branches covered.">        if (intValue &lt; 0 || intValue &gt; MAX_INTEGER) {</span>
+<span class="fc" id="L181">            throw new IllegalArgumentException(</span>
                     &quot;Identifiers can only be constructed from integers between 0 and &quot; + MAX_INTEGER + &quot; (inclusive).&quot;);
         }
 
-<span class="fc" id="L187">        byte[] newValue = new byte[2];</span>
+<span class="fc" id="L185">        byte[] newValue = new byte[2];</span>
 
-<span class="fc" id="L189">        newValue[0] = (byte) (intValue &gt;&gt; 8);</span>
-<span class="fc" id="L190">        newValue[1] = (byte) (intValue);</span>
+<span class="fc" id="L187">        newValue[0] = (byte) (intValue &gt;&gt; 8);</span>
+<span class="fc" id="L188">        newValue[1] = (byte) (intValue);</span>
 
-<span class="fc" id="L192">        return new BeaconIdentifier(newValue);</span>
+<span class="fc" id="L190">        return new BeaconIdentifier(newValue);</span>
     }
 
     /**
@@ -203,27 +201,26 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @throws ArrayIndexOutOfBoundsException if start or end are outside the bounds of the array.
      * @throws IllegalArgumentException start is larger than end.
      */
-    public static BeaconIdentifier fromBytes(byte[] bytes, int start, int end, boolean littleEndian)
-            throws NullPointerException, ArrayIndexOutOfBoundsException, IllegalArgumentException {
-<span class="fc bfc" id="L208" title="All 2 branches covered.">        if (bytes == null) {</span>
-<span class="fc" id="L209">            throw new NullPointerException(</span>
+    public static BeaconIdentifier fromBytes(byte[] bytes, int start, int end, boolean littleEndian) {
+<span class="fc bfc" id="L205" title="All 2 branches covered.">        if (bytes == null) {</span>
+<span class="fc" id="L206">            throw new NullPointerException(</span>
                     &quot;Identifiers cannot be constructed from null pointers but \&quot;bytes\&quot; is null.&quot;);
         }
-<span class="pc bpc" id="L212" title="1 of 4 branches missed.">        if (start &lt; 0 || start &gt; bytes.length) {</span>
-<span class="fc" id="L213">            throw new ArrayIndexOutOfBoundsException(&quot;start &lt; 0 || start &gt; bytes.length&quot;);</span>
+<span class="pc bpc" id="L209" title="1 of 4 branches missed.">        if (start &lt; 0 || start &gt; bytes.length) {</span>
+<span class="fc" id="L210">            throw new ArrayIndexOutOfBoundsException(&quot;start &lt; 0 || start &gt; bytes.length&quot;);</span>
         }
-<span class="fc bfc" id="L215" title="All 2 branches covered.">        if (end &gt; bytes.length) {</span>
-<span class="fc" id="L216">            throw new ArrayIndexOutOfBoundsException(&quot;end &gt; bytes.length&quot;);</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">        if (end &gt; bytes.length) {</span>
+<span class="fc" id="L213">            throw new ArrayIndexOutOfBoundsException(&quot;end &gt; bytes.length&quot;);</span>
         }
-<span class="fc bfc" id="L218" title="All 2 branches covered.">        if (start &gt; end) {</span>
-<span class="fc" id="L219">            throw new IllegalArgumentException(&quot;start &gt; end&quot;);</span>
+<span class="fc bfc" id="L215" title="All 2 branches covered.">        if (start &gt; end) {</span>
+<span class="fc" id="L216">            throw new IllegalArgumentException(&quot;start &gt; end&quot;);</span>
         }
 
-<span class="fc" id="L222">        byte[] byteRange = Arrays.copyOfRange(bytes, start, end);</span>
-<span class="fc bfc" id="L223" title="All 2 branches covered.">        if (littleEndian) {</span>
-<span class="fc" id="L224">            reverseArray(byteRange);</span>
+<span class="fc" id="L219">        byte[] byteRange = Arrays.copyOfRange(bytes, start, end);</span>
+<span class="fc bfc" id="L220" title="All 2 branches covered.">        if (littleEndian) {</span>
+<span class="fc" id="L221">            reverseArray(byteRange);</span>
         }
-<span class="fc" id="L226">        return new BeaconIdentifier(byteRange);</span>
+<span class="fc" id="L223">        return new BeaconIdentifier(byteRange);</span>
     }
 
     /**
@@ -234,10 +231,10 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @return a new identifier.
      */
     public static BeaconIdentifier fromUuid(UUID uuid) {
-<span class="fc" id="L237">        ByteBuffer buf = ByteBuffer.allocate(16);</span>
-<span class="fc" id="L238">        buf.putLong(uuid.getMostSignificantBits());</span>
-<span class="fc" id="L239">        buf.putLong(uuid.getLeastSignificantBits());</span>
-<span class="fc" id="L240">        return new BeaconIdentifier(buf.array());</span>
+<span class="fc" id="L234">        ByteBuffer buf = ByteBuffer.allocate(16);</span>
+<span class="fc" id="L235">        buf.putLong(uuid.getMostSignificantBits());</span>
+<span class="fc" id="L236">        buf.putLong(uuid.getLeastSignificantBits());</span>
+<span class="fc" id="L237">        return new BeaconIdentifier(buf.array());</span>
     }
 
     /**
@@ -251,17 +248,17 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
     public String toString() {
         // Note:  the toString() method is also used for serialization and deserialization.  So
         // toString() and parse() must always return objects that return true when you call equals()
-<span class="fc bfc" id="L254" title="All 2 branches covered.">        if (mValue == null) {</span>
-<span class="fc" id="L255">            return super.toString();</span>
+<span class="fc bfc" id="L251" title="All 2 branches covered.">        if (mValue == null) {</span>
+<span class="fc" id="L252">            return super.toString();</span>
         }
 
-<span class="fc bfc" id="L258" title="All 2 branches covered.">        if (mValue.length == 2) {</span>
-<span class="fc" id="L259">            return Integer.toString(toInt());</span>
+<span class="fc bfc" id="L255" title="All 2 branches covered.">        if (mValue.length == 2) {</span>
+<span class="fc" id="L256">            return Integer.toString(toInt());</span>
         }
-<span class="fc bfc" id="L261" title="All 2 branches covered.">        if (mValue.length == 16) {</span>
-<span class="fc" id="L262">            return toUuid().toString();</span>
+<span class="fc bfc" id="L258" title="All 2 branches covered.">        if (mValue.length == 16) {</span>
+<span class="fc" id="L259">            return toUuid().toString();</span>
         }
-<span class="fc" id="L264">        return toHexString();</span>
+<span class="fc" id="L261">        return toHexString();</span>
     }
 
     /**
@@ -269,21 +266,21 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @return value represented as int.
      * @throws UnsupportedOperationException when value length is longer than 2.
      */
-    public int toInt() throws UnsupportedOperationException {
-<span class="fc bfc" id="L273" title="All 2 branches covered.">        if (mValue == null) {</span>
-<span class="fc" id="L274">            return 0;</span>
+    public int toInt() {
+<span class="fc bfc" id="L270" title="All 2 branches covered.">        if (mValue == null) {</span>
+<span class="fc" id="L271">            return 0;</span>
         }
 
-<span class="fc bfc" id="L277" title="All 2 branches covered.">        if (mValue.length &gt; 2) {</span>
-<span class="fc" id="L278">            throw new UnsupportedOperationException(&quot;Only supported for Identifiers with max byte length of 2&quot;);</span>
+<span class="fc bfc" id="L274" title="All 2 branches covered.">        if (mValue.length &gt; 2) {</span>
+<span class="fc" id="L275">            throw new UnsupportedOperationException(&quot;Only supported for Identifiers with max byte length of 2&quot;);</span>
         }
-<span class="fc" id="L280">        int result = 0;</span>
+<span class="fc" id="L277">        int result = 0;</span>
 
-<span class="fc bfc" id="L282" title="All 2 branches covered.">        for (int i = 0; i &lt; mValue.length; i++) {</span>
-<span class="fc" id="L283">            result |= (mValue[i] &amp; 0xFF) &lt;&lt; ((mValue.length - i - 1) * 8);</span>
+<span class="fc bfc" id="L279" title="All 2 branches covered.">        for (int i = 0; i &lt; mValue.length; i++) {</span>
+<span class="fc" id="L280">            result |= (mValue[i] &amp; 0xFF) &lt;&lt; ((mValue.length - i - 1) * 8);</span>
         }
 
-<span class="fc" id="L286">        return result;</span>
+<span class="fc" id="L283">        return result;</span>
     }
 
     /**
@@ -292,17 +289,17 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @return a new byte array with a copy of the value.
      */
     public byte[] toByteArrayOfSpecifiedEndianness(boolean bigEndian) {
-<span class="fc bfc" id="L295" title="All 2 branches covered.">        if (mValue == null) {</span>
-<span class="fc" id="L296">            return null;</span>
+<span class="fc bfc" id="L292" title="All 2 branches covered.">        if (mValue == null) {</span>
+<span class="fc" id="L293">            return null;</span>
         }
 
-<span class="fc" id="L299">        byte[] copy = Arrays.copyOf(mValue, mValue.length);</span>
+<span class="fc" id="L296">        byte[] copy = Arrays.copyOf(mValue, mValue.length);</span>
 
-<span class="fc bfc" id="L301" title="All 2 branches covered.">        if (!bigEndian) {</span>
-<span class="fc" id="L302">            reverseArray(copy);</span>
+<span class="fc bfc" id="L298" title="All 2 branches covered.">        if (!bigEndian) {</span>
+<span class="fc" id="L299">            reverseArray(copy);</span>
         }
 
-<span class="fc" id="L305">        return copy;</span>
+<span class="fc" id="L302">        return copy;</span>
     }
 
     /**
@@ -310,7 +307,7 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @return length of identifier.
      */
     public int getByteCount() {
-<span class="fc bfc" id="L313" title="All 2 branches covered.">        return mValue != null ? mValue.length : 0;</span>
+<span class="fc bfc" id="L310" title="All 2 branches covered.">        return mValue != null ? mValue.length : 0;</span>
     }
 
     /**
@@ -319,19 +316,19 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @return value as hexadecimal String.
      */
     public String toHexString() {
-<span class="fc bfc" id="L322" title="All 2 branches covered.">        if (mValue == null) {</span>
-<span class="fc" id="L323">            return null;</span>
+<span class="fc bfc" id="L319" title="All 2 branches covered.">        if (mValue == null) {</span>
+<span class="fc" id="L320">            return null;</span>
         }
 
-<span class="fc" id="L326">        final int l = mValue.length;</span>
-<span class="fc" id="L327">        final char[] out = new char[l * 2 + 2];</span>
-<span class="fc" id="L328">        out[0] = '0';</span>
-<span class="fc" id="L329">        out[1] = 'x';</span>
-<span class="fc bfc" id="L330" title="All 2 branches covered.">        for (int i = 0, j = 2; i &lt; l; i++) {</span>
-<span class="fc" id="L331">            out[j++] = HEX_DIGITS[(0xF0 &amp; mValue[i]) &gt;&gt;&gt; 4];</span>
-<span class="fc" id="L332">            out[j++] = HEX_DIGITS[0x0F &amp; mValue[i]];</span>
+<span class="fc" id="L323">        final int l = mValue.length;</span>
+<span class="fc" id="L324">        final char[] out = new char[l * 2 + 2];</span>
+<span class="fc" id="L325">        out[0] = '0';</span>
+<span class="fc" id="L326">        out[1] = 'x';</span>
+<span class="fc bfc" id="L327" title="All 2 branches covered.">        for (int i = 0, j = 2; i &lt; l; i++) {</span>
+<span class="fc" id="L328">            out[j++] = HEX_DIGITS[(0xF0 &amp; mValue[i]) &gt;&gt;&gt; 4];</span>
+<span class="fc" id="L329">            out[j++] = HEX_DIGITS[0x0F &amp; mValue[i]];</span>
         }
-<span class="fc" id="L334">        return new String(out);</span>
+<span class="fc" id="L331">        return new String(out);</span>
     }
 
     /**
@@ -339,16 +336,16 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @return the identifier as a UUID.
      * @throws UnsupportedOperationException if conversion to UUID fails.
      */
-    public UUID toUuid() throws UnsupportedOperationException {
-<span class="fc bfc" id="L343" title="All 2 branches covered.">        if (mValue == null) {</span>
-<span class="fc" id="L344">            return null;</span>
+    public UUID toUuid() {
+<span class="fc bfc" id="L340" title="All 2 branches covered.">        if (mValue == null) {</span>
+<span class="fc" id="L341">            return null;</span>
         }
 
-<span class="fc bfc" id="L347" title="All 2 branches covered.">        if (mValue.length != 16) {</span>
-<span class="fc" id="L348">            throw new UnsupportedOperationException(&quot;Only Identifiers backed by a byte array with length of exactly 16 can be UUIDs.&quot;);</span>
+<span class="fc bfc" id="L344" title="All 2 branches covered.">        if (mValue.length != 16) {</span>
+<span class="fc" id="L345">            throw new UnsupportedOperationException(&quot;Only Identifiers backed by a byte array with length of exactly 16 can be UUIDs.&quot;);</span>
         }
-<span class="fc" id="L350">        LongBuffer buf = ByteBuffer.wrap(mValue).asLongBuffer();</span>
-<span class="fc" id="L351">        return new UUID(buf.get(), buf.get());</span>
+<span class="fc" id="L347">        LongBuffer buf = ByteBuffer.wrap(mValue).asLongBuffer();</span>
+<span class="fc" id="L348">        return new UUID(buf.get(), buf.get());</span>
     }
 
     /**
@@ -357,7 +354,7 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @return a deep copy of the data backing this identifier.
      */
     public byte[] toByteArray() {
-<span class="fc bfc" id="L360" title="All 2 branches covered.">        return mValue != null ? mValue.clone() : null;</span>
+<span class="fc bfc" id="L357" title="All 2 branches covered.">        return mValue != null ? mValue.clone() : null;</span>
     }
 
     /**
@@ -366,7 +363,7 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      */
     @Override
     public int hashCode() {
-<span class="fc bfc" id="L369" title="All 2 branches covered.">        return mValue != null ? Arrays.hashCode(mValue) : 0;</span>
+<span class="fc bfc" id="L366" title="All 2 branches covered.">        return mValue != null ? Arrays.hashCode(mValue) : 0;</span>
     }
 
     /**
@@ -377,11 +374,11 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      */
     @Override
     public boolean equals(Object that) {
-<span class="fc bfc" id="L380" title="All 2 branches covered.">        if (!(that instanceof BeaconIdentifier)) {</span>
-<span class="fc" id="L381">            return false;</span>
+<span class="fc bfc" id="L377" title="All 2 branches covered.">        if (!(that instanceof BeaconIdentifier)) {</span>
+<span class="fc" id="L378">            return false;</span>
         }
-<span class="fc" id="L383">        BeaconIdentifier thatIdentifier = (BeaconIdentifier) that;</span>
-<span class="fc" id="L384">        return Arrays.equals(mValue, thatIdentifier.mValue);</span>
+<span class="fc" id="L380">        BeaconIdentifier thatIdentifier = (BeaconIdentifier) that;</span>
+<span class="fc" id="L381">        return Arrays.equals(mValue, thatIdentifier.mValue);</span>
     }
 
     /**
@@ -395,15 +392,15 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      */
     @Override
     public int compareTo(BeaconIdentifier that) {
-<span class="fc bfc" id="L398" title="All 2 branches covered.">        if (mValue.length != that.mValue.length) {</span>
-<span class="fc bfc" id="L399" title="All 2 branches covered.">            return mValue.length &lt; that.mValue.length ? -1 : 1;</span>
+<span class="fc bfc" id="L395" title="All 2 branches covered.">        if (mValue.length != that.mValue.length) {</span>
+<span class="fc bfc" id="L396" title="All 2 branches covered.">            return mValue.length &lt; that.mValue.length ? -1 : 1;</span>
         }
-<span class="fc bfc" id="L401" title="All 2 branches covered.">        for (int i = 0; i &lt; mValue.length; i++) {</span>
-<span class="fc bfc" id="L402" title="All 2 branches covered.">            if (mValue[i] != that.mValue[i]) {</span>
-<span class="fc bfc" id="L403" title="All 2 branches covered.">                return mValue[i] &lt; that.mValue[i] ? -1 : 1;</span>
+<span class="fc bfc" id="L398" title="All 2 branches covered.">        for (int i = 0; i &lt; mValue.length; i++) {</span>
+<span class="fc bfc" id="L399" title="All 2 branches covered.">            if (mValue[i] != that.mValue[i]) {</span>
+<span class="fc bfc" id="L400" title="All 2 branches covered.">                return mValue[i] &lt; that.mValue[i] ? -1 : 1;</span>
             }
         }
-<span class="fc" id="L406">        return 0;</span>
+<span class="fc" id="L403">        return 0;</span>
     }
 
     /**
@@ -411,13 +408,13 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @param bytes array to be reversed.
      */
     private static void reverseArray(byte[] bytes) {
-<span class="fc bfc" id="L414" title="All 2 branches covered.">        for (int i = 0; i &lt; bytes.length / 2; i++) {</span>
-<span class="fc" id="L415">            int mirroredIndex = bytes.length - i - 1;</span>
-<span class="fc" id="L416">            byte tmp = bytes[i];</span>
-<span class="fc" id="L417">            bytes[i] = bytes[mirroredIndex];</span>
-<span class="fc" id="L418">            bytes[mirroredIndex] = tmp;</span>
+<span class="fc bfc" id="L411" title="All 2 branches covered.">        for (int i = 0; i &lt; bytes.length / 2; i++) {</span>
+<span class="fc" id="L412">            int mirroredIndex = bytes.length - i - 1;</span>
+<span class="fc" id="L413">            byte tmp = bytes[i];</span>
+<span class="fc" id="L414">            bytes[i] = bytes[mirroredIndex];</span>
+<span class="fc" id="L415">            bytes[mirroredIndex] = tmp;</span>
         }
-<span class="fc" id="L420">    }</span>
+<span class="fc" id="L417">    }</span>
 
     /**
      * Parses a string containing a beacon identifier in hexadecimal format.
@@ -426,29 +423,29 @@ public class BeaconIdentifier implements Comparable&lt;BeaconIdentifier&gt;, Ser
      * @return the parsed identifier.
      */
     private static BeaconIdentifier parseHex(String identifierString, int desiredByteLength) {
-<span class="pc bpc" id="L429" title="1 of 2 branches missed.">        String str = identifierString.length() % 2 == 0 ? &quot;&quot; : &quot;0&quot;;</span>
-<span class="fc" id="L430">        str += identifierString.toUpperCase();</span>
-<span class="fc" id="L431">        int len = str.length();</span>
+<span class="pc bpc" id="L426" title="1 of 2 branches missed.">        String str = identifierString.length() % 2 == 0 ? &quot;&quot; : &quot;0&quot;;</span>
+<span class="fc" id="L427">        str += identifierString.toUpperCase();</span>
+<span class="fc" id="L428">        int len = str.length();</span>
 
-<span class="fc bfc" id="L433" title="All 4 branches covered.">        if (desiredByteLength &gt; 0 &amp;&amp; desiredByteLength &lt; len / 2) {</span>
-<span class="fc" id="L434">            str = str.substring(len - desiredByteLength * 2);</span>
-<span class="fc" id="L435">            len = str.length();</span>
+<span class="fc bfc" id="L430" title="All 4 branches covered.">        if (desiredByteLength &gt; 0 &amp;&amp; desiredByteLength &lt; len / 2) {</span>
+<span class="fc" id="L431">            str = str.substring(len - desiredByteLength * 2);</span>
+<span class="fc" id="L432">            len = str.length();</span>
         }
-<span class="fc bfc" id="L437" title="All 4 branches covered.">        if (desiredByteLength &gt; 0 &amp;&amp; desiredByteLength &gt; len / 2) {</span>
-<span class="fc" id="L438">            int extraCharsToAdd = desiredByteLength * 2 - len;</span>
-<span class="fc" id="L439">            StringBuilder sb = new StringBuilder();</span>
-<span class="fc bfc" id="L440" title="All 2 branches covered.">            while (sb.length() &lt; extraCharsToAdd) {</span>
-<span class="fc" id="L441">                sb.append(&quot;0&quot;);</span>
+<span class="fc bfc" id="L434" title="All 4 branches covered.">        if (desiredByteLength &gt; 0 &amp;&amp; desiredByteLength &gt; len / 2) {</span>
+<span class="fc" id="L435">            int extraCharsToAdd = desiredByteLength * 2 - len;</span>
+<span class="fc" id="L436">            StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L437" title="All 2 branches covered.">            while (sb.length() &lt; extraCharsToAdd) {</span>
+<span class="fc" id="L438">                sb.append(&quot;0&quot;);</span>
             }
-<span class="fc" id="L443">            str = sb.toString() + str;</span>
-<span class="fc" id="L444">            len = str.length();</span>
+<span class="fc" id="L440">            str = sb.toString() + str;</span>
+<span class="fc" id="L441">            len = str.length();</span>
         }
 
-<span class="fc" id="L447">        byte[] result = new byte[len / 2];</span>
-<span class="fc bfc" id="L448" title="All 2 branches covered.">        for (int i = 0; i &lt; result.length; i++) {</span>
-<span class="fc" id="L449">            result[i] = (byte)(Integer.parseInt(str.substring(i * 2, i * 2 + 2), 16) &amp; 0xFF);</span>
+<span class="fc" id="L444">        byte[] result = new byte[len / 2];</span>
+<span class="fc bfc" id="L445" title="All 2 branches covered.">        for (int i = 0; i &lt; result.length; i++) {</span>
+<span class="fc" id="L446">            result[i] = (byte)(Integer.parseInt(str.substring(i * 2, i * 2 + 2), 16) &amp; 0xFF);</span>
         }
-<span class="fc" id="L451">        return new BeaconIdentifier(result);</span>
+<span class="fc" id="L448">        return new BeaconIdentifier(result);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
