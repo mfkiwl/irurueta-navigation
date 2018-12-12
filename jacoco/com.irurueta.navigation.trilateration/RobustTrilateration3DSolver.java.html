@@ -868,7 +868,7 @@ public abstract class RobustTrilateration3DSolver extends RobustTrilaterationSol
     public static RobustTrilateration3DSolver create(double[] qualityScores,
             Sphere[] spheres, double[] distanceStandardDeviations,
             RobustTrilaterationSolverListener&lt;Point3D&gt; listener,
-            RobustEstimatorMethod method) throws IllegalArgumentException {
+            RobustEstimatorMethod method) {
 <span class="fc bfc" id="L872" title="All 5 branches covered.">        switch (method) {</span>
             case RANSAC:
 <span class="fc" id="L874">                return new RANSACRobustTrilateration3DSolver(spheres,</span>
@@ -1261,16 +1261,18 @@ public abstract class RobustTrilateration3DSolver extends RobustTrilaterationSol
 <span class="nc" id="L1261">                    mCovariance = null;</span>
                 }
 
-<span class="fc" id="L1264">                return mEstimatedPosition = mNonLinearSolver.getEstimatedPosition();</span>
+<span class="fc" id="L1264">                mEstimatedPosition = mNonLinearSolver.getEstimatedPosition();</span>
 <span class="fc" id="L1265">            } catch (Exception e) {</span>
                 //refinement failed, so we return input value
 <span class="fc" id="L1267">                mCovariance = null;</span>
-<span class="fc" id="L1268">                return mEstimatedPosition = position;</span>
-            }
-        } else {
+<span class="fc" id="L1268">                mEstimatedPosition = position;</span>
+<span class="fc" id="L1269">            }</span>
+<span class="fc" id="L1270">        } else {</span>
 <span class="fc" id="L1271">            mCovariance = null;</span>
-<span class="fc" id="L1272">            return mEstimatedPosition = position;</span>
+<span class="fc" id="L1272">            mEstimatedPosition = position;</span>
         }
+
+<span class="fc" id="L1275">        return mEstimatedPosition;</span>
     }
 
     /**
@@ -1280,21 +1282,21 @@ public abstract class RobustTrilateration3DSolver extends RobustTrilaterationSol
      */
     protected void solvePreliminarSolutions(int[] samplesIndices, List&lt;Point3D&gt; solutions) {
         try {
-<span class="fc" id="L1283">            int length = samplesIndices.length;</span>
+<span class="fc" id="L1285">            int length = samplesIndices.length;</span>
             int index;
-<span class="fc bfc" id="L1285" title="All 2 branches covered.">            for (int i = 0; i &lt; length; i++) {</span>
-<span class="fc" id="L1286">                index = samplesIndices[i];</span>
-<span class="fc" id="L1287">                mInnerPositions[i] = mPositions[index];</span>
-<span class="fc" id="L1288">                mInnerDistances[i] = mDistances[index];</span>
+<span class="fc bfc" id="L1287" title="All 2 branches covered.">            for (int i = 0; i &lt; length; i++) {</span>
+<span class="fc" id="L1288">                index = samplesIndices[i];</span>
+<span class="fc" id="L1289">                mInnerPositions[i] = mPositions[index];</span>
+<span class="fc" id="L1290">                mInnerDistances[i] = mDistances[index];</span>
             }
 
-<span class="fc" id="L1291">            mLinearSolver.setPositionsAndDistances(mInnerPositions, mInnerDistances);</span>
-<span class="fc" id="L1292">            mLinearSolver.solve();</span>
-<span class="fc" id="L1293">            solutions.add(mLinearSolver.getEstimatedPosition());</span>
-<span class="fc" id="L1294">        } catch (NavigationException ignore) {</span>
+<span class="fc" id="L1293">            mLinearSolver.setPositionsAndDistances(mInnerPositions, mInnerDistances);</span>
+<span class="fc" id="L1294">            mLinearSolver.solve();</span>
+<span class="fc" id="L1295">            solutions.add(mLinearSolver.getEstimatedPosition());</span>
+<span class="fc" id="L1296">        } catch (NavigationException ignore) {</span>
             //if anything fails, no solution is added
-<span class="fc" id="L1296">        }</span>
-<span class="fc" id="L1297">    }</span>
+<span class="fc" id="L1298">        }</span>
+<span class="fc" id="L1299">    }</span>
 
     /**
      * Internally sets spheres defining positions and euclidean distances.
@@ -1303,20 +1305,20 @@ public abstract class RobustTrilateration3DSolver extends RobustTrilaterationSol
      * is less than {@link #getMinRequiredPositionsAndDistances()}
      */
     private void internalSetSpheres(Sphere[] spheres) {
-<span class="fc bfc" id="L1306" title="All 4 branches covered.">        if (spheres == null || spheres.length &lt; getMinRequiredPositionsAndDistances()) {</span>
-<span class="fc" id="L1307">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L1308" title="All 4 branches covered.">        if (spheres == null || spheres.length &lt; getMinRequiredPositionsAndDistances()) {</span>
+<span class="fc" id="L1309">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L1310">        Point3D[] positions = new Point3D[spheres.length];</span>
-<span class="fc" id="L1311">        double[] distances = new double[spheres.length];</span>
-<span class="fc bfc" id="L1312" title="All 2 branches covered.">        for (int i = 0; i &lt; spheres.length; i++) {</span>
-<span class="fc" id="L1313">            Sphere sphere = spheres[i];</span>
-<span class="fc" id="L1314">            positions[i] = sphere.getCenter();</span>
-<span class="fc" id="L1315">            distances[i] = sphere.getRadius();</span>
+<span class="fc" id="L1312">        Point3D[] positions = new Point3D[spheres.length];</span>
+<span class="fc" id="L1313">        double[] distances = new double[spheres.length];</span>
+<span class="fc bfc" id="L1314" title="All 2 branches covered.">        for (int i = 0; i &lt; spheres.length; i++) {</span>
+<span class="fc" id="L1315">            Sphere sphere = spheres[i];</span>
+<span class="fc" id="L1316">            positions[i] = sphere.getCenter();</span>
+<span class="fc" id="L1317">            distances[i] = sphere.getRadius();</span>
         }
 
-<span class="fc" id="L1318">        internalSetPositionsAndDistances(positions, distances);</span>
-<span class="fc" id="L1319">    }</span>
+<span class="fc" id="L1320">        internalSetPositionsAndDistances(positions, distances);</span>
+<span class="fc" id="L1321">    }</span>
 
     /**
      * Internally sets spheres defining positions and euclidean distances along
@@ -1328,40 +1330,40 @@ public abstract class RobustTrilateration3DSolver extends RobustTrilaterationSol
      */
     private void internalSetSpheresAndStandardDeviations(Sphere[] spheres,
             double[] radiusStandardDeviations) {
-<span class="fc bfc" id="L1331" title="All 4 branches covered.">        if (spheres == null || spheres.length &lt; getMinRequiredPositionsAndDistances()) {</span>
-<span class="fc" id="L1332">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L1333" title="All 4 branches covered.">        if (spheres == null || spheres.length &lt; getMinRequiredPositionsAndDistances()) {</span>
+<span class="fc" id="L1334">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc bfc" id="L1335" title="All 2 branches covered.">        if (radiusStandardDeviations == null) {</span>
-<span class="fc" id="L1336">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L1337" title="All 2 branches covered.">        if (radiusStandardDeviations == null) {</span>
+<span class="fc" id="L1338">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc bfc" id="L1339" title="All 2 branches covered.">        if (radiusStandardDeviations.length != spheres.length) {</span>
-<span class="fc" id="L1340">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L1341" title="All 2 branches covered.">        if (radiusStandardDeviations.length != spheres.length) {</span>
+<span class="fc" id="L1342">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L1343">        Point3D[] positions = new Point3D[spheres.length];</span>
-<span class="fc" id="L1344">        double[] distances = new double[spheres.length];</span>
-<span class="fc bfc" id="L1345" title="All 2 branches covered.">        for (int i = 0; i &lt; spheres.length; i++) {</span>
-<span class="fc" id="L1346">            Sphere sphere = spheres[i];</span>
-<span class="fc" id="L1347">            positions[i] = sphere.getCenter();</span>
-<span class="fc" id="L1348">            distances[i] = sphere.getRadius();</span>
+<span class="fc" id="L1345">        Point3D[] positions = new Point3D[spheres.length];</span>
+<span class="fc" id="L1346">        double[] distances = new double[spheres.length];</span>
+<span class="fc bfc" id="L1347" title="All 2 branches covered.">        for (int i = 0; i &lt; spheres.length; i++) {</span>
+<span class="fc" id="L1348">            Sphere sphere = spheres[i];</span>
+<span class="fc" id="L1349">            positions[i] = sphere.getCenter();</span>
+<span class="fc" id="L1350">            distances[i] = sphere.getRadius();</span>
         }
 
-<span class="fc" id="L1351">        internalSetPositionsDistancesAndStandardDeviations(positions, distances,</span>
+<span class="fc" id="L1353">        internalSetPositionsDistancesAndStandardDeviations(positions, distances,</span>
                 radiusStandardDeviations);
-<span class="fc" id="L1353">    }</span>
+<span class="fc" id="L1355">    }</span>
 
     /**
      * Setup inner positions and distances.
      */
     private void init() {
-<span class="fc" id="L1359">        int points = getMinRequiredPositionsAndDistances();</span>
-<span class="fc" id="L1360">        mInnerPositions = new Point3D[points];</span>
-<span class="fc" id="L1361">        mInnerDistances = new double[points];</span>
+<span class="fc" id="L1361">        int points = getMinRequiredPositionsAndDistances();</span>
+<span class="fc" id="L1362">        mInnerPositions = new Point3D[points];</span>
+<span class="fc" id="L1363">        mInnerDistances = new double[points];</span>
 
-<span class="fc" id="L1363">        mLinearSolver = new LinearLeastSquaresTrilateration3DSolver();</span>
-<span class="fc" id="L1364">        mNonLinearSolver = new NonLinearLeastSquaresTrilateration3DSolver();</span>
-<span class="fc" id="L1365">    }</span>
+<span class="fc" id="L1365">        mLinearSolver = new LinearLeastSquaresTrilateration3DSolver();</span>
+<span class="fc" id="L1366">        mNonLinearSolver = new NonLinearLeastSquaresTrilateration3DSolver();</span>
+<span class="fc" id="L1367">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

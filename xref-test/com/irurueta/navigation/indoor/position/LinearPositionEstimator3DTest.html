@@ -62,7 +62,7 @@
 <a class="jxr_linenumber" name="L54" href="#L54">54</a>  
 <a class="jxr_linenumber" name="L55" href="#L55">55</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> ERROR_STD = 1e-3;
 <a class="jxr_linenumber" name="L56" href="#L56">56</a>  
-<a class="jxr_linenumber" name="L57" href="#L57">57</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> TIMES = 5;
+<a class="jxr_linenumber" name="L57" href="#L57">57</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> TIMES = 10;
 <a class="jxr_linenumber" name="L58" href="#L58">58</a>  
 <a class="jxr_linenumber" name="L59" href="#L59">59</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> estimateStart;
 <a class="jxr_linenumber" name="L60" href="#L60">60</a>      <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">int</strong> estimateEnd;
@@ -408,7 +408,7 @@
 <a class="jxr_linenumber" name="L400" href="#L400">400</a>                 <strong class="jxr_keyword">double</strong> distance = position.distanceTo(accessPointPosition);
 <a class="jxr_linenumber" name="L401" href="#L401">401</a> 
 <a class="jxr_linenumber" name="L402" href="#L402">402</a>                 <strong class="jxr_keyword">double</strong> rssi = Utils.powerTodBm(receivedPower(transmittedPower,
-<a class="jxr_linenumber" name="L403" href="#L403">403</a>                         distance, FREQUENCY, pathLossExponent));
+<a class="jxr_linenumber" name="L403" href="#L403">403</a>                         distance, pathLossExponent));
 <a class="jxr_linenumber" name="L404" href="#L404">404</a> 
 <a class="jxr_linenumber" name="L405" href="#L405">405</a>                 readings.add(<strong class="jxr_keyword">new</strong> RssiReading&lt;&gt;(accessPoint, rssi));
 <a class="jxr_linenumber" name="L406" href="#L406">406</a>             }
@@ -458,7 +458,7 @@
 <a class="jxr_linenumber" name="L450" href="#L450">450</a>         GaussianRandomizer errorRandomizer = <strong class="jxr_keyword">new</strong> GaussianRandomizer(<strong class="jxr_keyword">new</strong> Random(),
 <a class="jxr_linenumber" name="L451" href="#L451">451</a>                 0.0, ERROR_STD);
 <a class="jxr_linenumber" name="L452" href="#L452">452</a> 
-<a class="jxr_linenumber" name="L453" href="#L453">453</a>         <strong class="jxr_keyword">int</strong> numValid = 0, numInvalid = 0;
+<a class="jxr_linenumber" name="L453" href="#L453">453</a>         <strong class="jxr_keyword">int</strong> numValid = 0;
 <a class="jxr_linenumber" name="L454" href="#L454">454</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> t = 0; t &lt; TIMES; t++) {
 <a class="jxr_linenumber" name="L455" href="#L455">455</a>             <strong class="jxr_keyword">int</strong> numSources = randomizer.nextInt(MIN_SOURCES, MAX_SOURCES);
 <a class="jxr_linenumber" name="L456" href="#L456">456</a> 
@@ -494,7 +494,7 @@
 <a class="jxr_linenumber" name="L486" href="#L486">486</a> 
 <a class="jxr_linenumber" name="L487" href="#L487">487</a>                 <strong class="jxr_keyword">double</strong> error = errorRandomizer.nextDouble();
 <a class="jxr_linenumber" name="L488" href="#L488">488</a>                 <strong class="jxr_keyword">double</strong> rssi = Utils.powerTodBm(receivedPower(transmittedPower,
-<a class="jxr_linenumber" name="L489" href="#L489">489</a>                         distance, FREQUENCY, pathLossExponent)) + error;
+<a class="jxr_linenumber" name="L489" href="#L489">489</a>                         distance, pathLossExponent)) + error;
 <a class="jxr_linenumber" name="L490" href="#L490">490</a> 
 <a class="jxr_linenumber" name="L491" href="#L491">491</a>                 readings.add(<strong class="jxr_keyword">new</strong> RssiReading&lt;&gt;(accessPoint, rssi));
 <a class="jxr_linenumber" name="L492" href="#L492">492</a>             }
@@ -528,74 +528,75 @@
 <a class="jxr_linenumber" name="L520" href="#L520">520</a>             Point3D estimatedPosition = estimator.getEstimatedPosition();
 <a class="jxr_linenumber" name="L521" href="#L521">521</a>             <strong class="jxr_keyword">double</strong> distance = position.distanceTo(estimatedPosition);
 <a class="jxr_linenumber" name="L522" href="#L522">522</a>             <strong class="jxr_keyword">if</strong> (distance &gt;= LARGE_ABSOLUTE_ERROR) {
-<a class="jxr_linenumber" name="L523" href="#L523">523</a>                 numInvalid++;
-<a class="jxr_linenumber" name="L524" href="#L524">524</a>             } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L525" href="#L525">525</a>                 numValid++;
-<a class="jxr_linenumber" name="L526" href="#L526">526</a>                 assertTrue(position.equals(estimatedPosition, LARGE_ABSOLUTE_ERROR));
-<a class="jxr_linenumber" name="L527" href="#L527">527</a>             }
-<a class="jxr_linenumber" name="L528" href="#L528">528</a>         }
-<a class="jxr_linenumber" name="L529" href="#L529">529</a> 
-<a class="jxr_linenumber" name="L530" href="#L530">530</a>         assertTrue(numValid &gt; numInvalid);
-<a class="jxr_linenumber" name="L531" href="#L531">531</a> 
-<a class="jxr_linenumber" name="L532" href="#L532">532</a>         <em class="jxr_comment">//force NotReadyException</em>
-<a class="jxr_linenumber" name="L533" href="#L533">533</a>         LinearPositionEstimator3D estimator = <strong class="jxr_keyword">new</strong> LinearPositionEstimator3D();
-<a class="jxr_linenumber" name="L534" href="#L534">534</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L535" href="#L535">535</a>             estimator.estimate();
-<a class="jxr_linenumber" name="L536" href="#L536">536</a>             fail(<span class="jxr_string">"NotReadyException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L537" href="#L537">537</a>         } <strong class="jxr_keyword">catch</strong> (NotReadyException ignore) { }
-<a class="jxr_linenumber" name="L538" href="#L538">538</a>     }
-<a class="jxr_linenumber" name="L539" href="#L539">539</a> 
+<a class="jxr_linenumber" name="L523" href="#L523">523</a>                 <strong class="jxr_keyword">continue</strong>;
+<a class="jxr_linenumber" name="L524" href="#L524">524</a>             }
+<a class="jxr_linenumber" name="L525" href="#L525">525</a> 
+<a class="jxr_linenumber" name="L526" href="#L526">526</a>             numValid++;
+<a class="jxr_linenumber" name="L527" href="#L527">527</a>             assertTrue(position.equals(estimatedPosition, LARGE_ABSOLUTE_ERROR));
+<a class="jxr_linenumber" name="L528" href="#L528">528</a>             <strong class="jxr_keyword">break</strong>;
+<a class="jxr_linenumber" name="L529" href="#L529">529</a>         }
+<a class="jxr_linenumber" name="L530" href="#L530">530</a> 
+<a class="jxr_linenumber" name="L531" href="#L531">531</a>         assertTrue(numValid &gt; 0);
+<a class="jxr_linenumber" name="L532" href="#L532">532</a> 
+<a class="jxr_linenumber" name="L533" href="#L533">533</a>         <em class="jxr_comment">//force NotReadyException</em>
+<a class="jxr_linenumber" name="L534" href="#L534">534</a>         LinearPositionEstimator3D estimator = <strong class="jxr_keyword">new</strong> LinearPositionEstimator3D();
+<a class="jxr_linenumber" name="L535" href="#L535">535</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L536" href="#L536">536</a>             estimator.estimate();
+<a class="jxr_linenumber" name="L537" href="#L537">537</a>             fail(<span class="jxr_string">"NotReadyException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L538" href="#L538">538</a>         } <strong class="jxr_keyword">catch</strong> (NotReadyException ignore) { }
+<a class="jxr_linenumber" name="L539" href="#L539">539</a>     }
 <a class="jxr_linenumber" name="L540" href="#L540">540</a> 
-<a class="jxr_linenumber" name="L541" href="#L541">541</a>     @Override
-<a class="jxr_linenumber" name="L542" href="#L542">542</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateStart(PositionEstimator&lt;Point3D&gt; estimator) {
-<a class="jxr_linenumber" name="L543" href="#L543">543</a>         estimateStart++;
-<a class="jxr_linenumber" name="L544" href="#L544">544</a>         checkLocked((LinearPositionEstimator3D)estimator);
-<a class="jxr_linenumber" name="L545" href="#L545">545</a>     }
-<a class="jxr_linenumber" name="L546" href="#L546">546</a> 
-<a class="jxr_linenumber" name="L547" href="#L547">547</a>     @Override
-<a class="jxr_linenumber" name="L548" href="#L548">548</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateEnd(PositionEstimator&lt;Point3D&gt; estimator) {
-<a class="jxr_linenumber" name="L549" href="#L549">549</a>         estimateEnd++;
-<a class="jxr_linenumber" name="L550" href="#L550">550</a>         checkLocked((LinearPositionEstimator3D)estimator);
-<a class="jxr_linenumber" name="L551" href="#L551">551</a>     }
-<a class="jxr_linenumber" name="L552" href="#L552">552</a> 
-<a class="jxr_linenumber" name="L553" href="#L553">553</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> reset() {
-<a class="jxr_linenumber" name="L554" href="#L554">554</a>         estimateStart = estimateEnd = 0;
-<a class="jxr_linenumber" name="L555" href="#L555">555</a>     }
-<a class="jxr_linenumber" name="L556" href="#L556">556</a> 
-<a class="jxr_linenumber" name="L557" href="#L557">557</a>     @SuppressWarnings(<span class="jxr_string">"all"</span>)
+<a class="jxr_linenumber" name="L541" href="#L541">541</a> 
+<a class="jxr_linenumber" name="L542" href="#L542">542</a>     @Override
+<a class="jxr_linenumber" name="L543" href="#L543">543</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateStart(PositionEstimator&lt;Point3D&gt; estimator) {
+<a class="jxr_linenumber" name="L544" href="#L544">544</a>         estimateStart++;
+<a class="jxr_linenumber" name="L545" href="#L545">545</a>         checkLocked((LinearPositionEstimator3D)estimator);
+<a class="jxr_linenumber" name="L546" href="#L546">546</a>     }
+<a class="jxr_linenumber" name="L547" href="#L547">547</a> 
+<a class="jxr_linenumber" name="L548" href="#L548">548</a>     @Override
+<a class="jxr_linenumber" name="L549" href="#L549">549</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateEnd(PositionEstimator&lt;Point3D&gt; estimator) {
+<a class="jxr_linenumber" name="L550" href="#L550">550</a>         estimateEnd++;
+<a class="jxr_linenumber" name="L551" href="#L551">551</a>         checkLocked((LinearPositionEstimator3D)estimator);
+<a class="jxr_linenumber" name="L552" href="#L552">552</a>     }
+<a class="jxr_linenumber" name="L553" href="#L553">553</a> 
+<a class="jxr_linenumber" name="L554" href="#L554">554</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> reset() {
+<a class="jxr_linenumber" name="L555" href="#L555">555</a>         estimateStart = estimateEnd = 0;
+<a class="jxr_linenumber" name="L556" href="#L556">556</a>     }
+<a class="jxr_linenumber" name="L557" href="#L557">557</a> 
 <a class="jxr_linenumber" name="L558" href="#L558">558</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">double</strong> receivedPower(<strong class="jxr_keyword">double</strong> equivalentTransmittedPower,
-<a class="jxr_linenumber" name="L559" href="#L559">559</a>                                  <strong class="jxr_keyword">double</strong> distance, <strong class="jxr_keyword">double</strong> frequency, <strong class="jxr_keyword">double</strong> pathLossExponent) {
+<a class="jxr_linenumber" name="L559" href="#L559">559</a>                                  <strong class="jxr_keyword">double</strong> distance, <strong class="jxr_keyword">double</strong> pathLossExponent) {
 <a class="jxr_linenumber" name="L560" href="#L560">560</a>         <em class="jxr_comment">//Pr = Pt*Gt*Gr*lambda^2/(4*pi*d)^2,    where Pr is the received power</em>
 <a class="jxr_linenumber" name="L561" href="#L561">561</a>         <em class="jxr_comment">// lambda = c/f, where lambda is wavelength,</em>
 <a class="jxr_linenumber" name="L562" href="#L562">562</a>         <em class="jxr_comment">// Pte = Pt*Gt*Gr, is the equivalent transmitted power, Gt is the transmitted Gain and Gr is the received Gain</em>
 <a class="jxr_linenumber" name="L563" href="#L563">563</a>         <em class="jxr_comment">//Pr = Pte*c^2/((4*pi*f)^2 * d^2)</em>
-<a class="jxr_linenumber" name="L564" href="#L564">564</a>         <strong class="jxr_keyword">double</strong> k = Math.pow(SPEED_OF_LIGHT / (4.0 * Math.PI * frequency), pathLossExponent);
-<a class="jxr_linenumber" name="L565" href="#L565">565</a>         <strong class="jxr_keyword">return</strong> equivalentTransmittedPower * k /
-<a class="jxr_linenumber" name="L566" href="#L566">566</a>                 Math.pow(distance, pathLossExponent);
-<a class="jxr_linenumber" name="L567" href="#L567">567</a>     }
-<a class="jxr_linenumber" name="L568" href="#L568">568</a> 
-<a class="jxr_linenumber" name="L569" href="#L569">569</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> checkLocked(LinearPositionEstimator3D estimator) {
-<a class="jxr_linenumber" name="L570" href="#L570">570</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L571" href="#L571">571</a>             estimator.setSources(<strong class="jxr_keyword">null</strong>);
-<a class="jxr_linenumber" name="L572" href="#L572">572</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L573" href="#L573">573</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
-<a class="jxr_linenumber" name="L574" href="#L574">574</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L575" href="#L575">575</a>             estimator.setFingerprint(<strong class="jxr_keyword">null</strong>);
-<a class="jxr_linenumber" name="L576" href="#L576">576</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L577" href="#L577">577</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
-<a class="jxr_linenumber" name="L578" href="#L578">578</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L579" href="#L579">579</a>             estimator.setListener(<strong class="jxr_keyword">null</strong>);
-<a class="jxr_linenumber" name="L580" href="#L580">580</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L581" href="#L581">581</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
-<a class="jxr_linenumber" name="L582" href="#L582">582</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L583" href="#L583">583</a>             estimator.estimate();
-<a class="jxr_linenumber" name="L584" href="#L584">584</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L585" href="#L585">585</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) {
-<a class="jxr_linenumber" name="L586" href="#L586">586</a>         } <strong class="jxr_keyword">catch</strong> (Exception e) {
-<a class="jxr_linenumber" name="L587" href="#L587">587</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L588" href="#L588">588</a>         }
-<a class="jxr_linenumber" name="L589" href="#L589">589</a>     }
-<a class="jxr_linenumber" name="L590" href="#L590">590</a> }
+<a class="jxr_linenumber" name="L564" href="#L564">564</a>         <strong class="jxr_keyword">double</strong> k = Math.pow(SPEED_OF_LIGHT / (4.0 * Math.PI * LinearPositionEstimator3DTest.FREQUENCY),
+<a class="jxr_linenumber" name="L565" href="#L565">565</a>                 pathLossExponent);
+<a class="jxr_linenumber" name="L566" href="#L566">566</a>         <strong class="jxr_keyword">return</strong> equivalentTransmittedPower * k /
+<a class="jxr_linenumber" name="L567" href="#L567">567</a>                 Math.pow(distance, pathLossExponent);
+<a class="jxr_linenumber" name="L568" href="#L568">568</a>     }
+<a class="jxr_linenumber" name="L569" href="#L569">569</a> 
+<a class="jxr_linenumber" name="L570" href="#L570">570</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> checkLocked(LinearPositionEstimator3D estimator) {
+<a class="jxr_linenumber" name="L571" href="#L571">571</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L572" href="#L572">572</a>             estimator.setSources(<strong class="jxr_keyword">null</strong>);
+<a class="jxr_linenumber" name="L573" href="#L573">573</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L574" href="#L574">574</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
+<a class="jxr_linenumber" name="L575" href="#L575">575</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L576" href="#L576">576</a>             estimator.setFingerprint(<strong class="jxr_keyword">null</strong>);
+<a class="jxr_linenumber" name="L577" href="#L577">577</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L578" href="#L578">578</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
+<a class="jxr_linenumber" name="L579" href="#L579">579</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L580" href="#L580">580</a>             estimator.setListener(<strong class="jxr_keyword">null</strong>);
+<a class="jxr_linenumber" name="L581" href="#L581">581</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L582" href="#L582">582</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
+<a class="jxr_linenumber" name="L583" href="#L583">583</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L584" href="#L584">584</a>             estimator.estimate();
+<a class="jxr_linenumber" name="L585" href="#L585">585</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L586" href="#L586">586</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) {
+<a class="jxr_linenumber" name="L587" href="#L587">587</a>         } <strong class="jxr_keyword">catch</strong> (Exception e) {
+<a class="jxr_linenumber" name="L588" href="#L588">588</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L589" href="#L589">589</a>         }
+<a class="jxr_linenumber" name="L590" href="#L590">590</a>     }
+<a class="jxr_linenumber" name="L591" href="#L591">591</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2018. All rights reserved.</div>
