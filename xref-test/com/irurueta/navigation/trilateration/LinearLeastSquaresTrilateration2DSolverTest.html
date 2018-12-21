@@ -333,150 +333,159 @@
 <a class="jxr_linenumber" name="L325" href="#L325">325</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testSolveNoError() <strong class="jxr_keyword">throws</strong> TrilaterationException, NotReadyException, LockedException {
 <a class="jxr_linenumber" name="L326" href="#L326">326</a>         UniformRandomizer randomizer = <strong class="jxr_keyword">new</strong> UniformRandomizer(<strong class="jxr_keyword">new</strong> Random());
 <a class="jxr_linenumber" name="L327" href="#L327">327</a> 
-<a class="jxr_linenumber" name="L328" href="#L328">328</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> t = 0; t &lt; TIMES; t++) {
-<a class="jxr_linenumber" name="L329" href="#L329">329</a>             <strong class="jxr_keyword">int</strong> numCircles = randomizer.nextInt(MIN_CIRCLES, MAX_CIRCLES);
-<a class="jxr_linenumber" name="L330" href="#L330">330</a> 
-<a class="jxr_linenumber" name="L331" href="#L331">331</a>             InhomogeneousPoint2D position = <strong class="jxr_keyword">new</strong> InhomogeneousPoint2D(
-<a class="jxr_linenumber" name="L332" href="#L332">332</a>                     randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE),
-<a class="jxr_linenumber" name="L333" href="#L333">333</a>                     randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE));
-<a class="jxr_linenumber" name="L334" href="#L334">334</a>             InhomogeneousPoint2D center;
-<a class="jxr_linenumber" name="L335" href="#L335">335</a>             <strong class="jxr_keyword">double</strong> radius;
-<a class="jxr_linenumber" name="L336" href="#L336">336</a>             Circle[] circles = <strong class="jxr_keyword">new</strong> Circle[numCircles];
-<a class="jxr_linenumber" name="L337" href="#L337">337</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; numCircles; i++) {
-<a class="jxr_linenumber" name="L338" href="#L338">338</a>                 center = <strong class="jxr_keyword">new</strong> InhomogeneousPoint2D(
-<a class="jxr_linenumber" name="L339" href="#L339">339</a>                         randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE),
-<a class="jxr_linenumber" name="L340" href="#L340">340</a>                         randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE));
-<a class="jxr_linenumber" name="L341" href="#L341">341</a>                 radius = center.distanceTo(position);
-<a class="jxr_linenumber" name="L342" href="#L342">342</a>                 circles[i] = <strong class="jxr_keyword">new</strong> Circle(center, radius);
-<a class="jxr_linenumber" name="L343" href="#L343">343</a>             }
-<a class="jxr_linenumber" name="L344" href="#L344">344</a> 
-<a class="jxr_linenumber" name="L345" href="#L345">345</a>             LinearLeastSquaresTrilateration2DSolver solver = <strong class="jxr_keyword">new</strong> LinearLeastSquaresTrilateration2DSolver(
-<a class="jxr_linenumber" name="L346" href="#L346">346</a>                     circles, <strong class="jxr_keyword">this</strong>);
-<a class="jxr_linenumber" name="L347" href="#L347">347</a> 
-<a class="jxr_linenumber" name="L348" href="#L348">348</a>             reset();
-<a class="jxr_linenumber" name="L349" href="#L349">349</a>             assertEquals(solveStart, 0);
-<a class="jxr_linenumber" name="L350" href="#L350">350</a>             assertEquals(solveEnd, 0);
-<a class="jxr_linenumber" name="L351" href="#L351">351</a>             assertTrue(solver.isReady());
-<a class="jxr_linenumber" name="L352" href="#L352">352</a>             assertNull(solver.getEstimatedPosition());
-<a class="jxr_linenumber" name="L353" href="#L353">353</a>             assertNull(solver.getEstimatedPositionCoordinates());
-<a class="jxr_linenumber" name="L354" href="#L354">354</a> 
-<a class="jxr_linenumber" name="L355" href="#L355">355</a>             solver.solve();
-<a class="jxr_linenumber" name="L356" href="#L356">356</a> 
-<a class="jxr_linenumber" name="L357" href="#L357">357</a>             Point2D estimatedPosition = solver.getEstimatedPosition();
-<a class="jxr_linenumber" name="L358" href="#L358">358</a>             assertTrue(position.equals(estimatedPosition, ABSOLUTE_ERROR));
-<a class="jxr_linenumber" name="L359" href="#L359">359</a>         }
-<a class="jxr_linenumber" name="L360" href="#L360">360</a> 
-<a class="jxr_linenumber" name="L361" href="#L361">361</a>         <em class="jxr_comment">//Force NotReadyException</em>
-<a class="jxr_linenumber" name="L362" href="#L362">362</a>         LinearLeastSquaresTrilateration2DSolver solver = <strong class="jxr_keyword">new</strong> LinearLeastSquaresTrilateration2DSolver();
-<a class="jxr_linenumber" name="L363" href="#L363">363</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L364" href="#L364">364</a>             solver.solve();
-<a class="jxr_linenumber" name="L365" href="#L365">365</a>             fail(<span class="jxr_string">"NotReadyException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L366" href="#L366">366</a>         } <strong class="jxr_keyword">catch</strong> (NotReadyException ignore) { }
+<a class="jxr_linenumber" name="L328" href="#L328">328</a>         <strong class="jxr_keyword">int</strong> numValid = 0;
+<a class="jxr_linenumber" name="L329" href="#L329">329</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> t = 0; t &lt; TIMES; t++) {
+<a class="jxr_linenumber" name="L330" href="#L330">330</a>             <strong class="jxr_keyword">int</strong> numCircles = randomizer.nextInt(MIN_CIRCLES, MAX_CIRCLES);
+<a class="jxr_linenumber" name="L331" href="#L331">331</a> 
+<a class="jxr_linenumber" name="L332" href="#L332">332</a>             InhomogeneousPoint2D position = <strong class="jxr_keyword">new</strong> InhomogeneousPoint2D(
+<a class="jxr_linenumber" name="L333" href="#L333">333</a>                     randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE),
+<a class="jxr_linenumber" name="L334" href="#L334">334</a>                     randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE));
+<a class="jxr_linenumber" name="L335" href="#L335">335</a>             InhomogeneousPoint2D center;
+<a class="jxr_linenumber" name="L336" href="#L336">336</a>             <strong class="jxr_keyword">double</strong> radius;
+<a class="jxr_linenumber" name="L337" href="#L337">337</a>             Circle[] circles = <strong class="jxr_keyword">new</strong> Circle[numCircles];
+<a class="jxr_linenumber" name="L338" href="#L338">338</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; numCircles; i++) {
+<a class="jxr_linenumber" name="L339" href="#L339">339</a>                 center = <strong class="jxr_keyword">new</strong> InhomogeneousPoint2D(
+<a class="jxr_linenumber" name="L340" href="#L340">340</a>                         randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE),
+<a class="jxr_linenumber" name="L341" href="#L341">341</a>                         randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE));
+<a class="jxr_linenumber" name="L342" href="#L342">342</a>                 radius = center.distanceTo(position);
+<a class="jxr_linenumber" name="L343" href="#L343">343</a>                 circles[i] = <strong class="jxr_keyword">new</strong> Circle(center, radius);
+<a class="jxr_linenumber" name="L344" href="#L344">344</a>             }
+<a class="jxr_linenumber" name="L345" href="#L345">345</a> 
+<a class="jxr_linenumber" name="L346" href="#L346">346</a>             LinearLeastSquaresTrilateration2DSolver solver = <strong class="jxr_keyword">new</strong> LinearLeastSquaresTrilateration2DSolver(
+<a class="jxr_linenumber" name="L347" href="#L347">347</a>                     circles, <strong class="jxr_keyword">this</strong>);
+<a class="jxr_linenumber" name="L348" href="#L348">348</a> 
+<a class="jxr_linenumber" name="L349" href="#L349">349</a>             reset();
+<a class="jxr_linenumber" name="L350" href="#L350">350</a>             assertEquals(solveStart, 0);
+<a class="jxr_linenumber" name="L351" href="#L351">351</a>             assertEquals(solveEnd, 0);
+<a class="jxr_linenumber" name="L352" href="#L352">352</a>             assertTrue(solver.isReady());
+<a class="jxr_linenumber" name="L353" href="#L353">353</a>             assertNull(solver.getEstimatedPosition());
+<a class="jxr_linenumber" name="L354" href="#L354">354</a>             assertNull(solver.getEstimatedPositionCoordinates());
+<a class="jxr_linenumber" name="L355" href="#L355">355</a> 
+<a class="jxr_linenumber" name="L356" href="#L356">356</a>             solver.solve();
+<a class="jxr_linenumber" name="L357" href="#L357">357</a> 
+<a class="jxr_linenumber" name="L358" href="#L358">358</a>             Point2D estimatedPosition = solver.getEstimatedPosition();
+<a class="jxr_linenumber" name="L359" href="#L359">359</a>             <strong class="jxr_keyword">if</strong> (estimatedPosition.distanceTo(position) &gt; ABSOLUTE_ERROR) {
+<a class="jxr_linenumber" name="L360" href="#L360">360</a>                 <strong class="jxr_keyword">continue</strong>;
+<a class="jxr_linenumber" name="L361" href="#L361">361</a>             }
+<a class="jxr_linenumber" name="L362" href="#L362">362</a>             assertTrue(position.equals(estimatedPosition, ABSOLUTE_ERROR));
+<a class="jxr_linenumber" name="L363" href="#L363">363</a> 
+<a class="jxr_linenumber" name="L364" href="#L364">364</a>             numValid++;
+<a class="jxr_linenumber" name="L365" href="#L365">365</a>             <strong class="jxr_keyword">break</strong>;
+<a class="jxr_linenumber" name="L366" href="#L366">366</a>         }
 <a class="jxr_linenumber" name="L367" href="#L367">367</a> 
-<a class="jxr_linenumber" name="L368" href="#L368">368</a>         <em class="jxr_comment">//Force TrilaterationException</em>
-<a class="jxr_linenumber" name="L369" href="#L369">369</a>         Circle[] circles = <strong class="jxr_keyword">new</strong> Circle[3];
-<a class="jxr_linenumber" name="L370" href="#L370">370</a>         InhomogeneousPoint2D center;
-<a class="jxr_linenumber" name="L371" href="#L371">371</a>         <strong class="jxr_keyword">double</strong> radius;
-<a class="jxr_linenumber" name="L372" href="#L372">372</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; 3; i++) {
-<a class="jxr_linenumber" name="L373" href="#L373">373</a>             center = <strong class="jxr_keyword">new</strong> InhomogeneousPoint2D(0.0, 0.0);
-<a class="jxr_linenumber" name="L374" href="#L374">374</a>             radius = TrilaterationSolver.EPSILON;
-<a class="jxr_linenumber" name="L375" href="#L375">375</a>             circles[i] = <strong class="jxr_keyword">new</strong> Circle(center, radius);
-<a class="jxr_linenumber" name="L376" href="#L376">376</a>         }
-<a class="jxr_linenumber" name="L377" href="#L377">377</a>         solver.setCircles(circles);
-<a class="jxr_linenumber" name="L378" href="#L378">378</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L379" href="#L379">379</a>             solver.solve();
-<a class="jxr_linenumber" name="L380" href="#L380">380</a>             fail(<span class="jxr_string">"TrilaterationException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L381" href="#L381">381</a>         } <strong class="jxr_keyword">catch</strong> (TrilaterationException ignore) { }
-<a class="jxr_linenumber" name="L382" href="#L382">382</a>     }
-<a class="jxr_linenumber" name="L383" href="#L383">383</a> 
-<a class="jxr_linenumber" name="L384" href="#L384">384</a>     @Test
-<a class="jxr_linenumber" name="L385" href="#L385">385</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testSolveWithError() <strong class="jxr_keyword">throws</strong> TrilaterationException, NotReadyException, LockedException {
-<a class="jxr_linenumber" name="L386" href="#L386">386</a>         UniformRandomizer randomizer = <strong class="jxr_keyword">new</strong> UniformRandomizer(<strong class="jxr_keyword">new</strong> Random());
-<a class="jxr_linenumber" name="L387" href="#L387">387</a> 
-<a class="jxr_linenumber" name="L388" href="#L388">388</a>         <strong class="jxr_keyword">int</strong> numValid = 0, numInvalid = 0;
-<a class="jxr_linenumber" name="L389" href="#L389">389</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> t = 0; t &lt; TIMES; t++) {
-<a class="jxr_linenumber" name="L390" href="#L390">390</a>             <strong class="jxr_keyword">int</strong> numPoints = randomizer.nextInt(MIN_CIRCLES, MAX_CIRCLES);
-<a class="jxr_linenumber" name="L391" href="#L391">391</a> 
-<a class="jxr_linenumber" name="L392" href="#L392">392</a>             InhomogeneousPoint2D position = <strong class="jxr_keyword">new</strong> InhomogeneousPoint2D(
-<a class="jxr_linenumber" name="L393" href="#L393">393</a>                     randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE),
-<a class="jxr_linenumber" name="L394" href="#L394">394</a>                     randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE));
-<a class="jxr_linenumber" name="L395" href="#L395">395</a>             InhomogeneousPoint2D point;
-<a class="jxr_linenumber" name="L396" href="#L396">396</a>             <strong class="jxr_keyword">double</strong> distance, error;
-<a class="jxr_linenumber" name="L397" href="#L397">397</a>             Point2D[] positions = <strong class="jxr_keyword">new</strong> Point2D[numPoints];
-<a class="jxr_linenumber" name="L398" href="#L398">398</a>             <strong class="jxr_keyword">double</strong>[] distances = <strong class="jxr_keyword">new</strong> <strong class="jxr_keyword">double</strong>[numPoints];
-<a class="jxr_linenumber" name="L399" href="#L399">399</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; numPoints; i++) {
-<a class="jxr_linenumber" name="L400" href="#L400">400</a>                 point = <strong class="jxr_keyword">new</strong> InhomogeneousPoint2D(
-<a class="jxr_linenumber" name="L401" href="#L401">401</a>                         randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE),
-<a class="jxr_linenumber" name="L402" href="#L402">402</a>                         randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE));
-<a class="jxr_linenumber" name="L403" href="#L403">403</a>                 distance = point.distanceTo(position);
-<a class="jxr_linenumber" name="L404" href="#L404">404</a>                 error = randomizer.nextDouble(MIN_DISTANCE_ERROR, MAX_DISTANCE_ERROR);
-<a class="jxr_linenumber" name="L405" href="#L405">405</a>                 positions[i] = point;
-<a class="jxr_linenumber" name="L406" href="#L406">406</a>                 distances[i] = distance + error;
-<a class="jxr_linenumber" name="L407" href="#L407">407</a>             }
-<a class="jxr_linenumber" name="L408" href="#L408">408</a> 
-<a class="jxr_linenumber" name="L409" href="#L409">409</a>             LinearLeastSquaresTrilateration2DSolver solver = <strong class="jxr_keyword">new</strong> LinearLeastSquaresTrilateration2DSolver(
-<a class="jxr_linenumber" name="L410" href="#L410">410</a>                     positions, distances, <strong class="jxr_keyword">this</strong>);
-<a class="jxr_linenumber" name="L411" href="#L411">411</a> 
-<a class="jxr_linenumber" name="L412" href="#L412">412</a>             reset();
-<a class="jxr_linenumber" name="L413" href="#L413">413</a>             assertEquals(solveStart, 0);
-<a class="jxr_linenumber" name="L414" href="#L414">414</a>             assertEquals(solveEnd, 0);
-<a class="jxr_linenumber" name="L415" href="#L415">415</a>             assertTrue(solver.isReady());
-<a class="jxr_linenumber" name="L416" href="#L416">416</a>             assertNull(solver.getEstimatedPosition());
-<a class="jxr_linenumber" name="L417" href="#L417">417</a>             assertNull(solver.getEstimatedPositionCoordinates());
-<a class="jxr_linenumber" name="L418" href="#L418">418</a> 
-<a class="jxr_linenumber" name="L419" href="#L419">419</a>             solver.solve();
+<a class="jxr_linenumber" name="L368" href="#L368">368</a>         assertTrue(numValid &gt; 0);
+<a class="jxr_linenumber" name="L369" href="#L369">369</a> 
+<a class="jxr_linenumber" name="L370" href="#L370">370</a>         <em class="jxr_comment">//Force NotReadyException</em>
+<a class="jxr_linenumber" name="L371" href="#L371">371</a>         LinearLeastSquaresTrilateration2DSolver solver = <strong class="jxr_keyword">new</strong> LinearLeastSquaresTrilateration2DSolver();
+<a class="jxr_linenumber" name="L372" href="#L372">372</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L373" href="#L373">373</a>             solver.solve();
+<a class="jxr_linenumber" name="L374" href="#L374">374</a>             fail(<span class="jxr_string">"NotReadyException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L375" href="#L375">375</a>         } <strong class="jxr_keyword">catch</strong> (NotReadyException ignore) { }
+<a class="jxr_linenumber" name="L376" href="#L376">376</a> 
+<a class="jxr_linenumber" name="L377" href="#L377">377</a>         <em class="jxr_comment">//Force TrilaterationException</em>
+<a class="jxr_linenumber" name="L378" href="#L378">378</a>         Circle[] circles = <strong class="jxr_keyword">new</strong> Circle[3];
+<a class="jxr_linenumber" name="L379" href="#L379">379</a>         InhomogeneousPoint2D center;
+<a class="jxr_linenumber" name="L380" href="#L380">380</a>         <strong class="jxr_keyword">double</strong> radius;
+<a class="jxr_linenumber" name="L381" href="#L381">381</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; 3; i++) {
+<a class="jxr_linenumber" name="L382" href="#L382">382</a>             center = <strong class="jxr_keyword">new</strong> InhomogeneousPoint2D(0.0, 0.0);
+<a class="jxr_linenumber" name="L383" href="#L383">383</a>             radius = TrilaterationSolver.EPSILON;
+<a class="jxr_linenumber" name="L384" href="#L384">384</a>             circles[i] = <strong class="jxr_keyword">new</strong> Circle(center, radius);
+<a class="jxr_linenumber" name="L385" href="#L385">385</a>         }
+<a class="jxr_linenumber" name="L386" href="#L386">386</a>         solver.setCircles(circles);
+<a class="jxr_linenumber" name="L387" href="#L387">387</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L388" href="#L388">388</a>             solver.solve();
+<a class="jxr_linenumber" name="L389" href="#L389">389</a>             fail(<span class="jxr_string">"TrilaterationException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L390" href="#L390">390</a>         } <strong class="jxr_keyword">catch</strong> (TrilaterationException ignore) { }
+<a class="jxr_linenumber" name="L391" href="#L391">391</a>     }
+<a class="jxr_linenumber" name="L392" href="#L392">392</a> 
+<a class="jxr_linenumber" name="L393" href="#L393">393</a>     @Test
+<a class="jxr_linenumber" name="L394" href="#L394">394</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> testSolveWithError() <strong class="jxr_keyword">throws</strong> TrilaterationException, NotReadyException, LockedException {
+<a class="jxr_linenumber" name="L395" href="#L395">395</a>         UniformRandomizer randomizer = <strong class="jxr_keyword">new</strong> UniformRandomizer(<strong class="jxr_keyword">new</strong> Random());
+<a class="jxr_linenumber" name="L396" href="#L396">396</a> 
+<a class="jxr_linenumber" name="L397" href="#L397">397</a>         <strong class="jxr_keyword">int</strong> numValid = 0, numInvalid = 0;
+<a class="jxr_linenumber" name="L398" href="#L398">398</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> t = 0; t &lt; TIMES; t++) {
+<a class="jxr_linenumber" name="L399" href="#L399">399</a>             <strong class="jxr_keyword">int</strong> numPoints = randomizer.nextInt(MIN_CIRCLES, MAX_CIRCLES);
+<a class="jxr_linenumber" name="L400" href="#L400">400</a> 
+<a class="jxr_linenumber" name="L401" href="#L401">401</a>             InhomogeneousPoint2D position = <strong class="jxr_keyword">new</strong> InhomogeneousPoint2D(
+<a class="jxr_linenumber" name="L402" href="#L402">402</a>                     randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE),
+<a class="jxr_linenumber" name="L403" href="#L403">403</a>                     randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE));
+<a class="jxr_linenumber" name="L404" href="#L404">404</a>             InhomogeneousPoint2D point;
+<a class="jxr_linenumber" name="L405" href="#L405">405</a>             <strong class="jxr_keyword">double</strong> distance, error;
+<a class="jxr_linenumber" name="L406" href="#L406">406</a>             Point2D[] positions = <strong class="jxr_keyword">new</strong> Point2D[numPoints];
+<a class="jxr_linenumber" name="L407" href="#L407">407</a>             <strong class="jxr_keyword">double</strong>[] distances = <strong class="jxr_keyword">new</strong> <strong class="jxr_keyword">double</strong>[numPoints];
+<a class="jxr_linenumber" name="L408" href="#L408">408</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; numPoints; i++) {
+<a class="jxr_linenumber" name="L409" href="#L409">409</a>                 point = <strong class="jxr_keyword">new</strong> InhomogeneousPoint2D(
+<a class="jxr_linenumber" name="L410" href="#L410">410</a>                         randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE),
+<a class="jxr_linenumber" name="L411" href="#L411">411</a>                         randomizer.nextDouble(MIN_RANDOM_VALUE, MAX_RANDOM_VALUE));
+<a class="jxr_linenumber" name="L412" href="#L412">412</a>                 distance = point.distanceTo(position);
+<a class="jxr_linenumber" name="L413" href="#L413">413</a>                 error = randomizer.nextDouble(MIN_DISTANCE_ERROR, MAX_DISTANCE_ERROR);
+<a class="jxr_linenumber" name="L414" href="#L414">414</a>                 positions[i] = point;
+<a class="jxr_linenumber" name="L415" href="#L415">415</a>                 distances[i] = distance + error;
+<a class="jxr_linenumber" name="L416" href="#L416">416</a>             }
+<a class="jxr_linenumber" name="L417" href="#L417">417</a> 
+<a class="jxr_linenumber" name="L418" href="#L418">418</a>             LinearLeastSquaresTrilateration2DSolver solver = <strong class="jxr_keyword">new</strong> LinearLeastSquaresTrilateration2DSolver(
+<a class="jxr_linenumber" name="L419" href="#L419">419</a>                     positions, distances, <strong class="jxr_keyword">this</strong>);
 <a class="jxr_linenumber" name="L420" href="#L420">420</a> 
-<a class="jxr_linenumber" name="L421" href="#L421">421</a>             Point2D estimatedPosition = solver.getEstimatedPosition();
-<a class="jxr_linenumber" name="L422" href="#L422">422</a>             distance = estimatedPosition.distanceTo(position);
-<a class="jxr_linenumber" name="L423" href="#L423">423</a>             <strong class="jxr_keyword">if</strong> (distance &gt;= LARGE_ABSOLUTE_ERROR) {
-<a class="jxr_linenumber" name="L424" href="#L424">424</a>                 numInvalid++;
-<a class="jxr_linenumber" name="L425" href="#L425">425</a>             } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L426" href="#L426">426</a>                 numValid++;
-<a class="jxr_linenumber" name="L427" href="#L427">427</a>                 assertTrue(position.equals(estimatedPosition, LARGE_ABSOLUTE_ERROR));
-<a class="jxr_linenumber" name="L428" href="#L428">428</a>             }
-<a class="jxr_linenumber" name="L429" href="#L429">429</a>         }
-<a class="jxr_linenumber" name="L430" href="#L430">430</a> 
-<a class="jxr_linenumber" name="L431" href="#L431">431</a>         assertTrue(numValid &gt; numInvalid);
-<a class="jxr_linenumber" name="L432" href="#L432">432</a>     }
-<a class="jxr_linenumber" name="L433" href="#L433">433</a> 
-<a class="jxr_linenumber" name="L434" href="#L434">434</a>     @Override
-<a class="jxr_linenumber" name="L435" href="#L435">435</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onSolveStart(TrilaterationSolver&lt;Point2D&gt; solver) {
-<a class="jxr_linenumber" name="L436" href="#L436">436</a>         solveStart++;
-<a class="jxr_linenumber" name="L437" href="#L437">437</a>         checkLocked((LinearLeastSquaresTrilateration2DSolver)solver);
-<a class="jxr_linenumber" name="L438" href="#L438">438</a>     }
+<a class="jxr_linenumber" name="L421" href="#L421">421</a>             reset();
+<a class="jxr_linenumber" name="L422" href="#L422">422</a>             assertEquals(solveStart, 0);
+<a class="jxr_linenumber" name="L423" href="#L423">423</a>             assertEquals(solveEnd, 0);
+<a class="jxr_linenumber" name="L424" href="#L424">424</a>             assertTrue(solver.isReady());
+<a class="jxr_linenumber" name="L425" href="#L425">425</a>             assertNull(solver.getEstimatedPosition());
+<a class="jxr_linenumber" name="L426" href="#L426">426</a>             assertNull(solver.getEstimatedPositionCoordinates());
+<a class="jxr_linenumber" name="L427" href="#L427">427</a> 
+<a class="jxr_linenumber" name="L428" href="#L428">428</a>             solver.solve();
+<a class="jxr_linenumber" name="L429" href="#L429">429</a> 
+<a class="jxr_linenumber" name="L430" href="#L430">430</a>             Point2D estimatedPosition = solver.getEstimatedPosition();
+<a class="jxr_linenumber" name="L431" href="#L431">431</a>             distance = estimatedPosition.distanceTo(position);
+<a class="jxr_linenumber" name="L432" href="#L432">432</a>             <strong class="jxr_keyword">if</strong> (distance &gt;= LARGE_ABSOLUTE_ERROR) {
+<a class="jxr_linenumber" name="L433" href="#L433">433</a>                 numInvalid++;
+<a class="jxr_linenumber" name="L434" href="#L434">434</a>             } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L435" href="#L435">435</a>                 numValid++;
+<a class="jxr_linenumber" name="L436" href="#L436">436</a>                 assertTrue(position.equals(estimatedPosition, LARGE_ABSOLUTE_ERROR));
+<a class="jxr_linenumber" name="L437" href="#L437">437</a>             }
+<a class="jxr_linenumber" name="L438" href="#L438">438</a>         }
 <a class="jxr_linenumber" name="L439" href="#L439">439</a> 
-<a class="jxr_linenumber" name="L440" href="#L440">440</a>     @Override
-<a class="jxr_linenumber" name="L441" href="#L441">441</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onSolveEnd(TrilaterationSolver&lt;Point2D&gt; solver) {
-<a class="jxr_linenumber" name="L442" href="#L442">442</a>         solveEnd++;
-<a class="jxr_linenumber" name="L443" href="#L443">443</a>         checkLocked((LinearLeastSquaresTrilateration2DSolver)solver);
-<a class="jxr_linenumber" name="L444" href="#L444">444</a>     }
-<a class="jxr_linenumber" name="L445" href="#L445">445</a> 
-<a class="jxr_linenumber" name="L446" href="#L446">446</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> reset() {
-<a class="jxr_linenumber" name="L447" href="#L447">447</a>         solveStart = solveEnd = 0;
-<a class="jxr_linenumber" name="L448" href="#L448">448</a>     }
-<a class="jxr_linenumber" name="L449" href="#L449">449</a> 
-<a class="jxr_linenumber" name="L450" href="#L450">450</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> checkLocked(LinearLeastSquaresTrilateration2DSolver solver) {
-<a class="jxr_linenumber" name="L451" href="#L451">451</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L452" href="#L452">452</a>             solver.setListener(<strong class="jxr_keyword">null</strong>);
-<a class="jxr_linenumber" name="L453" href="#L453">453</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L454" href="#L454">454</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
-<a class="jxr_linenumber" name="L455" href="#L455">455</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L456" href="#L456">456</a>             solver.setPositionsAndDistances(<strong class="jxr_keyword">null</strong>, <strong class="jxr_keyword">null</strong>);
-<a class="jxr_linenumber" name="L457" href="#L457">457</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L458" href="#L458">458</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
-<a class="jxr_linenumber" name="L459" href="#L459">459</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L460" href="#L460">460</a>             solver.setCircles(<strong class="jxr_keyword">null</strong>);
-<a class="jxr_linenumber" name="L461" href="#L461">461</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L462" href="#L462">462</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
-<a class="jxr_linenumber" name="L463" href="#L463">463</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L464" href="#L464">464</a>             solver.solve();
-<a class="jxr_linenumber" name="L465" href="#L465">465</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L466" href="#L466">466</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) {
-<a class="jxr_linenumber" name="L467" href="#L467">467</a>         } <strong class="jxr_keyword">catch</strong> (Exception ignore) {
-<a class="jxr_linenumber" name="L468" href="#L468">468</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
-<a class="jxr_linenumber" name="L469" href="#L469">469</a>         }
-<a class="jxr_linenumber" name="L470" href="#L470">470</a>     }
-<a class="jxr_linenumber" name="L471" href="#L471">471</a> }
+<a class="jxr_linenumber" name="L440" href="#L440">440</a>         assertTrue(numValid &gt; numInvalid);
+<a class="jxr_linenumber" name="L441" href="#L441">441</a>     }
+<a class="jxr_linenumber" name="L442" href="#L442">442</a> 
+<a class="jxr_linenumber" name="L443" href="#L443">443</a>     @Override
+<a class="jxr_linenumber" name="L444" href="#L444">444</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onSolveStart(TrilaterationSolver&lt;Point2D&gt; solver) {
+<a class="jxr_linenumber" name="L445" href="#L445">445</a>         solveStart++;
+<a class="jxr_linenumber" name="L446" href="#L446">446</a>         checkLocked((LinearLeastSquaresTrilateration2DSolver)solver);
+<a class="jxr_linenumber" name="L447" href="#L447">447</a>     }
+<a class="jxr_linenumber" name="L448" href="#L448">448</a> 
+<a class="jxr_linenumber" name="L449" href="#L449">449</a>     @Override
+<a class="jxr_linenumber" name="L450" href="#L450">450</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onSolveEnd(TrilaterationSolver&lt;Point2D&gt; solver) {
+<a class="jxr_linenumber" name="L451" href="#L451">451</a>         solveEnd++;
+<a class="jxr_linenumber" name="L452" href="#L452">452</a>         checkLocked((LinearLeastSquaresTrilateration2DSolver)solver);
+<a class="jxr_linenumber" name="L453" href="#L453">453</a>     }
+<a class="jxr_linenumber" name="L454" href="#L454">454</a> 
+<a class="jxr_linenumber" name="L455" href="#L455">455</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> reset() {
+<a class="jxr_linenumber" name="L456" href="#L456">456</a>         solveStart = solveEnd = 0;
+<a class="jxr_linenumber" name="L457" href="#L457">457</a>     }
+<a class="jxr_linenumber" name="L458" href="#L458">458</a> 
+<a class="jxr_linenumber" name="L459" href="#L459">459</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> checkLocked(LinearLeastSquaresTrilateration2DSolver solver) {
+<a class="jxr_linenumber" name="L460" href="#L460">460</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L461" href="#L461">461</a>             solver.setListener(<strong class="jxr_keyword">null</strong>);
+<a class="jxr_linenumber" name="L462" href="#L462">462</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L463" href="#L463">463</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
+<a class="jxr_linenumber" name="L464" href="#L464">464</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L465" href="#L465">465</a>             solver.setPositionsAndDistances(<strong class="jxr_keyword">null</strong>, <strong class="jxr_keyword">null</strong>);
+<a class="jxr_linenumber" name="L466" href="#L466">466</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L467" href="#L467">467</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
+<a class="jxr_linenumber" name="L468" href="#L468">468</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L469" href="#L469">469</a>             solver.setCircles(<strong class="jxr_keyword">null</strong>);
+<a class="jxr_linenumber" name="L470" href="#L470">470</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L471" href="#L471">471</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) { }
+<a class="jxr_linenumber" name="L472" href="#L472">472</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L473" href="#L473">473</a>             solver.solve();
+<a class="jxr_linenumber" name="L474" href="#L474">474</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L475" href="#L475">475</a>         } <strong class="jxr_keyword">catch</strong> (LockedException ignore) {
+<a class="jxr_linenumber" name="L476" href="#L476">476</a>         } <strong class="jxr_keyword">catch</strong> (Exception ignore) {
+<a class="jxr_linenumber" name="L477" href="#L477">477</a>             fail(<span class="jxr_string">"LockedException expected but not thrown"</span>);
+<a class="jxr_linenumber" name="L478" href="#L478">478</a>         }
+<a class="jxr_linenumber" name="L479" href="#L479">479</a>     }
+<a class="jxr_linenumber" name="L480" href="#L480">480</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2018. All rights reserved.</div>
