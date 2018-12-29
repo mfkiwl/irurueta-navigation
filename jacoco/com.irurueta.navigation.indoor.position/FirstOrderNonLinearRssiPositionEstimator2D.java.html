@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FirstOrderNonLinearRssiPositionEstimator2D.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor.position</a> &gt; <span class="el_source">FirstOrderNonLinearRssiPositionEstimator2D.java</span></div><h1>FirstOrderNonLinearRssiPositionEstimator2D.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor.position;
+
+import com.irurueta.geometry.Point2D;
+import com.irurueta.navigation.indoor.*;
+
+import java.util.List;
+
+/**
+ * 2D position estimator based on located fingerprints containing only RSSI readings and
+ * having as well prior knowledge of the location of radio sources associated to those
+ * readings.
+ * This implementation uses a first-order Taylor approximation over provided located
+ * fingerprints to determine an approximate position for a non-located fingerprint using
+ * a non-linear solving algorithm.
+ * An initial position can be provided as a starting point to solve the position,
+ * otherwise the average point of selected nearest fingerprints is used as a starting
+ * point.
+ */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
+public class FirstOrderNonLinearRssiPositionEstimator2D extends
+        NonLinearRssiPositionEstimator2D {
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L41">    public FirstOrderNonLinearRssiPositionEstimator2D() { }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener in charge of handling events.
+     */
+    public FirstOrderNonLinearRssiPositionEstimator2D(
+            SourcedRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L49">        super(listener);</span>
+<span class="fc" id="L50">    }</span>
+
+    /**
+     * Constructor.
+     * @param locatedFingerprints located fingerprints containing RSSI readings.
+     * @param fingerprint fingerprint containing readings at an unknown location
+     *                    for provided located fingerprints.
+     * @param sources located radio sources.
+     * @throws IllegalArgumentException if provided non located fingerprint is null,
+     * located fingerprints value is null or there are not enough fingerprints or
+     * readings within provided fingerprints (for 2D position estimation at least 2
+     * located total readings are required among all fingerprints, for example 2
+     * readings are required in a single fingerprint, or at least 2 fingerprints at
+     * different locations containing a single reading are required).
+     */
+    public FirstOrderNonLinearRssiPositionEstimator2D(
+            List&lt;? extends RssiFingerprintLocated&lt;? extends RadioSource,
+            ? extends RssiReading&lt;? extends RadioSource&gt;, Point2D&gt;&gt; locatedFingerprints,
+            RssiFingerprint&lt;? extends RadioSource,
+            ? extends RssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources) {
+<span class="fc" id="L71">        super(locatedFingerprints, fingerprint, sources);</span>
+<span class="fc" id="L72">    }</span>
+
+    /**
+     * Constructor.
+     * @param locatedFingerprints located fingerprints containing RSSI readings.
+     * @param fingerprint fingerprint containing readings at an unknown location
+     *                    for provided located fingerprints.
+     * @param sources located radio sources.
+     * @param listener listener in charge of handling events.
+     * @throws IllegalArgumentException if provided non located fingerprint is null,
+     * located fingerprints value is null or there are not enough fingerprints or
+     * readings within provided fingerprints (for 2D position estimation at least 2
+     * located total readings are required among all fingerprints, for example 2
+     * readings are required in a single fingerprint, or at least 2 fingerprints at
+     * different locations containing a single reading are required).
+     */
+    public FirstOrderNonLinearRssiPositionEstimator2D(
+            List&lt;? extends RssiFingerprintLocated&lt;? extends RadioSource,
+            ? extends RssiReading&lt;? extends RadioSource&gt;, Point2D&gt;&gt; locatedFingerprints,
+            RssiFingerprint&lt;? extends RadioSource,
+            ? extends RssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            SourcedRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L95">        super(locatedFingerprints, fingerprint, sources, listener);</span>
+<span class="fc" id="L96">    }</span>
+
+    /**
+     * Constructor.
+     * @param locatedFingerprints located fingerprints containing RSSI readings.
+     * @param fingerprint fingerprint containing readings at an unknown location
+     *                    for provided located fingerprints.
+     * @param sources located radio sources.
+     * @param initialPosition initial position to start the solving algorithm or null.
+     * @throws IllegalArgumentException if provided non located fingerprint is null,
+     * located fingerprints value is null or there are not enough fingerprints or
+     * readings within provided fingerprints (for 2D position estimation at least 2
+     * located total readings are required among all fingerprints, for example 2
+     * readings are required in a single fingerprint, or at least 2 fingerprints at
+     * different locations containing a single reading are required).
+     */
+    public FirstOrderNonLinearRssiPositionEstimator2D(
+            List&lt;? extends RssiFingerprintLocated&lt;? extends RadioSource,
+            ? extends RssiReading&lt;? extends RadioSource&gt;, Point2D&gt;&gt; locatedFingerprints,
+            RssiFingerprint&lt;? extends RadioSource,
+            ? extends RssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources, Point2D initialPosition) {
+<span class="fc" id="L118">        super(locatedFingerprints, fingerprint, sources, initialPosition);</span>
+<span class="fc" id="L119">    }</span>
+
+    /**
+     * Constructor.
+     * @param locatedFingerprints located fingerprints containing RSSI readings.
+     * @param fingerprint fingerprint containing readings at an unknown location
+     *                    for provided located fingerprints.
+     * @param sources located radio sources.
+     * @param initialPosition initial position to start the solving algorithm or null.
+     * @param listener listener in charge of handling events.
+     * @throws IllegalArgumentException if provided non located fingerprint is null,
+     * located fingerprints value is null or there are not enough fingerprints or
+     * readings within provided fingerprints (for 2D position estimation at least 2
+     * located total readings are required among all fingerprints, for example 2
+     * readings are required in a single fingerprint, or at least 2 fingerprints at
+     * different locations containing a single reading are required).
+     */
+    public FirstOrderNonLinearRssiPositionEstimator2D(
+            List&lt;? extends RssiFingerprintLocated&lt;? extends RadioSource,
+            ? extends RssiReading&lt;? extends RadioSource&gt;, Point2D&gt;&gt; locatedFingerprints,
+            RssiFingerprint&lt;? extends RadioSource,
+            ? extends RssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources, Point2D initialPosition,
+            SourcedRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L143">        super(locatedFingerprints, fingerprint, sources, initialPosition, listener);</span>
+<span class="fc" id="L144">    }</span>
+
+    /**
+     * Gets type of position estimator.
+     * @return type of position estimator.
+     */
+    @Override
+    public NonLinearRssiPositionEstimatorType getType() {
+<span class="fc" id="L152">        return NonLinearRssiPositionEstimatorType.FIRST_ORDER;</span>
+    }
+
+    /**
+     * Evaluates a non-linear multi dimension function at provided point using
+     * provided parameters and returns its evaluation and derivatives of the
+     * function respect the function parameters.
+     * @param i number of sample being evaluated.
+     * @param point point where function will be evaluated.
+     * @param params initial parameters estimation to be tried. These will
+     * change as the Levenberg-Marquard algorithm iterates to the best solution.
+     * These are used as input parameters along with point to evaluate function.
+     * @param derivatives partial derivatives of the function respect to each
+     * provided parameter.
+     * @return function evaluation at provided point.
+     */
+    @Override
+    @SuppressWarnings(&quot;Duplicates&quot;)
+    protected double evaluate(int i, double[] point, double[] params, double[] derivatives) {
+        //This method implements received power at point pi = (xi, yi) and its derivatives
+
+        //Pr(pi) = Pr(p1)
+        //- 10*n*(x1 - xa)/(ln(10)*d1a^2)*(xi - x1)
+        //- 10*n*(y1 - ya)/(ln(10)*d1a^2)*(yi - y1)
+
+<span class="fc" id="L177">        double xi = params[0];</span>
+<span class="fc" id="L178">        double yi = params[1];</span>
+
+        //received power
+<span class="fc" id="L181">        double pr = point[0];</span>
+
+        //fingerprint coordinates
+<span class="fc" id="L184">        double x1 = point[1];</span>
+<span class="fc" id="L185">        double y1 = point[2];</span>
+
+        //radio source coordinates
+<span class="fc" id="L188">        double xa = point[3];</span>
+<span class="fc" id="L189">        double ya = point[4];</span>
+
+        //path loss exponent
+<span class="fc" id="L192">        double n = point[5];</span>
+
+<span class="fc" id="L194">        double ln10 = Math.log(10.0);</span>
+
+<span class="fc" id="L196">        double diffXi1 = xi - x1;</span>
+<span class="fc" id="L197">        double diffYi1 = yi - y1;</span>
+
+<span class="fc" id="L199">        double diffX1a = x1 - xa;</span>
+<span class="fc" id="L200">        double diffY1a = y1 - ya;</span>
+
+<span class="fc" id="L202">        double diffX1a2 = diffX1a * diffX1a;</span>
+<span class="fc" id="L203">        double diffY1a2 = diffY1a * diffY1a;</span>
+
+<span class="fc" id="L205">        double d1a2 = diffX1a2 + diffY1a2;</span>
+
+<span class="fc" id="L207">        double value1 = - 10.0 * n * diffX1a / (ln10 * d1a2);</span>
+<span class="fc" id="L208">        double value2 = - 10.0 * n * diffY1a / (ln10 * d1a2);</span>
+
+<span class="fc" id="L210">        double result = pr</span>
+                + value1 * diffXi1
+                + value2 * diffYi1;
+
+        //derivative respect xi
+        //diff(Pr(pi))/diff(xi) = - 10*n*(x1 - xa)/(ln(10)*d1a^2)
+<span class="fc" id="L216">        derivatives[0] = value1;</span>
+
+        //derivative respect yi
+        //diff(Pr(pi))/diff(yi) = - 10*n*(y1 - ya)/(ln(10)*d1a^2)
+<span class="fc" id="L220">        derivatives[1] = value2;</span>
+
+<span class="fc" id="L222">        return result;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
