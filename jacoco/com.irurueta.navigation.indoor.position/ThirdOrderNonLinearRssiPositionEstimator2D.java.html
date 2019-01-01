@@ -15,8 +15,10 @@
  */
 package com.irurueta.navigation.indoor.position;
 
+import com.irurueta.algebra.Matrix;
 import com.irurueta.geometry.Point2D;
 import com.irurueta.navigation.indoor.*;
+import com.irurueta.statistics.MultivariateNormalDist;
 
 import java.util.List;
 
@@ -38,7 +40,7 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
     /**
      * Constructor.
      */
-<span class="fc" id="L41">    public ThirdOrderNonLinearRssiPositionEstimator2D() { }</span>
+<span class="fc" id="L43">    public ThirdOrderNonLinearRssiPositionEstimator2D() { }</span>
 
     /**
      * Constructor.
@@ -46,8 +48,8 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
      */
     public ThirdOrderNonLinearRssiPositionEstimator2D(
             SourcedRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
-<span class="fc" id="L49">        super(listener);</span>
-<span class="fc" id="L50">    }</span>
+<span class="fc" id="L51">        super(listener);</span>
+<span class="fc" id="L52">    }</span>
 
     /**
      * Constructor.
@@ -68,8 +70,8 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
             RssiFingerprint&lt;? extends RadioSource,
             ? extends RssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
             List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources) {
-<span class="fc" id="L71">        super(locatedFingerprints, fingerprint, sources);</span>
-<span class="fc" id="L72">    }</span>
+<span class="fc" id="L73">        super(locatedFingerprints, fingerprint, sources);</span>
+<span class="fc" id="L74">    }</span>
 
     /**
      * Constructor.
@@ -92,8 +94,8 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
             ? extends RssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
             List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
             SourcedRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
-<span class="fc" id="L95">        super(locatedFingerprints, fingerprint, sources, listener);</span>
-<span class="fc" id="L96">    }</span>
+<span class="fc" id="L97">        super(locatedFingerprints, fingerprint, sources, listener);</span>
+<span class="fc" id="L98">    }</span>
 
     /**
      * Constructor.
@@ -115,8 +117,8 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
             RssiFingerprint&lt;? extends RadioSource,
             ? extends RssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
             List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources, Point2D initialPosition) {
-<span class="fc" id="L118">        super(locatedFingerprints, fingerprint, sources, initialPosition);</span>
-<span class="fc" id="L119">    }</span>
+<span class="fc" id="L120">        super(locatedFingerprints, fingerprint, sources, initialPosition);</span>
+<span class="fc" id="L121">    }</span>
 
     /**
      * Constructor.
@@ -140,8 +142,8 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
             ? extends RssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
             List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources, Point2D initialPosition,
             SourcedRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
-<span class="fc" id="L143">        super(locatedFingerprints, fingerprint, sources, initialPosition, listener);</span>
-<span class="fc" id="L144">    }</span>
+<span class="fc" id="L145">        super(locatedFingerprints, fingerprint, sources, initialPosition, listener);</span>
+<span class="fc" id="L146">    }</span>
 
     /**
      * Gets type of position estimator.
@@ -149,7 +151,7 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
      */
     @Override
     public NonLinearRssiPositionEstimatorType getType() {
-<span class="fc" id="L152">        return NonLinearRssiPositionEstimatorType.THIRD_ORDER;</span>
+<span class="fc" id="L154">        return NonLinearRssiPositionEstimatorType.THIRD_ORDER;</span>
     }
 
     /**
@@ -323,53 +325,53 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
 
         //This method implements received power at point pi = (xi, yi) and its derivatives
 
-<span class="fc" id="L326">        double xi = params[0];</span>
-<span class="fc" id="L327">        double yi = params[1];</span>
+<span class="fc" id="L328">        double xi = params[0];</span>
+<span class="fc" id="L329">        double yi = params[1];</span>
 
         //received power
-<span class="fc" id="L330">        double pr = point[0];</span>
+<span class="fc" id="L332">        double pr = point[0];</span>
 
         //fingerprint coordinates
-<span class="fc" id="L333">        double x1 = point[1];</span>
-<span class="fc" id="L334">        double y1 = point[2];</span>
+<span class="fc" id="L335">        double x1 = point[1];</span>
+<span class="fc" id="L336">        double y1 = point[2];</span>
 
         //radio source coordinates
-<span class="fc" id="L337">        double xa = point[3];</span>
-<span class="fc" id="L338">        double ya = point[4];</span>
+<span class="fc" id="L339">        double xa = point[3];</span>
+<span class="fc" id="L340">        double ya = point[4];</span>
 
         //path loss exponent
-<span class="fc" id="L341">        double n = point[5];</span>
+<span class="fc" id="L343">        double n = point[5];</span>
 
-<span class="fc" id="L343">        double ln10 = Math.log(10.0);</span>
+<span class="fc" id="L345">        double ln10 = Math.log(10.0);</span>
 
-<span class="fc" id="L345">        double diffXi1 = xi - x1;</span>
-<span class="fc" id="L346">        double diffYi1 = yi - y1;</span>
+<span class="fc" id="L347">        double diffXi1 = xi - x1;</span>
+<span class="fc" id="L348">        double diffYi1 = yi - y1;</span>
 
-<span class="fc" id="L348">        double diffX1a = x1 - xa;</span>
-<span class="fc" id="L349">        double diffY1a = y1 - ya;</span>
+<span class="fc" id="L350">        double diffX1a = x1 - xa;</span>
+<span class="fc" id="L351">        double diffY1a = y1 - ya;</span>
 
-<span class="fc" id="L351">        double diffXi12 = diffXi1 * diffXi1;</span>
-<span class="fc" id="L352">        double diffYi12 = diffYi1 * diffYi1;</span>
+<span class="fc" id="L353">        double diffXi12 = diffXi1 * diffXi1;</span>
+<span class="fc" id="L354">        double diffYi12 = diffYi1 * diffYi1;</span>
 
-<span class="fc" id="L354">        double diffXi13 = diffXi12 * diffXi1;</span>
-<span class="fc" id="L355">        double diffYi13 = diffYi12 * diffYi1;</span>
+<span class="fc" id="L356">        double diffXi13 = diffXi12 * diffXi1;</span>
+<span class="fc" id="L357">        double diffYi13 = diffYi12 * diffYi1;</span>
 
-<span class="fc" id="L357">        double diffX1a2 = diffX1a * diffX1a;</span>
-<span class="fc" id="L358">        double diffY1a2 = diffY1a * diffY1a;</span>
+<span class="fc" id="L359">        double diffX1a2 = diffX1a * diffX1a;</span>
+<span class="fc" id="L360">        double diffY1a2 = diffY1a * diffY1a;</span>
 
-<span class="fc" id="L360">        double d1a2 = diffX1a2 + diffY1a2;</span>
-<span class="fc" id="L361">        double d1a4 = d1a2 * d1a2;</span>
-<span class="fc" id="L362">        double d1a8 = d1a4 * d1a4;</span>
+<span class="fc" id="L362">        double d1a2 = diffX1a2 + diffY1a2;</span>
+<span class="fc" id="L363">        double d1a4 = d1a2 * d1a2;</span>
+<span class="fc" id="L364">        double d1a8 = d1a4 * d1a4;</span>
 
-<span class="fc" id="L364">        double value1 = - 10.0 * n * diffX1a / (ln10 * d1a2);</span>
-<span class="fc" id="L365">        double value2 = - 10.0 * n * diffY1a / (ln10 * d1a2);</span>
-<span class="fc" id="L366">        double value3 = - 5.0 * n * (-diffX1a2 + diffY1a2) / (ln10 * d1a4);</span>
-<span class="fc" id="L367">        double value4 = - 5.0 * n * (diffX1a2 - diffY1a2) / (ln10 * d1a4);</span>
-<span class="fc" id="L368">        double value5 = 20.0 * n * diffX1a * diffY1a / (ln10 * d1a4);</span>
-<span class="fc" id="L369">        double value6 = - 10.0 / 6.0 * n / ln10 * (-2.0 * diffX1a * d1a4 - (-diffX1a2 + diffY1a2) * 4.0 * d1a2 * diffX1a) / d1a8;</span>
-<span class="fc" id="L370">        double value7 = - 10.0 / 6.0 * n / ln10 * (-2.0 * diffY1a * d1a4 - (diffX1a2 - diffY1a2) * 4.0 * d1a2 * diffY1a) / d1a8;</span>
-<span class="fc" id="L371">        double value8 = - 5.0 * n / ln10 * (2.0 * diffY1a * d1a4 - (-diffX1a2 + diffY1a2) * 4.0 * d1a2 * diffY1a) / d1a8;</span>
-<span class="fc" id="L372">        double value9 = - 5.0 * n / ln10 * (2.0 * diffX1a * d1a4 - (diffX1a2 - diffY1a2) * 4.0 * d1a2 * diffX1a) / d1a8;</span>
+<span class="fc" id="L366">        double value1 = - 10.0 * n * diffX1a / (ln10 * d1a2);</span>
+<span class="fc" id="L367">        double value2 = - 10.0 * n * diffY1a / (ln10 * d1a2);</span>
+<span class="fc" id="L368">        double value3 = - 5.0 * n * (-diffX1a2 + diffY1a2) / (ln10 * d1a4);</span>
+<span class="fc" id="L369">        double value4 = - 5.0 * n * (diffX1a2 - diffY1a2) / (ln10 * d1a4);</span>
+<span class="fc" id="L370">        double value5 = 20.0 * n * diffX1a * diffY1a / (ln10 * d1a4);</span>
+<span class="fc" id="L371">        double value6 = - 10.0 / 6.0 * n / ln10 * (-2.0 * diffX1a * d1a4 - (-diffX1a2 + diffY1a2) * 4.0 * d1a2 * diffX1a) / d1a8;</span>
+<span class="fc" id="L372">        double value7 = - 10.0 / 6.0 * n / ln10 * (-2.0 * diffY1a * d1a4 - (diffX1a2 - diffY1a2) * 4.0 * d1a2 * diffY1a) / d1a8;</span>
+<span class="fc" id="L373">        double value8 = - 5.0 * n / ln10 * (2.0 * diffY1a * d1a4 - (-diffX1a2 + diffY1a2) * 4.0 * d1a2 * diffY1a) / d1a8;</span>
+<span class="fc" id="L374">        double value9 = - 5.0 * n / ln10 * (2.0 * diffX1a * d1a4 - (diffX1a2 - diffY1a2) * 4.0 * d1a2 * diffX1a) / d1a8;</span>
 
         //hence:
         //Pr(pi) = Pr(p1) +
@@ -383,7 +385,7 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
         //  value8*(xi - x1)^2*(yi - y1) +
         //  value9*(xi - x1)*(yi - y1)^2 +
 
-<span class="fc" id="L386">        double result = pr</span>
+<span class="fc" id="L388">        double result = pr</span>
                 + value1 * diffXi1
                 + value2 * diffYi1
                 + value3 * diffXi12
@@ -403,7 +405,7 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
         //  2*value8*(xi - x1)*(yi - y1) +
         //  value9*(yi - y1)^2
 
-<span class="fc" id="L406">        derivatives[0] = value1 + 2.0 * value3 * diffXi1 + value5 * diffYi1 +</span>
+<span class="fc" id="L408">        derivatives[0] = value1 + 2.0 * value3 * diffXi1 + value5 * diffYi1 +</span>
                 3.0 * value6 * diffXi12 + 2.0 * value8 * diffXi1 * diffYi1 +
                 value9 * diffYi12;
 
@@ -416,11 +418,60 @@ public class ThirdOrderNonLinearRssiPositionEstimator2D extends
         //  value8*(xi - x1)^2 +
         //  2*value9*(xi - x1)*(yi - y1)
 
-<span class="fc" id="L419">        derivatives[1] = value2 + 2.0 * value4 * diffYi1 + value5 * diffXi1 +</span>
+<span class="fc" id="L421">        derivatives[1] = value2 + 2.0 * value4 * diffYi1 + value5 * diffXi1 +</span>
                 3.0 * value7 * diffYi12 + value8 * diffXi12 +
                 2.0 * value9 * diffXi1 * diffYi1;
 
-<span class="fc" id="L423">        return result;</span>
+<span class="fc" id="L425">        return result;</span>
     }
+
+    /**
+     * Propagates provided variances into RSSI variance of non-located fingerprint
+     * reading.
+     * @param fingerprintRssi closest located fingerprint reading RSSI expressed in dBm's.
+     * @param pathlossExponent path-loss exponent.
+     * @param fingerprintPosition position of closest fingerprint.
+     * @param radioSourcePosition radio source position associated to fingerprint reading.
+     * @param estimatedPosition position to be estimated. Usually this is equal to the
+     *                          initial position used by a non linear algorithm.
+     * @param fingerprintRssiVariance variance of fingerprint RSSI or null if unknown.
+     * @param pathlossExponentVariance variance of path-loss exponent or null if unknown.
+     * @param fingerprintPositionCovariance covariance of fingerprint position or null if
+     *                                      unknown.
+     * @param radioSourcePositionCovariance covariance of radio source position or null if
+     *                                      unknown.
+     * @return variance of RSSI measured at non located fingerprint reading.
+     */
+    @Override
+    @SuppressWarnings(&quot;Duplicates&quot;)
+    protected Double propagateVariances(double fingerprintRssi,
+            double pathlossExponent, Point2D fingerprintPosition,
+            Point2D radioSourcePosition, Point2D estimatedPosition,
+            Double fingerprintRssiVariance, Double pathlossExponentVariance,
+            Matrix fingerprintPositionCovariance,
+            Matrix radioSourcePositionCovariance) {
+        try {
+<span class="fc" id="L454">            MultivariateNormalDist dist =</span>
+<span class="fc" id="L455">                    Utils.propagateVariancesToRssiVarianceThirdOrderNonLinear2D(</span>
+                            fingerprintRssi, pathlossExponent, fingerprintPosition,
+                            radioSourcePosition, estimatedPosition, fingerprintRssiVariance,
+                            pathlossExponentVariance, fingerprintPositionCovariance,
+                            radioSourcePositionCovariance, null);
+<span class="pc bpc" id="L460" title="1 of 2 branches missed.">            if (dist == null) {</span>
+<span class="nc" id="L461">                return null;</span>
+            }
+
+<span class="fc" id="L464">            Matrix covariance = dist.getCovariance();</span>
+<span class="pc bpc" id="L465" title="1 of 2 branches missed.">            if (covariance == null) {</span>
+<span class="nc" id="L466">                return null;</span>
+            }
+
+<span class="fc" id="L469">            return covariance.getElementAt(0, 0);</span>
+
+<span class="nc" id="L471">        } catch (IndoorException e) {</span>
+<span class="nc" id="L472">            return null;</span>
+        }
+    }
+
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
