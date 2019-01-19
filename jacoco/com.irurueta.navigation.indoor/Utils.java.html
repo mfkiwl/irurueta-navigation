@@ -2343,5 +2343,409 @@ public class Utils {
         }
     }
 
+    /**
+     * Propagates provided variances (path-loss exponent variance,
+     * fingerprint position covariance and radio source position covariance) into
+     * difference of rssi variance by considering the 2D expression.
+     * Notice that any unknown variance is assumed to be zero.
+     * @param pathLossExponent path-loss exponent.
+     * @param fingerprintPosition position of closest fingerprint.
+     * @param radioSourcePosition radio source position associated to fingerprint reading.
+     * @param estimatedPosition  position to be estimated. Usually this is equal to the
+     *                           initial position used by a non linear algorithm.
+     * @param pathLossExponentVariance variance of path-loss exponent or null if unknown.
+     * @param fingerprintPositionCovariance covariance of fingerprint position or null if
+     *                                      unknown.
+     * @param radioSourcePositionCovariance covariance of radio source position or null
+     *                                      if unknown.
+     * @param estimatedPositionCovariance  covariance of position to be estimated or null
+     *                                     if unknown. (This is usually unknown).
+     * @return a normal distribution containing expected received RSSI value and its variance.
+     * @throws IndoorException if something fails.
+     */
+    public static MultivariateNormalDist propagateVariancesToRssiDifferenceVariance2D(
+            final double pathLossExponent,
+            Point2D fingerprintPosition, Point2D radioSourcePosition,
+            Point2D estimatedPosition,
+            Double pathLossExponentVariance,
+            Matrix fingerprintPositionCovariance,
+            Matrix radioSourcePositionCovariance,
+            Matrix estimatedPositionCovariance) throws IndoorException {
+
+<span class="fc bfc" id="L2375" title="All 6 branches covered.">        if (fingerprintPosition == null || radioSourcePosition == null ||</span>
+                estimatedPosition == null) {
+<span class="fc" id="L2377">            return null;</span>
+        }
+
+        //Expression being used is:
+        //Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =
+        //  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2)
+
+
+<span class="fc" id="L2385">        final double x1 = fingerprintPosition.getInhomX();</span>
+<span class="fc" id="L2386">        final double y1 = fingerprintPosition.getInhomY();</span>
+
+<span class="fc" id="L2388">        final double xa = radioSourcePosition.getInhomX();</span>
+<span class="fc" id="L2389">        final double ya = radioSourcePosition.getInhomY();</span>
+
+<span class="fc" id="L2391">        final double xi = estimatedPosition.getInhomX();</span>
+<span class="fc" id="L2392">        final double yi = estimatedPosition.getInhomY();</span>
+
+<span class="fc" id="L2394">        double[] mean = new double[] {</span>
+                pathLossExponent, x1, y1, xa, ya, xi, yi
+        };
+<span class="fc" id="L2397">        Matrix covariance = Matrix.diagonal(new double[]{</span>
+<span class="fc bfc" id="L2398" title="All 2 branches covered.">                pathLossExponentVariance != null ? pathLossExponentVariance : 0.0,</span>
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        });
+
+<span class="fc bfc" id="L2402" title="All 2 branches covered.">        if (fingerprintPositionCovariance != null &amp;&amp;</span>
+<span class="pc bpc" id="L2403" title="1 of 2 branches missed.">                fingerprintPositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;</span>
+<span class="pc bpc" id="L2404" title="1 of 2 branches missed.">                fingerprintPositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {</span>
+
+<span class="fc" id="L2406">            covariance.setSubmatrix(1, 1,</span>
+                    2, 2,
+                    fingerprintPositionCovariance);
+        }
+
+<span class="fc bfc" id="L2411" title="All 2 branches covered.">        if (radioSourcePositionCovariance != null &amp;&amp;</span>
+<span class="pc bpc" id="L2412" title="1 of 2 branches missed.">                radioSourcePositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;</span>
+<span class="pc bpc" id="L2413" title="1 of 2 branches missed.">                radioSourcePositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {</span>
+<span class="fc" id="L2414">            covariance.setSubmatrix(3, 3,</span>
+                    4, 4,
+                    radioSourcePositionCovariance);
+        }
+
+<span class="fc bfc" id="L2419" title="All 2 branches covered.">        if (estimatedPositionCovariance != null &amp;&amp;</span>
+<span class="pc bpc" id="L2420" title="1 of 2 branches missed.">                estimatedPositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;</span>
+<span class="pc bpc" id="L2421" title="1 of 2 branches missed.">                estimatedPositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {</span>
+<span class="fc" id="L2422">            covariance.setSubmatrix(5, 5,</span>
+                    6, 6,
+                    estimatedPositionCovariance);
+        }
+
+        try {
+<span class="fc" id="L2428">            return MultivariateNormalDist.propagate(new MultivariateNormalDist.JacobianEvaluator() {</span>
+                @Override
+                public void evaluate(double[] x, double[] y, Matrix jacobian) {
+
+                    //Expression being used is:
+                    //Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =
+                    //  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2)
+
+<span class="fc" id="L2436">                    double diffX1a = x1 - xa;</span>
+<span class="fc" id="L2437">                    double diffY1a = y1 - ya;</span>
+
+<span class="fc" id="L2439">                    double diffXia = xi - xa;</span>
+<span class="fc" id="L2440">                    double diffYia = yi - ya;</span>
+
+<span class="fc" id="L2442">                    double diffX1a2 = diffX1a * diffX1a;</span>
+<span class="fc" id="L2443">                    double diffY1a2 = diffY1a * diffY1a;</span>
+
+<span class="fc" id="L2445">                    double diffXia2 = diffXia * diffXia;</span>
+<span class="fc" id="L2446">                    double diffYia2 = diffYia * diffYia;</span>
+
+<span class="fc" id="L2448">                    double d1a2 = diffX1a2 + diffY1a2;</span>
+<span class="fc" id="L2449">                    double dia2 = diffXia2 + diffYia2;</span>
+
+<span class="fc" id="L2451">                    double ln10 = Math.log(10.0);</span>
+
+
+                    //compute gradient (is a jacobian having 1 row and 7 columns)
+
+
+                    //derivative of diff rssi respect to fingerprint path-loss exponent &quot;n&quot;
+
+<span class="fc" id="L2459">                    double derivativePathLossExponent = 5.0 *</span>
+<span class="fc" id="L2460">                            (Math.log10(d1a2) - Math.log10(dia2));</span>
+
+
+                    //derivative of diff rssi respect to x1
+                    //diff(Prdiff1a)/diff(x1) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))*2*(x1 - xa) =
+                    //  = 10*n*(x1 - xa)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))
+
+<span class="fc" id="L2467">                    double tmp1a = 10.0 * pathLossExponent / (ln10 * d1a2);</span>
+<span class="fc" id="L2468">                    double derivativeX1 = tmp1a * diffX1a;</span>
+
+
+                    //derivative of diff rssi respect to y1
+                    //diff(Prdiff1a)/diff(y1) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))*2*(y1 - ya) =
+                    //  = 10*n*(y1 - ya)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))
+
+<span class="fc" id="L2475">                    double derivativeY1 = tmp1a * diffY1a;</span>
+
+
+                    //derivative of rssi respect to xi
+                    //diff(Prdiff1a)/diff(xi) = -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2))*2*(xi - xa)
+                    //  = -10*n*(xi - xa)/(ln(10)*((xi - xa)^2 + (yi - ya)^2))
+
+<span class="fc" id="L2482">                    double tmpia = 10.0 * pathLossExponent / (ln10 * dia2);</span>
+<span class="fc" id="L2483">                    double derivativeXi = - tmpia * diffXia;</span>
+
+                    //derivative of rssi respect to yi
+                    //diff(Prdiff1a)/diff(yi) = -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2))*2*(yi - ya)
+                    //  = -10*n*(yi - ya)/(ln(10)*((xi - xa)^2 + (yi - ya)^2))
+
+<span class="fc" id="L2489">                    double derivativeYi = - tmpia * diffYia;</span>
+
+
+                    //derivative of rssi respect to xa
+                    //diff(Prdiff1a)/diff(xa) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))*-2*(x1 - xa) -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2))*-2(xi - xa) =
+                    //  = -10*n*(x1 - xa)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2)) + 10*n*(xi - xa)/(ln(10)*((xi - xa)^2 + (yi - ya)^2))
+
+<span class="fc" id="L2496">                    double derivativeXa = - derivativeX1 - derivativeXi ;</span>
+
+
+                    //derivative of rssi respect to ya
+                    //diff(Prdiff1a)/diff(ya) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))*-2*(y1 - ya) -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2))*-2(yi - ya) =
+                    //  = -10*n*(y1 - ya)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2)) + 10*n*(yi - ya)/(ln(10)*((xi - xa)^2 + (yi - ya)^2))
+
+<span class="fc" id="L2503">                    double derivativeYa = - derivativeY1 - derivativeYi ;</span>
+
+
+                    //Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =
+                    //  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2)
+
+
+                    //set derivatives pathLossExponent, x1, y1, xa, ya, xi, yi
+<span class="fc" id="L2511">                    jacobian.setElementAtIndex(0, derivativePathLossExponent);</span>
+<span class="fc" id="L2512">                    jacobian.setElementAtIndex(1, derivativeX1);</span>
+<span class="fc" id="L2513">                    jacobian.setElementAtIndex(2, derivativeY1);</span>
+<span class="fc" id="L2514">                    jacobian.setElementAtIndex(3, derivativeXa);</span>
+<span class="fc" id="L2515">                    jacobian.setElementAtIndex(4, derivativeYa);</span>
+<span class="fc" id="L2516">                    jacobian.setElementAtIndex(5, derivativeXi);</span>
+<span class="fc" id="L2517">                    jacobian.setElementAtIndex(6, derivativeYi);</span>
+
+
+<span class="fc" id="L2520">                    y[0] = derivativePathLossExponent * pathLossExponent;</span>
+<span class="fc" id="L2521">                }</span>
+
+                @Override
+                public int getNumberOfVariables() {
+<span class="fc" id="L2525">                    return 1;</span>
+                }
+            }, mean, covariance);
+<span class="nc" id="L2528">        } catch (AlgebraException | StatisticsException e) {</span>
+<span class="nc" id="L2529">            throw new IndoorException(e);</span>
+        }
+    }
+
+    /**
+     * Propagates provided variances (path-loss exponent variance,
+     * fingerprint position covariance and radio source position covariance) into
+     * difference of rssi variance by considering the 3D expression.
+     * Notice that any unknown variance is assumed to be zero.
+     * @param pathLossExponent path-loss exponent.
+     * @param fingerprintPosition position of closest fingerprint.
+     * @param radioSourcePosition radio source position associated to fingerprint reading.
+     * @param estimatedPosition  position to be estimated. Usually this is equal to the
+     *                           initial position used by a non linear algorithm.
+     * @param pathLossExponentVariance variance of path-loss exponent or null if unknown.
+     * @param fingerprintPositionCovariance covariance of fingerprint position or null if
+     *                                      unknown.
+     * @param radioSourcePositionCovariance covariance of radio source position or null
+     *                                      if unknown.
+     * @param estimatedPositionCovariance  covariance of position to be estimated or null
+     *                                     if unknown. (This is usually unknown).
+     * @return a normal distribution containing expected received RSSI value and its variance.
+     * @throws IndoorException if something fails.
+     */
+    public static MultivariateNormalDist propagateVariancesToRssiDifferenceVariance3D(
+            final double pathLossExponent,
+            Point3D fingerprintPosition, Point3D radioSourcePosition,
+            Point3D estimatedPosition,
+            Double pathLossExponentVariance,
+            Matrix fingerprintPositionCovariance,
+            Matrix radioSourcePositionCovariance,
+            Matrix estimatedPositionCovariance) throws IndoorException {
+
+<span class="fc bfc" id="L2562" title="All 6 branches covered.">        if (fingerprintPosition == null || radioSourcePosition == null ||</span>
+                estimatedPosition == null) {
+<span class="fc" id="L2564">            return null;</span>
+        }
+
+        //Expression being used is:
+        //Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =
+        //  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2)
+
+
+<span class="fc" id="L2572">        final double x1 = fingerprintPosition.getInhomX();</span>
+<span class="fc" id="L2573">        final double y1 = fingerprintPosition.getInhomY();</span>
+<span class="fc" id="L2574">        final double z1 = fingerprintPosition.getInhomZ();</span>
+
+<span class="fc" id="L2576">        final double xa = radioSourcePosition.getInhomX();</span>
+<span class="fc" id="L2577">        final double ya = radioSourcePosition.getInhomY();</span>
+<span class="fc" id="L2578">        final double za = radioSourcePosition.getInhomZ();</span>
+
+<span class="fc" id="L2580">        final double xi = estimatedPosition.getInhomX();</span>
+<span class="fc" id="L2581">        final double yi = estimatedPosition.getInhomY();</span>
+<span class="fc" id="L2582">        final double zi = estimatedPosition.getInhomZ();</span>
+
+<span class="fc" id="L2584">        double[] mean = new double[] {</span>
+                pathLossExponent, x1, y1, z1, xa, ya, za, xi, yi, zi
+        };
+<span class="fc" id="L2587">        Matrix covariance = Matrix.diagonal(new double[]{</span>
+<span class="fc bfc" id="L2588" title="All 2 branches covered.">                pathLossExponentVariance != null ? pathLossExponentVariance : 0.0,</span>
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        });
+
+<span class="fc bfc" id="L2592" title="All 2 branches covered.">        if (fingerprintPositionCovariance != null &amp;&amp;</span>
+<span class="pc bpc" id="L2593" title="1 of 2 branches missed.">                fingerprintPositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;</span>
+<span class="nc bnc" id="L2594" title="All 2 branches missed.">                fingerprintPositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {</span>
+
+<span class="nc" id="L2596">            covariance.setSubmatrix(1, 1,</span>
+                    3, 3,
+                    fingerprintPositionCovariance);
+        }
+
+<span class="fc bfc" id="L2601" title="All 2 branches covered.">        if (radioSourcePositionCovariance != null &amp;&amp;</span>
+<span class="pc bpc" id="L2602" title="1 of 2 branches missed.">                radioSourcePositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;</span>
+<span class="nc bnc" id="L2603" title="All 2 branches missed.">                radioSourcePositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {</span>
+<span class="nc" id="L2604">            covariance.setSubmatrix(4, 4,</span>
+                    6, 6,
+                    radioSourcePositionCovariance);
+        }
+
+<span class="fc bfc" id="L2609" title="All 2 branches covered.">        if (estimatedPositionCovariance != null &amp;&amp;</span>
+<span class="pc bpc" id="L2610" title="1 of 2 branches missed.">                estimatedPositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;</span>
+<span class="nc bnc" id="L2611" title="All 2 branches missed.">                estimatedPositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {</span>
+<span class="nc" id="L2612">            covariance.setSubmatrix(7, 7,</span>
+                    9, 9,
+                    estimatedPositionCovariance);
+        }
+
+        try {
+<span class="fc" id="L2618">            return MultivariateNormalDist.propagate(new MultivariateNormalDist.JacobianEvaluator() {</span>
+                @Override
+                public void evaluate(double[] x, double[] y, Matrix jacobian) {
+
+                    //Expression being used is:
+                    //Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =
+                    //  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2)
+
+<span class="fc" id="L2626">                    double diffX1a = x1 - xa;</span>
+<span class="fc" id="L2627">                    double diffY1a = y1 - ya;</span>
+<span class="fc" id="L2628">                    double diffZ1a = z1 - za;</span>
+
+<span class="fc" id="L2630">                    double diffXia = xi - xa;</span>
+<span class="fc" id="L2631">                    double diffYia = yi - ya;</span>
+<span class="fc" id="L2632">                    double diffZia = zi - za;</span>
+
+<span class="fc" id="L2634">                    double diffX1a2 = diffX1a * diffX1a;</span>
+<span class="fc" id="L2635">                    double diffY1a2 = diffY1a * diffY1a;</span>
+<span class="fc" id="L2636">                    double diffZ1a2 = diffZ1a * diffZ1a;</span>
+
+<span class="fc" id="L2638">                    double diffXia2 = diffXia * diffXia;</span>
+<span class="fc" id="L2639">                    double diffYia2 = diffYia * diffYia;</span>
+<span class="fc" id="L2640">                    double diffZia2 = diffZia * diffZia;</span>
+
+<span class="fc" id="L2642">                    double d1a2 = diffX1a2 + diffY1a2 + diffZ1a2;</span>
+<span class="fc" id="L2643">                    double dia2 = diffXia2 + diffYia2 + diffZia2;</span>
+
+<span class="fc" id="L2645">                    double ln10 = Math.log(10.0);</span>
+
+
+                    //compute gradient (is a jacobian having 1 row and 10 columns)
+
+                    //derivative of diff rssi respect to fingerprint path-loss exponent &quot;n&quot;
+
+<span class="fc" id="L2652">                    double derivativePathLossExponent = 5.0 *</span>
+<span class="fc" id="L2653">                            (Math.log10(d1a2) - Math.log10(dia2));</span>
+
+
+                    //derivative of diff rssi respect to x1
+                    //diff(Prdiff1a)/diff(x1) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))*2*(x1 - xa) =
+                    //  = 10*n*(x1 - xa)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))
+
+<span class="fc" id="L2660">                    double tmp1a = 10.0 * pathLossExponent / (ln10 * d1a2);</span>
+<span class="fc" id="L2661">                    double derivativeX1 = tmp1a * diffX1a;</span>
+
+
+                    //derivative of diff rssi respect to y1
+                    //diff(Prdiff1a)/diff(y1) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2) + (z1 - za)^2)*2*(y1 - ya) =
+                    //  = 10*n*(y1 - ya)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))
+
+<span class="fc" id="L2668">                    double derivativeY1 = tmp1a * diffY1a;</span>
+
+
+                    //derivative of diff rssi respect to z1
+                    //diff(Prdiff1a)/diff(z1) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2) + (z1 - za)^2)*2*(z1 - za) =
+                    //  = 10*n*(z1 - za)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))
+
+<span class="fc" id="L2675">                    double derivativeZ1 = tmp1a * diffZ1a;</span>
+
+
+                    //derivative of rssi respect to xi
+                    //diff(Prdiff1a)/diff(xi) = -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*2*(xi - xa)
+                    //  = -10*n*(xi - xa)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))
+
+<span class="fc" id="L2682">                    double tmpia = 10.0 * pathLossExponent / (ln10 * dia2);</span>
+<span class="fc" id="L2683">                    double derivativeXi = - tmpia * diffXia;</span>
+
+
+                    //derivative of rssi respect to yi
+                    //diff(Prdiff1a)/diff(yi) = -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*2*(yi - ya)
+                    //  = -10*n*(yi - ya)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))
+
+<span class="fc" id="L2690">                    double derivativeYi = - tmpia * diffYia;</span>
+
+
+                    //derivative of rssi respect to zi
+                    //diff(Prdiff1a)/diff(zi) = -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*2*(zi - za)
+                    //  = -10*n*(zi - za)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))
+
+<span class="fc" id="L2697">                    double derivativeZi = - tmpia * diffZia;</span>
+
+
+                    //Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =
+                    //  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2)
+
+                    //derivative of rssi respect to xa
+                    //diff(Prdiff1a)/diff(xa) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))*-2*(x1 - xa) -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*-2(xi - xa) =
+                    //  = -10*n*(x1 - xa)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2)) + 10*n*(xi - xa)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))
+
+<span class="fc" id="L2707">                    double derivativeXa = - derivativeX1 - derivativeXi;</span>
+
+
+                    //derivative of rssi respect to ya
+                    //diff(Prdiff1a)/diff(ya) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))*-2*(y1 - ya) -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*-2(yi - ya) =
+                    //  = -10*n*(y1 - ya)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2)) + 10*n*(yi - ya)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))
+
+<span class="fc" id="L2714">                    double derivativeYa = - derivativeY1 - derivativeYi;</span>
+
+
+                    //derivative of rssi respect to za
+                    //diff(Prdiff1a)/diff(za) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))*-2*(z1 - za) -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*-2(zi - za) =
+                    //  = -10*n*(z1 - za)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2)) + 10*n*(zi - za)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))
+
+<span class="fc" id="L2721">                    double derivativeZa = - derivativeZ1 - derivativeZi;</span>
+
+
+                    //set derivatives pathLossExponent, x1, y1, z1, xa, ya, za, xi, yi, zi
+<span class="fc" id="L2725">                    jacobian.setElementAtIndex(0, derivativePathLossExponent);</span>
+<span class="fc" id="L2726">                    jacobian.setElementAtIndex(1, derivativeX1);</span>
+<span class="fc" id="L2727">                    jacobian.setElementAtIndex(2, derivativeY1);</span>
+<span class="fc" id="L2728">                    jacobian.setElementAtIndex(3, derivativeZ1);</span>
+<span class="fc" id="L2729">                    jacobian.setElementAtIndex(4, derivativeXa);</span>
+<span class="fc" id="L2730">                    jacobian.setElementAtIndex(5, derivativeYa);</span>
+<span class="fc" id="L2731">                    jacobian.setElementAtIndex(6, derivativeZa);</span>
+<span class="fc" id="L2732">                    jacobian.setElementAtIndex(7, derivativeXi);</span>
+<span class="fc" id="L2733">                    jacobian.setElementAtIndex(8, derivativeYi);</span>
+<span class="fc" id="L2734">                    jacobian.setElementAtIndex(9, derivativeZi);</span>
+
+
+<span class="fc" id="L2737">                    y[0] = derivativePathLossExponent * pathLossExponent;</span>
+<span class="fc" id="L2738">                }</span>
+
+                @Override
+                public int getNumberOfVariables() {
+<span class="fc" id="L2742">                    return 1;</span>
+                }
+            }, mean, covariance);
+<span class="nc" id="L2745">        } catch (AlgebraException | StatisticsException e) {</span>
+<span class="nc" id="L2746">            throw new IndoorException(e);</span>
+        }
+    }
+
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

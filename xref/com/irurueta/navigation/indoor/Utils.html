@@ -2351,7 +2351,411 @@
 <a class="jxr_linenumber" name="L2343" href="#L2343">2343</a>         }
 <a class="jxr_linenumber" name="L2344" href="#L2344">2344</a>     }
 <a class="jxr_linenumber" name="L2345" href="#L2345">2345</a> 
-<a class="jxr_linenumber" name="L2346" href="#L2346">2346</a> }
+<a class="jxr_linenumber" name="L2346" href="#L2346">2346</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L2347" href="#L2347">2347</a> <em class="jxr_javadoccomment">     * Propagates provided variances (path-loss exponent variance,</em>
+<a class="jxr_linenumber" name="L2348" href="#L2348">2348</a> <em class="jxr_javadoccomment">     * fingerprint position covariance and radio source position covariance) into</em>
+<a class="jxr_linenumber" name="L2349" href="#L2349">2349</a> <em class="jxr_javadoccomment">     * difference of rssi variance by considering the 2D expression.</em>
+<a class="jxr_linenumber" name="L2350" href="#L2350">2350</a> <em class="jxr_javadoccomment">     * Notice that any unknown variance is assumed to be zero.</em>
+<a class="jxr_linenumber" name="L2351" href="#L2351">2351</a> <em class="jxr_javadoccomment">     * @param pathLossExponent path-loss exponent.</em>
+<a class="jxr_linenumber" name="L2352" href="#L2352">2352</a> <em class="jxr_javadoccomment">     * @param fingerprintPosition position of closest fingerprint.</em>
+<a class="jxr_linenumber" name="L2353" href="#L2353">2353</a> <em class="jxr_javadoccomment">     * @param radioSourcePosition radio source position associated to fingerprint reading.</em>
+<a class="jxr_linenumber" name="L2354" href="#L2354">2354</a> <em class="jxr_javadoccomment">     * @param estimatedPosition  position to be estimated. Usually this is equal to the</em>
+<a class="jxr_linenumber" name="L2355" href="#L2355">2355</a> <em class="jxr_javadoccomment">     *                           initial position used by a non linear algorithm.</em>
+<a class="jxr_linenumber" name="L2356" href="#L2356">2356</a> <em class="jxr_javadoccomment">     * @param pathLossExponentVariance variance of path-loss exponent or null if unknown.</em>
+<a class="jxr_linenumber" name="L2357" href="#L2357">2357</a> <em class="jxr_javadoccomment">     * @param fingerprintPositionCovariance covariance of fingerprint position or null if</em>
+<a class="jxr_linenumber" name="L2358" href="#L2358">2358</a> <em class="jxr_javadoccomment">     *                                      unknown.</em>
+<a class="jxr_linenumber" name="L2359" href="#L2359">2359</a> <em class="jxr_javadoccomment">     * @param radioSourcePositionCovariance covariance of radio source position or null</em>
+<a class="jxr_linenumber" name="L2360" href="#L2360">2360</a> <em class="jxr_javadoccomment">     *                                      if unknown.</em>
+<a class="jxr_linenumber" name="L2361" href="#L2361">2361</a> <em class="jxr_javadoccomment">     * @param estimatedPositionCovariance  covariance of position to be estimated or null</em>
+<a class="jxr_linenumber" name="L2362" href="#L2362">2362</a> <em class="jxr_javadoccomment">     *                                     if unknown. (This is usually unknown).</em>
+<a class="jxr_linenumber" name="L2363" href="#L2363">2363</a> <em class="jxr_javadoccomment">     * @return a normal distribution containing expected received RSSI value and its variance.</em>
+<a class="jxr_linenumber" name="L2364" href="#L2364">2364</a> <em class="jxr_javadoccomment">     * @throws IndoorException if something fails.</em>
+<a class="jxr_linenumber" name="L2365" href="#L2365">2365</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L2366" href="#L2366">2366</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> MultivariateNormalDist propagateVariancesToRssiDifferenceVariance2D(
+<a class="jxr_linenumber" name="L2367" href="#L2367">2367</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> pathLossExponent,
+<a class="jxr_linenumber" name="L2368" href="#L2368">2368</a>             Point2D fingerprintPosition, Point2D radioSourcePosition,
+<a class="jxr_linenumber" name="L2369" href="#L2369">2369</a>             Point2D estimatedPosition,
+<a class="jxr_linenumber" name="L2370" href="#L2370">2370</a>             Double pathLossExponentVariance,
+<a class="jxr_linenumber" name="L2371" href="#L2371">2371</a>             Matrix fingerprintPositionCovariance,
+<a class="jxr_linenumber" name="L2372" href="#L2372">2372</a>             Matrix radioSourcePositionCovariance,
+<a class="jxr_linenumber" name="L2373" href="#L2373">2373</a>             Matrix estimatedPositionCovariance) <strong class="jxr_keyword">throws</strong> IndoorException {
+<a class="jxr_linenumber" name="L2374" href="#L2374">2374</a> 
+<a class="jxr_linenumber" name="L2375" href="#L2375">2375</a>         <strong class="jxr_keyword">if</strong> (fingerprintPosition == <strong class="jxr_keyword">null</strong> || radioSourcePosition == <strong class="jxr_keyword">null</strong> ||
+<a class="jxr_linenumber" name="L2376" href="#L2376">2376</a>                 estimatedPosition == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L2377" href="#L2377">2377</a>             <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L2378" href="#L2378">2378</a>         }
+<a class="jxr_linenumber" name="L2379" href="#L2379">2379</a> 
+<a class="jxr_linenumber" name="L2380" href="#L2380">2380</a>         <em class="jxr_comment">//Expression being used is:</em>
+<a class="jxr_linenumber" name="L2381" href="#L2381">2381</a>         <em class="jxr_comment">//Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =</em>
+<a class="jxr_linenumber" name="L2382" href="#L2382">2382</a>         <em class="jxr_comment">//  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2)</em>
+<a class="jxr_linenumber" name="L2383" href="#L2383">2383</a> 
+<a class="jxr_linenumber" name="L2384" href="#L2384">2384</a> 
+<a class="jxr_linenumber" name="L2385" href="#L2385">2385</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> x1 = fingerprintPosition.getInhomX();
+<a class="jxr_linenumber" name="L2386" href="#L2386">2386</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> y1 = fingerprintPosition.getInhomY();
+<a class="jxr_linenumber" name="L2387" href="#L2387">2387</a> 
+<a class="jxr_linenumber" name="L2388" href="#L2388">2388</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> xa = radioSourcePosition.getInhomX();
+<a class="jxr_linenumber" name="L2389" href="#L2389">2389</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> ya = radioSourcePosition.getInhomY();
+<a class="jxr_linenumber" name="L2390" href="#L2390">2390</a> 
+<a class="jxr_linenumber" name="L2391" href="#L2391">2391</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> xi = estimatedPosition.getInhomX();
+<a class="jxr_linenumber" name="L2392" href="#L2392">2392</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> yi = estimatedPosition.getInhomY();
+<a class="jxr_linenumber" name="L2393" href="#L2393">2393</a> 
+<a class="jxr_linenumber" name="L2394" href="#L2394">2394</a>         <strong class="jxr_keyword">double</strong>[] mean = <strong class="jxr_keyword">new</strong> <strong class="jxr_keyword">double</strong>[] {
+<a class="jxr_linenumber" name="L2395" href="#L2395">2395</a>                 pathLossExponent, x1, y1, xa, ya, xi, yi
+<a class="jxr_linenumber" name="L2396" href="#L2396">2396</a>         };
+<a class="jxr_linenumber" name="L2397" href="#L2397">2397</a>         Matrix covariance = Matrix.diagonal(<strong class="jxr_keyword">new</strong> <strong class="jxr_keyword">double</strong>[]{
+<a class="jxr_linenumber" name="L2398" href="#L2398">2398</a>                 pathLossExponentVariance != <strong class="jxr_keyword">null</strong> ? pathLossExponentVariance : 0.0,
+<a class="jxr_linenumber" name="L2399" href="#L2399">2399</a>                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+<a class="jxr_linenumber" name="L2400" href="#L2400">2400</a>         });
+<a class="jxr_linenumber" name="L2401" href="#L2401">2401</a> 
+<a class="jxr_linenumber" name="L2402" href="#L2402">2402</a>         <strong class="jxr_keyword">if</strong> (fingerprintPositionCovariance != <strong class="jxr_keyword">null</strong> &amp;&amp;
+<a class="jxr_linenumber" name="L2403" href="#L2403">2403</a>                 fingerprintPositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;
+<a class="jxr_linenumber" name="L2404" href="#L2404">2404</a>                 fingerprintPositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {
+<a class="jxr_linenumber" name="L2405" href="#L2405">2405</a> 
+<a class="jxr_linenumber" name="L2406" href="#L2406">2406</a>             covariance.setSubmatrix(1, 1,
+<a class="jxr_linenumber" name="L2407" href="#L2407">2407</a>                     2, 2,
+<a class="jxr_linenumber" name="L2408" href="#L2408">2408</a>                     fingerprintPositionCovariance);
+<a class="jxr_linenumber" name="L2409" href="#L2409">2409</a>         }
+<a class="jxr_linenumber" name="L2410" href="#L2410">2410</a> 
+<a class="jxr_linenumber" name="L2411" href="#L2411">2411</a>         <strong class="jxr_keyword">if</strong> (radioSourcePositionCovariance != <strong class="jxr_keyword">null</strong> &amp;&amp;
+<a class="jxr_linenumber" name="L2412" href="#L2412">2412</a>                 radioSourcePositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;
+<a class="jxr_linenumber" name="L2413" href="#L2413">2413</a>                 radioSourcePositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {
+<a class="jxr_linenumber" name="L2414" href="#L2414">2414</a>             covariance.setSubmatrix(3, 3,
+<a class="jxr_linenumber" name="L2415" href="#L2415">2415</a>                     4, 4,
+<a class="jxr_linenumber" name="L2416" href="#L2416">2416</a>                     radioSourcePositionCovariance);
+<a class="jxr_linenumber" name="L2417" href="#L2417">2417</a>         }
+<a class="jxr_linenumber" name="L2418" href="#L2418">2418</a> 
+<a class="jxr_linenumber" name="L2419" href="#L2419">2419</a>         <strong class="jxr_keyword">if</strong> (estimatedPositionCovariance != <strong class="jxr_keyword">null</strong> &amp;&amp;
+<a class="jxr_linenumber" name="L2420" href="#L2420">2420</a>                 estimatedPositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;
+<a class="jxr_linenumber" name="L2421" href="#L2421">2421</a>                 estimatedPositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {
+<a class="jxr_linenumber" name="L2422" href="#L2422">2422</a>             covariance.setSubmatrix(5, 5,
+<a class="jxr_linenumber" name="L2423" href="#L2423">2423</a>                     6, 6,
+<a class="jxr_linenumber" name="L2424" href="#L2424">2424</a>                     estimatedPositionCovariance);
+<a class="jxr_linenumber" name="L2425" href="#L2425">2425</a>         }
+<a class="jxr_linenumber" name="L2426" href="#L2426">2426</a> 
+<a class="jxr_linenumber" name="L2427" href="#L2427">2427</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L2428" href="#L2428">2428</a>             <strong class="jxr_keyword">return</strong> MultivariateNormalDist.propagate(<strong class="jxr_keyword">new</strong> MultivariateNormalDist.JacobianEvaluator() {
+<a class="jxr_linenumber" name="L2429" href="#L2429">2429</a>                 @Override
+<a class="jxr_linenumber" name="L2430" href="#L2430">2430</a>                 <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> evaluate(<strong class="jxr_keyword">double</strong>[] x, <strong class="jxr_keyword">double</strong>[] y, Matrix jacobian) {
+<a class="jxr_linenumber" name="L2431" href="#L2431">2431</a> 
+<a class="jxr_linenumber" name="L2432" href="#L2432">2432</a>                     <em class="jxr_comment">//Expression being used is:</em>
+<a class="jxr_linenumber" name="L2433" href="#L2433">2433</a>                     <em class="jxr_comment">//Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =</em>
+<a class="jxr_linenumber" name="L2434" href="#L2434">2434</a>                     <em class="jxr_comment">//  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2)</em>
+<a class="jxr_linenumber" name="L2435" href="#L2435">2435</a> 
+<a class="jxr_linenumber" name="L2436" href="#L2436">2436</a>                     <strong class="jxr_keyword">double</strong> diffX1a = x1 - xa;
+<a class="jxr_linenumber" name="L2437" href="#L2437">2437</a>                     <strong class="jxr_keyword">double</strong> diffY1a = y1 - ya;
+<a class="jxr_linenumber" name="L2438" href="#L2438">2438</a> 
+<a class="jxr_linenumber" name="L2439" href="#L2439">2439</a>                     <strong class="jxr_keyword">double</strong> diffXia = xi - xa;
+<a class="jxr_linenumber" name="L2440" href="#L2440">2440</a>                     <strong class="jxr_keyword">double</strong> diffYia = yi - ya;
+<a class="jxr_linenumber" name="L2441" href="#L2441">2441</a> 
+<a class="jxr_linenumber" name="L2442" href="#L2442">2442</a>                     <strong class="jxr_keyword">double</strong> diffX1a2 = diffX1a * diffX1a;
+<a class="jxr_linenumber" name="L2443" href="#L2443">2443</a>                     <strong class="jxr_keyword">double</strong> diffY1a2 = diffY1a * diffY1a;
+<a class="jxr_linenumber" name="L2444" href="#L2444">2444</a> 
+<a class="jxr_linenumber" name="L2445" href="#L2445">2445</a>                     <strong class="jxr_keyword">double</strong> diffXia2 = diffXia * diffXia;
+<a class="jxr_linenumber" name="L2446" href="#L2446">2446</a>                     <strong class="jxr_keyword">double</strong> diffYia2 = diffYia * diffYia;
+<a class="jxr_linenumber" name="L2447" href="#L2447">2447</a> 
+<a class="jxr_linenumber" name="L2448" href="#L2448">2448</a>                     <strong class="jxr_keyword">double</strong> d1a2 = diffX1a2 + diffY1a2;
+<a class="jxr_linenumber" name="L2449" href="#L2449">2449</a>                     <strong class="jxr_keyword">double</strong> dia2 = diffXia2 + diffYia2;
+<a class="jxr_linenumber" name="L2450" href="#L2450">2450</a> 
+<a class="jxr_linenumber" name="L2451" href="#L2451">2451</a>                     <strong class="jxr_keyword">double</strong> ln10 = Math.log(10.0);
+<a class="jxr_linenumber" name="L2452" href="#L2452">2452</a> 
+<a class="jxr_linenumber" name="L2453" href="#L2453">2453</a> 
+<a class="jxr_linenumber" name="L2454" href="#L2454">2454</a>                     <em class="jxr_comment">//compute gradient (is a jacobian having 1 row and 7 columns)</em>
+<a class="jxr_linenumber" name="L2455" href="#L2455">2455</a> 
+<a class="jxr_linenumber" name="L2456" href="#L2456">2456</a> 
+<a class="jxr_linenumber" name="L2457" href="#L2457">2457</a>                     <em class="jxr_comment">//derivative of diff rssi respect to fingerprint path-loss exponent "n"</em>
+<a class="jxr_linenumber" name="L2458" href="#L2458">2458</a> 
+<a class="jxr_linenumber" name="L2459" href="#L2459">2459</a>                     <strong class="jxr_keyword">double</strong> derivativePathLossExponent = 5.0 *
+<a class="jxr_linenumber" name="L2460" href="#L2460">2460</a>                             (Math.log10(d1a2) - Math.log10(dia2));
+<a class="jxr_linenumber" name="L2461" href="#L2461">2461</a> 
+<a class="jxr_linenumber" name="L2462" href="#L2462">2462</a> 
+<a class="jxr_linenumber" name="L2463" href="#L2463">2463</a>                     <em class="jxr_comment">//derivative of diff rssi respect to x1</em>
+<a class="jxr_linenumber" name="L2464" href="#L2464">2464</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(x1) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))*2*(x1 - xa) =</em>
+<a class="jxr_linenumber" name="L2465" href="#L2465">2465</a>                     <em class="jxr_comment">//  = 10*n*(x1 - xa)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))</em>
+<a class="jxr_linenumber" name="L2466" href="#L2466">2466</a> 
+<a class="jxr_linenumber" name="L2467" href="#L2467">2467</a>                     <strong class="jxr_keyword">double</strong> tmp1a = 10.0 * pathLossExponent / (ln10 * d1a2);
+<a class="jxr_linenumber" name="L2468" href="#L2468">2468</a>                     <strong class="jxr_keyword">double</strong> derivativeX1 = tmp1a * diffX1a;
+<a class="jxr_linenumber" name="L2469" href="#L2469">2469</a> 
+<a class="jxr_linenumber" name="L2470" href="#L2470">2470</a> 
+<a class="jxr_linenumber" name="L2471" href="#L2471">2471</a>                     <em class="jxr_comment">//derivative of diff rssi respect to y1</em>
+<a class="jxr_linenumber" name="L2472" href="#L2472">2472</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(y1) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))*2*(y1 - ya) =</em>
+<a class="jxr_linenumber" name="L2473" href="#L2473">2473</a>                     <em class="jxr_comment">//  = 10*n*(y1 - ya)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))</em>
+<a class="jxr_linenumber" name="L2474" href="#L2474">2474</a> 
+<a class="jxr_linenumber" name="L2475" href="#L2475">2475</a>                     <strong class="jxr_keyword">double</strong> derivativeY1 = tmp1a * diffY1a;
+<a class="jxr_linenumber" name="L2476" href="#L2476">2476</a> 
+<a class="jxr_linenumber" name="L2477" href="#L2477">2477</a> 
+<a class="jxr_linenumber" name="L2478" href="#L2478">2478</a>                     <em class="jxr_comment">//derivative of rssi respect to xi</em>
+<a class="jxr_linenumber" name="L2479" href="#L2479">2479</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(xi) = -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2))*2*(xi - xa)</em>
+<a class="jxr_linenumber" name="L2480" href="#L2480">2480</a>                     <em class="jxr_comment">//  = -10*n*(xi - xa)/(ln(10)*((xi - xa)^2 + (yi - ya)^2))</em>
+<a class="jxr_linenumber" name="L2481" href="#L2481">2481</a> 
+<a class="jxr_linenumber" name="L2482" href="#L2482">2482</a>                     <strong class="jxr_keyword">double</strong> tmpia = 10.0 * pathLossExponent / (ln10 * dia2);
+<a class="jxr_linenumber" name="L2483" href="#L2483">2483</a>                     <strong class="jxr_keyword">double</strong> derivativeXi = - tmpia * diffXia;
+<a class="jxr_linenumber" name="L2484" href="#L2484">2484</a> 
+<a class="jxr_linenumber" name="L2485" href="#L2485">2485</a>                     <em class="jxr_comment">//derivative of rssi respect to yi</em>
+<a class="jxr_linenumber" name="L2486" href="#L2486">2486</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(yi) = -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2))*2*(yi - ya)</em>
+<a class="jxr_linenumber" name="L2487" href="#L2487">2487</a>                     <em class="jxr_comment">//  = -10*n*(yi - ya)/(ln(10)*((xi - xa)^2 + (yi - ya)^2))</em>
+<a class="jxr_linenumber" name="L2488" href="#L2488">2488</a> 
+<a class="jxr_linenumber" name="L2489" href="#L2489">2489</a>                     <strong class="jxr_keyword">double</strong> derivativeYi = - tmpia * diffYia;
+<a class="jxr_linenumber" name="L2490" href="#L2490">2490</a> 
+<a class="jxr_linenumber" name="L2491" href="#L2491">2491</a> 
+<a class="jxr_linenumber" name="L2492" href="#L2492">2492</a>                     <em class="jxr_comment">//derivative of rssi respect to xa</em>
+<a class="jxr_linenumber" name="L2493" href="#L2493">2493</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(xa) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))*-2*(x1 - xa) -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2))*-2(xi - xa) =</em>
+<a class="jxr_linenumber" name="L2494" href="#L2494">2494</a>                     <em class="jxr_comment">//  = -10*n*(x1 - xa)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2)) + 10*n*(xi - xa)/(ln(10)*((xi - xa)^2 + (yi - ya)^2))</em>
+<a class="jxr_linenumber" name="L2495" href="#L2495">2495</a> 
+<a class="jxr_linenumber" name="L2496" href="#L2496">2496</a>                     <strong class="jxr_keyword">double</strong> derivativeXa = - derivativeX1 - derivativeXi ;
+<a class="jxr_linenumber" name="L2497" href="#L2497">2497</a> 
+<a class="jxr_linenumber" name="L2498" href="#L2498">2498</a> 
+<a class="jxr_linenumber" name="L2499" href="#L2499">2499</a>                     <em class="jxr_comment">//derivative of rssi respect to ya</em>
+<a class="jxr_linenumber" name="L2500" href="#L2500">2500</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(ya) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2))*-2*(y1 - ya) -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2))*-2(yi - ya) =</em>
+<a class="jxr_linenumber" name="L2501" href="#L2501">2501</a>                     <em class="jxr_comment">//  = -10*n*(y1 - ya)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2)) + 10*n*(yi - ya)/(ln(10)*((xi - xa)^2 + (yi - ya)^2))</em>
+<a class="jxr_linenumber" name="L2502" href="#L2502">2502</a> 
+<a class="jxr_linenumber" name="L2503" href="#L2503">2503</a>                     <strong class="jxr_keyword">double</strong> derivativeYa = - derivativeY1 - derivativeYi ;
+<a class="jxr_linenumber" name="L2504" href="#L2504">2504</a> 
+<a class="jxr_linenumber" name="L2505" href="#L2505">2505</a> 
+<a class="jxr_linenumber" name="L2506" href="#L2506">2506</a>                     <em class="jxr_comment">//Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =</em>
+<a class="jxr_linenumber" name="L2507" href="#L2507">2507</a>                     <em class="jxr_comment">//  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2)</em>
+<a class="jxr_linenumber" name="L2508" href="#L2508">2508</a> 
+<a class="jxr_linenumber" name="L2509" href="#L2509">2509</a> 
+<a class="jxr_linenumber" name="L2510" href="#L2510">2510</a>                     <em class="jxr_comment">//set derivatives pathLossExponent, x1, y1, xa, ya, xi, yi</em>
+<a class="jxr_linenumber" name="L2511" href="#L2511">2511</a>                     jacobian.setElementAtIndex(0, derivativePathLossExponent);
+<a class="jxr_linenumber" name="L2512" href="#L2512">2512</a>                     jacobian.setElementAtIndex(1, derivativeX1);
+<a class="jxr_linenumber" name="L2513" href="#L2513">2513</a>                     jacobian.setElementAtIndex(2, derivativeY1);
+<a class="jxr_linenumber" name="L2514" href="#L2514">2514</a>                     jacobian.setElementAtIndex(3, derivativeXa);
+<a class="jxr_linenumber" name="L2515" href="#L2515">2515</a>                     jacobian.setElementAtIndex(4, derivativeYa);
+<a class="jxr_linenumber" name="L2516" href="#L2516">2516</a>                     jacobian.setElementAtIndex(5, derivativeXi);
+<a class="jxr_linenumber" name="L2517" href="#L2517">2517</a>                     jacobian.setElementAtIndex(6, derivativeYi);
+<a class="jxr_linenumber" name="L2518" href="#L2518">2518</a> 
+<a class="jxr_linenumber" name="L2519" href="#L2519">2519</a> 
+<a class="jxr_linenumber" name="L2520" href="#L2520">2520</a>                     y[0] = derivativePathLossExponent * pathLossExponent;
+<a class="jxr_linenumber" name="L2521" href="#L2521">2521</a>                 }
+<a class="jxr_linenumber" name="L2522" href="#L2522">2522</a> 
+<a class="jxr_linenumber" name="L2523" href="#L2523">2523</a>                 @Override
+<a class="jxr_linenumber" name="L2524" href="#L2524">2524</a>                 <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">int</strong> getNumberOfVariables() {
+<a class="jxr_linenumber" name="L2525" href="#L2525">2525</a>                     <strong class="jxr_keyword">return</strong> 1;
+<a class="jxr_linenumber" name="L2526" href="#L2526">2526</a>                 }
+<a class="jxr_linenumber" name="L2527" href="#L2527">2527</a>             }, mean, covariance);
+<a class="jxr_linenumber" name="L2528" href="#L2528">2528</a>         } <strong class="jxr_keyword">catch</strong> (AlgebraException | StatisticsException e) {
+<a class="jxr_linenumber" name="L2529" href="#L2529">2529</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../com/irurueta/navigation/indoor/IndoorException.html">IndoorException</a>(e);
+<a class="jxr_linenumber" name="L2530" href="#L2530">2530</a>         }
+<a class="jxr_linenumber" name="L2531" href="#L2531">2531</a>     }
+<a class="jxr_linenumber" name="L2532" href="#L2532">2532</a> 
+<a class="jxr_linenumber" name="L2533" href="#L2533">2533</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L2534" href="#L2534">2534</a> <em class="jxr_javadoccomment">     * Propagates provided variances (path-loss exponent variance,</em>
+<a class="jxr_linenumber" name="L2535" href="#L2535">2535</a> <em class="jxr_javadoccomment">     * fingerprint position covariance and radio source position covariance) into</em>
+<a class="jxr_linenumber" name="L2536" href="#L2536">2536</a> <em class="jxr_javadoccomment">     * difference of rssi variance by considering the 3D expression.</em>
+<a class="jxr_linenumber" name="L2537" href="#L2537">2537</a> <em class="jxr_javadoccomment">     * Notice that any unknown variance is assumed to be zero.</em>
+<a class="jxr_linenumber" name="L2538" href="#L2538">2538</a> <em class="jxr_javadoccomment">     * @param pathLossExponent path-loss exponent.</em>
+<a class="jxr_linenumber" name="L2539" href="#L2539">2539</a> <em class="jxr_javadoccomment">     * @param fingerprintPosition position of closest fingerprint.</em>
+<a class="jxr_linenumber" name="L2540" href="#L2540">2540</a> <em class="jxr_javadoccomment">     * @param radioSourcePosition radio source position associated to fingerprint reading.</em>
+<a class="jxr_linenumber" name="L2541" href="#L2541">2541</a> <em class="jxr_javadoccomment">     * @param estimatedPosition  position to be estimated. Usually this is equal to the</em>
+<a class="jxr_linenumber" name="L2542" href="#L2542">2542</a> <em class="jxr_javadoccomment">     *                           initial position used by a non linear algorithm.</em>
+<a class="jxr_linenumber" name="L2543" href="#L2543">2543</a> <em class="jxr_javadoccomment">     * @param pathLossExponentVariance variance of path-loss exponent or null if unknown.</em>
+<a class="jxr_linenumber" name="L2544" href="#L2544">2544</a> <em class="jxr_javadoccomment">     * @param fingerprintPositionCovariance covariance of fingerprint position or null if</em>
+<a class="jxr_linenumber" name="L2545" href="#L2545">2545</a> <em class="jxr_javadoccomment">     *                                      unknown.</em>
+<a class="jxr_linenumber" name="L2546" href="#L2546">2546</a> <em class="jxr_javadoccomment">     * @param radioSourcePositionCovariance covariance of radio source position or null</em>
+<a class="jxr_linenumber" name="L2547" href="#L2547">2547</a> <em class="jxr_javadoccomment">     *                                      if unknown.</em>
+<a class="jxr_linenumber" name="L2548" href="#L2548">2548</a> <em class="jxr_javadoccomment">     * @param estimatedPositionCovariance  covariance of position to be estimated or null</em>
+<a class="jxr_linenumber" name="L2549" href="#L2549">2549</a> <em class="jxr_javadoccomment">     *                                     if unknown. (This is usually unknown).</em>
+<a class="jxr_linenumber" name="L2550" href="#L2550">2550</a> <em class="jxr_javadoccomment">     * @return a normal distribution containing expected received RSSI value and its variance.</em>
+<a class="jxr_linenumber" name="L2551" href="#L2551">2551</a> <em class="jxr_javadoccomment">     * @throws IndoorException if something fails.</em>
+<a class="jxr_linenumber" name="L2552" href="#L2552">2552</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L2553" href="#L2553">2553</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">static</strong> MultivariateNormalDist propagateVariancesToRssiDifferenceVariance3D(
+<a class="jxr_linenumber" name="L2554" href="#L2554">2554</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> pathLossExponent,
+<a class="jxr_linenumber" name="L2555" href="#L2555">2555</a>             Point3D fingerprintPosition, Point3D radioSourcePosition,
+<a class="jxr_linenumber" name="L2556" href="#L2556">2556</a>             Point3D estimatedPosition,
+<a class="jxr_linenumber" name="L2557" href="#L2557">2557</a>             Double pathLossExponentVariance,
+<a class="jxr_linenumber" name="L2558" href="#L2558">2558</a>             Matrix fingerprintPositionCovariance,
+<a class="jxr_linenumber" name="L2559" href="#L2559">2559</a>             Matrix radioSourcePositionCovariance,
+<a class="jxr_linenumber" name="L2560" href="#L2560">2560</a>             Matrix estimatedPositionCovariance) <strong class="jxr_keyword">throws</strong> IndoorException {
+<a class="jxr_linenumber" name="L2561" href="#L2561">2561</a> 
+<a class="jxr_linenumber" name="L2562" href="#L2562">2562</a>         <strong class="jxr_keyword">if</strong> (fingerprintPosition == <strong class="jxr_keyword">null</strong> || radioSourcePosition == <strong class="jxr_keyword">null</strong> ||
+<a class="jxr_linenumber" name="L2563" href="#L2563">2563</a>                 estimatedPosition == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L2564" href="#L2564">2564</a>             <strong class="jxr_keyword">return</strong> <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L2565" href="#L2565">2565</a>         }
+<a class="jxr_linenumber" name="L2566" href="#L2566">2566</a> 
+<a class="jxr_linenumber" name="L2567" href="#L2567">2567</a>         <em class="jxr_comment">//Expression being used is:</em>
+<a class="jxr_linenumber" name="L2568" href="#L2568">2568</a>         <em class="jxr_comment">//Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =</em>
+<a class="jxr_linenumber" name="L2569" href="#L2569">2569</a>         <em class="jxr_comment">//  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2)</em>
+<a class="jxr_linenumber" name="L2570" href="#L2570">2570</a> 
+<a class="jxr_linenumber" name="L2571" href="#L2571">2571</a> 
+<a class="jxr_linenumber" name="L2572" href="#L2572">2572</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> x1 = fingerprintPosition.getInhomX();
+<a class="jxr_linenumber" name="L2573" href="#L2573">2573</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> y1 = fingerprintPosition.getInhomY();
+<a class="jxr_linenumber" name="L2574" href="#L2574">2574</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> z1 = fingerprintPosition.getInhomZ();
+<a class="jxr_linenumber" name="L2575" href="#L2575">2575</a> 
+<a class="jxr_linenumber" name="L2576" href="#L2576">2576</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> xa = radioSourcePosition.getInhomX();
+<a class="jxr_linenumber" name="L2577" href="#L2577">2577</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> ya = radioSourcePosition.getInhomY();
+<a class="jxr_linenumber" name="L2578" href="#L2578">2578</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> za = radioSourcePosition.getInhomZ();
+<a class="jxr_linenumber" name="L2579" href="#L2579">2579</a> 
+<a class="jxr_linenumber" name="L2580" href="#L2580">2580</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> xi = estimatedPosition.getInhomX();
+<a class="jxr_linenumber" name="L2581" href="#L2581">2581</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> yi = estimatedPosition.getInhomY();
+<a class="jxr_linenumber" name="L2582" href="#L2582">2582</a>         <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> zi = estimatedPosition.getInhomZ();
+<a class="jxr_linenumber" name="L2583" href="#L2583">2583</a> 
+<a class="jxr_linenumber" name="L2584" href="#L2584">2584</a>         <strong class="jxr_keyword">double</strong>[] mean = <strong class="jxr_keyword">new</strong> <strong class="jxr_keyword">double</strong>[] {
+<a class="jxr_linenumber" name="L2585" href="#L2585">2585</a>                 pathLossExponent, x1, y1, z1, xa, ya, za, xi, yi, zi
+<a class="jxr_linenumber" name="L2586" href="#L2586">2586</a>         };
+<a class="jxr_linenumber" name="L2587" href="#L2587">2587</a>         Matrix covariance = Matrix.diagonal(<strong class="jxr_keyword">new</strong> <strong class="jxr_keyword">double</strong>[]{
+<a class="jxr_linenumber" name="L2588" href="#L2588">2588</a>                 pathLossExponentVariance != <strong class="jxr_keyword">null</strong> ? pathLossExponentVariance : 0.0,
+<a class="jxr_linenumber" name="L2589" href="#L2589">2589</a>                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+<a class="jxr_linenumber" name="L2590" href="#L2590">2590</a>         });
+<a class="jxr_linenumber" name="L2591" href="#L2591">2591</a> 
+<a class="jxr_linenumber" name="L2592" href="#L2592">2592</a>         <strong class="jxr_keyword">if</strong> (fingerprintPositionCovariance != <strong class="jxr_keyword">null</strong> &amp;&amp;
+<a class="jxr_linenumber" name="L2593" href="#L2593">2593</a>                 fingerprintPositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;
+<a class="jxr_linenumber" name="L2594" href="#L2594">2594</a>                 fingerprintPositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {
+<a class="jxr_linenumber" name="L2595" href="#L2595">2595</a> 
+<a class="jxr_linenumber" name="L2596" href="#L2596">2596</a>             covariance.setSubmatrix(1, 1,
+<a class="jxr_linenumber" name="L2597" href="#L2597">2597</a>                     3, 3,
+<a class="jxr_linenumber" name="L2598" href="#L2598">2598</a>                     fingerprintPositionCovariance);
+<a class="jxr_linenumber" name="L2599" href="#L2599">2599</a>         }
+<a class="jxr_linenumber" name="L2600" href="#L2600">2600</a> 
+<a class="jxr_linenumber" name="L2601" href="#L2601">2601</a>         <strong class="jxr_keyword">if</strong> (radioSourcePositionCovariance != <strong class="jxr_keyword">null</strong> &amp;&amp;
+<a class="jxr_linenumber" name="L2602" href="#L2602">2602</a>                 radioSourcePositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;
+<a class="jxr_linenumber" name="L2603" href="#L2603">2603</a>                 radioSourcePositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {
+<a class="jxr_linenumber" name="L2604" href="#L2604">2604</a>             covariance.setSubmatrix(4, 4,
+<a class="jxr_linenumber" name="L2605" href="#L2605">2605</a>                     6, 6,
+<a class="jxr_linenumber" name="L2606" href="#L2606">2606</a>                     radioSourcePositionCovariance);
+<a class="jxr_linenumber" name="L2607" href="#L2607">2607</a>         }
+<a class="jxr_linenumber" name="L2608" href="#L2608">2608</a> 
+<a class="jxr_linenumber" name="L2609" href="#L2609">2609</a>         <strong class="jxr_keyword">if</strong> (estimatedPositionCovariance != <strong class="jxr_keyword">null</strong> &amp;&amp;
+<a class="jxr_linenumber" name="L2610" href="#L2610">2610</a>                 estimatedPositionCovariance.getRows() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH &amp;&amp;
+<a class="jxr_linenumber" name="L2611" href="#L2611">2611</a>                 estimatedPositionCovariance.getColumns() == Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH) {
+<a class="jxr_linenumber" name="L2612" href="#L2612">2612</a>             covariance.setSubmatrix(7, 7,
+<a class="jxr_linenumber" name="L2613" href="#L2613">2613</a>                     9, 9,
+<a class="jxr_linenumber" name="L2614" href="#L2614">2614</a>                     estimatedPositionCovariance);
+<a class="jxr_linenumber" name="L2615" href="#L2615">2615</a>         }
+<a class="jxr_linenumber" name="L2616" href="#L2616">2616</a> 
+<a class="jxr_linenumber" name="L2617" href="#L2617">2617</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L2618" href="#L2618">2618</a>             <strong class="jxr_keyword">return</strong> MultivariateNormalDist.propagate(<strong class="jxr_keyword">new</strong> MultivariateNormalDist.JacobianEvaluator() {
+<a class="jxr_linenumber" name="L2619" href="#L2619">2619</a>                 @Override
+<a class="jxr_linenumber" name="L2620" href="#L2620">2620</a>                 <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> evaluate(<strong class="jxr_keyword">double</strong>[] x, <strong class="jxr_keyword">double</strong>[] y, Matrix jacobian) {
+<a class="jxr_linenumber" name="L2621" href="#L2621">2621</a> 
+<a class="jxr_linenumber" name="L2622" href="#L2622">2622</a>                     <em class="jxr_comment">//Expression being used is:</em>
+<a class="jxr_linenumber" name="L2623" href="#L2623">2623</a>                     <em class="jxr_comment">//Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =</em>
+<a class="jxr_linenumber" name="L2624" href="#L2624">2624</a>                     <em class="jxr_comment">//  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2)</em>
+<a class="jxr_linenumber" name="L2625" href="#L2625">2625</a> 
+<a class="jxr_linenumber" name="L2626" href="#L2626">2626</a>                     <strong class="jxr_keyword">double</strong> diffX1a = x1 - xa;
+<a class="jxr_linenumber" name="L2627" href="#L2627">2627</a>                     <strong class="jxr_keyword">double</strong> diffY1a = y1 - ya;
+<a class="jxr_linenumber" name="L2628" href="#L2628">2628</a>                     <strong class="jxr_keyword">double</strong> diffZ1a = z1 - za;
+<a class="jxr_linenumber" name="L2629" href="#L2629">2629</a> 
+<a class="jxr_linenumber" name="L2630" href="#L2630">2630</a>                     <strong class="jxr_keyword">double</strong> diffXia = xi - xa;
+<a class="jxr_linenumber" name="L2631" href="#L2631">2631</a>                     <strong class="jxr_keyword">double</strong> diffYia = yi - ya;
+<a class="jxr_linenumber" name="L2632" href="#L2632">2632</a>                     <strong class="jxr_keyword">double</strong> diffZia = zi - za;
+<a class="jxr_linenumber" name="L2633" href="#L2633">2633</a> 
+<a class="jxr_linenumber" name="L2634" href="#L2634">2634</a>                     <strong class="jxr_keyword">double</strong> diffX1a2 = diffX1a * diffX1a;
+<a class="jxr_linenumber" name="L2635" href="#L2635">2635</a>                     <strong class="jxr_keyword">double</strong> diffY1a2 = diffY1a * diffY1a;
+<a class="jxr_linenumber" name="L2636" href="#L2636">2636</a>                     <strong class="jxr_keyword">double</strong> diffZ1a2 = diffZ1a * diffZ1a;
+<a class="jxr_linenumber" name="L2637" href="#L2637">2637</a> 
+<a class="jxr_linenumber" name="L2638" href="#L2638">2638</a>                     <strong class="jxr_keyword">double</strong> diffXia2 = diffXia * diffXia;
+<a class="jxr_linenumber" name="L2639" href="#L2639">2639</a>                     <strong class="jxr_keyword">double</strong> diffYia2 = diffYia * diffYia;
+<a class="jxr_linenumber" name="L2640" href="#L2640">2640</a>                     <strong class="jxr_keyword">double</strong> diffZia2 = diffZia * diffZia;
+<a class="jxr_linenumber" name="L2641" href="#L2641">2641</a> 
+<a class="jxr_linenumber" name="L2642" href="#L2642">2642</a>                     <strong class="jxr_keyword">double</strong> d1a2 = diffX1a2 + diffY1a2 + diffZ1a2;
+<a class="jxr_linenumber" name="L2643" href="#L2643">2643</a>                     <strong class="jxr_keyword">double</strong> dia2 = diffXia2 + diffYia2 + diffZia2;
+<a class="jxr_linenumber" name="L2644" href="#L2644">2644</a> 
+<a class="jxr_linenumber" name="L2645" href="#L2645">2645</a>                     <strong class="jxr_keyword">double</strong> ln10 = Math.log(10.0);
+<a class="jxr_linenumber" name="L2646" href="#L2646">2646</a> 
+<a class="jxr_linenumber" name="L2647" href="#L2647">2647</a> 
+<a class="jxr_linenumber" name="L2648" href="#L2648">2648</a>                     <em class="jxr_comment">//compute gradient (is a jacobian having 1 row and 10 columns)</em>
+<a class="jxr_linenumber" name="L2649" href="#L2649">2649</a> 
+<a class="jxr_linenumber" name="L2650" href="#L2650">2650</a>                     <em class="jxr_comment">//derivative of diff rssi respect to fingerprint path-loss exponent "n"</em>
+<a class="jxr_linenumber" name="L2651" href="#L2651">2651</a> 
+<a class="jxr_linenumber" name="L2652" href="#L2652">2652</a>                     <strong class="jxr_keyword">double</strong> derivativePathLossExponent = 5.0 *
+<a class="jxr_linenumber" name="L2653" href="#L2653">2653</a>                             (Math.log10(d1a2) - Math.log10(dia2));
+<a class="jxr_linenumber" name="L2654" href="#L2654">2654</a> 
+<a class="jxr_linenumber" name="L2655" href="#L2655">2655</a> 
+<a class="jxr_linenumber" name="L2656" href="#L2656">2656</a>                     <em class="jxr_comment">//derivative of diff rssi respect to x1</em>
+<a class="jxr_linenumber" name="L2657" href="#L2657">2657</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(x1) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))*2*(x1 - xa) =</em>
+<a class="jxr_linenumber" name="L2658" href="#L2658">2658</a>                     <em class="jxr_comment">//  = 10*n*(x1 - xa)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))</em>
+<a class="jxr_linenumber" name="L2659" href="#L2659">2659</a> 
+<a class="jxr_linenumber" name="L2660" href="#L2660">2660</a>                     <strong class="jxr_keyword">double</strong> tmp1a = 10.0 * pathLossExponent / (ln10 * d1a2);
+<a class="jxr_linenumber" name="L2661" href="#L2661">2661</a>                     <strong class="jxr_keyword">double</strong> derivativeX1 = tmp1a * diffX1a;
+<a class="jxr_linenumber" name="L2662" href="#L2662">2662</a> 
+<a class="jxr_linenumber" name="L2663" href="#L2663">2663</a> 
+<a class="jxr_linenumber" name="L2664" href="#L2664">2664</a>                     <em class="jxr_comment">//derivative of diff rssi respect to y1</em>
+<a class="jxr_linenumber" name="L2665" href="#L2665">2665</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(y1) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2) + (z1 - za)^2)*2*(y1 - ya) =</em>
+<a class="jxr_linenumber" name="L2666" href="#L2666">2666</a>                     <em class="jxr_comment">//  = 10*n*(y1 - ya)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))</em>
+<a class="jxr_linenumber" name="L2667" href="#L2667">2667</a> 
+<a class="jxr_linenumber" name="L2668" href="#L2668">2668</a>                     <strong class="jxr_keyword">double</strong> derivativeY1 = tmp1a * diffY1a;
+<a class="jxr_linenumber" name="L2669" href="#L2669">2669</a> 
+<a class="jxr_linenumber" name="L2670" href="#L2670">2670</a> 
+<a class="jxr_linenumber" name="L2671" href="#L2671">2671</a>                     <em class="jxr_comment">//derivative of diff rssi respect to z1</em>
+<a class="jxr_linenumber" name="L2672" href="#L2672">2672</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(z1) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2) + (z1 - za)^2)*2*(z1 - za) =</em>
+<a class="jxr_linenumber" name="L2673" href="#L2673">2673</a>                     <em class="jxr_comment">//  = 10*n*(z1 - za)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))</em>
+<a class="jxr_linenumber" name="L2674" href="#L2674">2674</a> 
+<a class="jxr_linenumber" name="L2675" href="#L2675">2675</a>                     <strong class="jxr_keyword">double</strong> derivativeZ1 = tmp1a * diffZ1a;
+<a class="jxr_linenumber" name="L2676" href="#L2676">2676</a> 
+<a class="jxr_linenumber" name="L2677" href="#L2677">2677</a> 
+<a class="jxr_linenumber" name="L2678" href="#L2678">2678</a>                     <em class="jxr_comment">//derivative of rssi respect to xi</em>
+<a class="jxr_linenumber" name="L2679" href="#L2679">2679</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(xi) = -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*2*(xi - xa)</em>
+<a class="jxr_linenumber" name="L2680" href="#L2680">2680</a>                     <em class="jxr_comment">//  = -10*n*(xi - xa)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))</em>
+<a class="jxr_linenumber" name="L2681" href="#L2681">2681</a> 
+<a class="jxr_linenumber" name="L2682" href="#L2682">2682</a>                     <strong class="jxr_keyword">double</strong> tmpia = 10.0 * pathLossExponent / (ln10 * dia2);
+<a class="jxr_linenumber" name="L2683" href="#L2683">2683</a>                     <strong class="jxr_keyword">double</strong> derivativeXi = - tmpia * diffXia;
+<a class="jxr_linenumber" name="L2684" href="#L2684">2684</a> 
+<a class="jxr_linenumber" name="L2685" href="#L2685">2685</a> 
+<a class="jxr_linenumber" name="L2686" href="#L2686">2686</a>                     <em class="jxr_comment">//derivative of rssi respect to yi</em>
+<a class="jxr_linenumber" name="L2687" href="#L2687">2687</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(yi) = -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*2*(yi - ya)</em>
+<a class="jxr_linenumber" name="L2688" href="#L2688">2688</a>                     <em class="jxr_comment">//  = -10*n*(yi - ya)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))</em>
+<a class="jxr_linenumber" name="L2689" href="#L2689">2689</a> 
+<a class="jxr_linenumber" name="L2690" href="#L2690">2690</a>                     <strong class="jxr_keyword">double</strong> derivativeYi = - tmpia * diffYia;
+<a class="jxr_linenumber" name="L2691" href="#L2691">2691</a> 
+<a class="jxr_linenumber" name="L2692" href="#L2692">2692</a> 
+<a class="jxr_linenumber" name="L2693" href="#L2693">2693</a>                     <em class="jxr_comment">//derivative of rssi respect to zi</em>
+<a class="jxr_linenumber" name="L2694" href="#L2694">2694</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(zi) = -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*2*(zi - za)</em>
+<a class="jxr_linenumber" name="L2695" href="#L2695">2695</a>                     <em class="jxr_comment">//  = -10*n*(zi - za)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))</em>
+<a class="jxr_linenumber" name="L2696" href="#L2696">2696</a> 
+<a class="jxr_linenumber" name="L2697" href="#L2697">2697</a>                     <strong class="jxr_keyword">double</strong> derivativeZi = - tmpia * diffZia;
+<a class="jxr_linenumber" name="L2698" href="#L2698">2698</a> 
+<a class="jxr_linenumber" name="L2699" href="#L2699">2699</a> 
+<a class="jxr_linenumber" name="L2700" href="#L2700">2700</a>                     <em class="jxr_comment">//Prdiff1a = Pr(pi) - Pr(p1) = 5*n*log(d1a^2) - 5*n*log(dia^2) =</em>
+<a class="jxr_linenumber" name="L2701" href="#L2701">2701</a>                     <em class="jxr_comment">//  = 5*n*log((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2) - 5*n*log((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2)</em>
+<a class="jxr_linenumber" name="L2702" href="#L2702">2702</a> 
+<a class="jxr_linenumber" name="L2703" href="#L2703">2703</a>                     <em class="jxr_comment">//derivative of rssi respect to xa</em>
+<a class="jxr_linenumber" name="L2704" href="#L2704">2704</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(xa) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))*-2*(x1 - xa) -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*-2(xi - xa) =</em>
+<a class="jxr_linenumber" name="L2705" href="#L2705">2705</a>                     <em class="jxr_comment">//  = -10*n*(x1 - xa)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2)) + 10*n*(xi - xa)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))</em>
+<a class="jxr_linenumber" name="L2706" href="#L2706">2706</a> 
+<a class="jxr_linenumber" name="L2707" href="#L2707">2707</a>                     <strong class="jxr_keyword">double</strong> derivativeXa = - derivativeX1 - derivativeXi;
+<a class="jxr_linenumber" name="L2708" href="#L2708">2708</a> 
+<a class="jxr_linenumber" name="L2709" href="#L2709">2709</a> 
+<a class="jxr_linenumber" name="L2710" href="#L2710">2710</a>                     <em class="jxr_comment">//derivative of rssi respect to ya</em>
+<a class="jxr_linenumber" name="L2711" href="#L2711">2711</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(ya) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))*-2*(y1 - ya) -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*-2(yi - ya) =</em>
+<a class="jxr_linenumber" name="L2712" href="#L2712">2712</a>                     <em class="jxr_comment">//  = -10*n*(y1 - ya)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2)) + 10*n*(yi - ya)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))</em>
+<a class="jxr_linenumber" name="L2713" href="#L2713">2713</a> 
+<a class="jxr_linenumber" name="L2714" href="#L2714">2714</a>                     <strong class="jxr_keyword">double</strong> derivativeYa = - derivativeY1 - derivativeYi;
+<a class="jxr_linenumber" name="L2715" href="#L2715">2715</a> 
+<a class="jxr_linenumber" name="L2716" href="#L2716">2716</a> 
+<a class="jxr_linenumber" name="L2717" href="#L2717">2717</a>                     <em class="jxr_comment">//derivative of rssi respect to za</em>
+<a class="jxr_linenumber" name="L2718" href="#L2718">2718</a>                     <em class="jxr_comment">//diff(Prdiff1a)/diff(za) = 5*n/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2))*-2*(z1 - za) -5*n/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))*-2(zi - za) =</em>
+<a class="jxr_linenumber" name="L2719" href="#L2719">2719</a>                     <em class="jxr_comment">//  = -10*n*(z1 - za)/(ln(10)*((x1 - xa)^2 + (y1 - ya)^2 + (z1 - za)^2)) + 10*n*(zi - za)/(ln(10)*((xi - xa)^2 + (yi - ya)^2 + (zi - za)^2))</em>
+<a class="jxr_linenumber" name="L2720" href="#L2720">2720</a> 
+<a class="jxr_linenumber" name="L2721" href="#L2721">2721</a>                     <strong class="jxr_keyword">double</strong> derivativeZa = - derivativeZ1 - derivativeZi;
+<a class="jxr_linenumber" name="L2722" href="#L2722">2722</a> 
+<a class="jxr_linenumber" name="L2723" href="#L2723">2723</a> 
+<a class="jxr_linenumber" name="L2724" href="#L2724">2724</a>                     <em class="jxr_comment">//set derivatives pathLossExponent, x1, y1, z1, xa, ya, za, xi, yi, zi</em>
+<a class="jxr_linenumber" name="L2725" href="#L2725">2725</a>                     jacobian.setElementAtIndex(0, derivativePathLossExponent);
+<a class="jxr_linenumber" name="L2726" href="#L2726">2726</a>                     jacobian.setElementAtIndex(1, derivativeX1);
+<a class="jxr_linenumber" name="L2727" href="#L2727">2727</a>                     jacobian.setElementAtIndex(2, derivativeY1);
+<a class="jxr_linenumber" name="L2728" href="#L2728">2728</a>                     jacobian.setElementAtIndex(3, derivativeZ1);
+<a class="jxr_linenumber" name="L2729" href="#L2729">2729</a>                     jacobian.setElementAtIndex(4, derivativeXa);
+<a class="jxr_linenumber" name="L2730" href="#L2730">2730</a>                     jacobian.setElementAtIndex(5, derivativeYa);
+<a class="jxr_linenumber" name="L2731" href="#L2731">2731</a>                     jacobian.setElementAtIndex(6, derivativeZa);
+<a class="jxr_linenumber" name="L2732" href="#L2732">2732</a>                     jacobian.setElementAtIndex(7, derivativeXi);
+<a class="jxr_linenumber" name="L2733" href="#L2733">2733</a>                     jacobian.setElementAtIndex(8, derivativeYi);
+<a class="jxr_linenumber" name="L2734" href="#L2734">2734</a>                     jacobian.setElementAtIndex(9, derivativeZi);
+<a class="jxr_linenumber" name="L2735" href="#L2735">2735</a> 
+<a class="jxr_linenumber" name="L2736" href="#L2736">2736</a> 
+<a class="jxr_linenumber" name="L2737" href="#L2737">2737</a>                     y[0] = derivativePathLossExponent * pathLossExponent;
+<a class="jxr_linenumber" name="L2738" href="#L2738">2738</a>                 }
+<a class="jxr_linenumber" name="L2739" href="#L2739">2739</a> 
+<a class="jxr_linenumber" name="L2740" href="#L2740">2740</a>                 @Override
+<a class="jxr_linenumber" name="L2741" href="#L2741">2741</a>                 <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">int</strong> getNumberOfVariables() {
+<a class="jxr_linenumber" name="L2742" href="#L2742">2742</a>                     <strong class="jxr_keyword">return</strong> 1;
+<a class="jxr_linenumber" name="L2743" href="#L2743">2743</a>                 }
+<a class="jxr_linenumber" name="L2744" href="#L2744">2744</a>             }, mean, covariance);
+<a class="jxr_linenumber" name="L2745" href="#L2745">2745</a>         } <strong class="jxr_keyword">catch</strong> (AlgebraException | StatisticsException e) {
+<a class="jxr_linenumber" name="L2746" href="#L2746">2746</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../com/irurueta/navigation/indoor/IndoorException.html">IndoorException</a>(e);
+<a class="jxr_linenumber" name="L2747" href="#L2747">2747</a>         }
+<a class="jxr_linenumber" name="L2748" href="#L2748">2748</a>     }
+<a class="jxr_linenumber" name="L2749" href="#L2749">2749</a> 
+<a class="jxr_linenumber" name="L2750" href="#L2750">2750</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2018&#x2013;2019. All rights reserved.</div>
