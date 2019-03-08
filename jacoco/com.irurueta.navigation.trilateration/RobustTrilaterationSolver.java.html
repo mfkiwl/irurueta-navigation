@@ -34,9 +34,26 @@ import com.irurueta.numerical.robust.RobustEstimatorMethod;
 public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
 
     /**
+     * Indicates that by default a linear solver is used for preliminary solution estimation.
+     * The result obtained on each preliminary solution might be later refined.
+     */
+    private static final boolean DEFAULT_USE_LINEAR_SOLVER = true;
+
+    /**
+     * Indicates that by default an homogeneous linear solver is used either to estimate preliminary
+     * solutions or an initial solution for preliminary solutions that will be later refined.
+     */
+    public static final boolean DEFAULT_USE_HOMOGENEOUS_LINEAR_SOLVER = true;
+
+    /**
+     * Indicates that by default preliminary solutions are refined.
+     */
+    public static final boolean DEFAULT_REFINE_PRELIMINARY_SOLUTIONS = true;
+
+    /**
      * Default robust estimator method when none is provided.
      */
-<span class="fc" id="L39">    public static final RobustEstimatorMethod DEFAULT_ROBUST_METHOD =</span>
+<span class="fc" id="L56">    public static final RobustEstimatorMethod DEFAULT_ROBUST_METHOD =</span>
             RobustEstimatorMethod.PROMedS;
 
     /**
@@ -115,6 +132,23 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
     protected RobustTrilaterationSolverListener&lt;P&gt; mListener;
 
     /**
+     * Indicates whether a linear solver is used or not (either homogeneous or inomogeneous)
+     * for preliminary solutions.
+     */
+<span class="fc" id="L138">    protected boolean mUseLinearSolver = DEFAULT_USE_LINEAR_SOLVER;</span>
+
+    /**
+     * Indicates whether an homogeneous linear solver is used either to estimate preliminary solutions
+     * or an initial solution for preliminary solutions that will be later refined.
+     */
+<span class="fc" id="L144">    protected boolean mUseHomogeneousLinearSolver = DEFAULT_USE_HOMOGENEOUS_LINEAR_SOLVER;</span>
+
+    /**
+     * Indicates whether preliminary solutions must be refined after an initial linear solution is found.
+     */
+<span class="fc" id="L149">    protected boolean mRefinePreliminarySolutions = DEFAULT_REFINE_PRELIMINARY_SOLUTIONS;</span>
+
+    /**
      * Estimated position.
      */
     protected P mEstimatedPosition;
@@ -127,21 +161,21 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
     /**
      * Amount of progress variation before notifying a progress change during estimation.
      */
-<span class="fc" id="L130">    protected float mProgressDelta = DEFAULT_PROGRESS_DELTA;</span>
+<span class="fc" id="L164">    protected float mProgressDelta = DEFAULT_PROGRESS_DELTA;</span>
 
     /**
      * Amount of confidence expressed as a value between 0.0 and 1.0 (which is equivalent
      * to 100%). The amount of confidence indicates the probability that the estimated
      * result is correct. Usually this value will be close to 1.0, but not exactly 1.0.
      */
-<span class="fc" id="L137">    protected double mConfidence = DEFAULT_CONFIDENCE;</span>
+<span class="fc" id="L171">    protected double mConfidence = DEFAULT_CONFIDENCE;</span>
 
     /**
      * Maximum allowed number of iterations. When the maximum number of iterations is
      * exceeded, result will not be available, however an approximate result will be
      * available for retrieval.
      */
-<span class="fc" id="L144">    protected int mMaxIterations = DEFAULT_MAX_ITERATIONS;</span>
+<span class="fc" id="L178">    protected int mMaxIterations = DEFAULT_MAX_ITERATIONS;</span>
 
     /**
      * Data related to inliers found after estimation.
@@ -154,13 +188,13 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * If true, inliers will be computed and kept in any implementation regardless of the
      * settings.
      */
-<span class="fc" id="L157">    protected boolean mRefineResult = DEFAULT_REFINE_RESULT;</span>
+<span class="fc" id="L191">    protected boolean mRefineResult = DEFAULT_REFINE_RESULT;</span>
 
     /**
      * Indicates whether covariance must be kept after refining result.
      * This setting is only taken into account if result is refined.
      */
-<span class="fc" id="L163">    protected boolean mKeepCovariance = DEFAULT_KEEP_COVARIANCE;</span>
+<span class="fc" id="L197">    protected boolean mKeepCovariance = DEFAULT_KEEP_COVARIANCE;</span>
 
     /**
      * Estimated covariance of estimated position.
@@ -176,16 +210,16 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
     /**
      * Constructor.
      */
-<span class="fc" id="L179">    public RobustTrilaterationSolver() { }</span>
+<span class="fc" id="L213">    public RobustTrilaterationSolver() { }</span>
 
     /**
      * Constructor.
      * @param listener listener to be notified of events such as when estimation
      *                 starts, ends or its progress significantly changes.
      */
-<span class="fc" id="L186">    public RobustTrilaterationSolver(RobustTrilaterationSolverListener&lt;P&gt; listener) {</span>
-<span class="fc" id="L187">        mListener = listener;</span>
-<span class="fc" id="L188">    }</span>
+<span class="fc" id="L220">    public RobustTrilaterationSolver(RobustTrilaterationSolverListener&lt;P&gt; listener) {</span>
+<span class="fc" id="L221">        mListener = listener;</span>
+<span class="fc" id="L222">    }</span>
 
     /**
      * Constructor.
@@ -194,9 +228,9 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @throws IllegalArgumentException if either positions or distances are null, don't have the same length or their
      * length is smaller than required (3 for 2D points or 4 for 3D points).
      */
-<span class="fc" id="L197">    public RobustTrilaterationSolver(P[] positions, double[] distances) {</span>
-<span class="fc" id="L198">        internalSetPositionsAndDistances(positions, distances);</span>
-<span class="fc" id="L199">    }</span>
+<span class="fc" id="L231">    public RobustTrilaterationSolver(P[] positions, double[] distances) {</span>
+<span class="fc" id="L232">        internalSetPositionsAndDistances(positions, distances);</span>
+<span class="fc" id="L233">    }</span>
 
     /**
      * Constructor.
@@ -207,9 +241,9 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * are null, don't have the same length or their length is smaller than required (3 for
      * 2D points or 4 for 3D points).
      */
-<span class="fc" id="L210">    public RobustTrilaterationSolver(P[] positions, double[] distances, double[] distanceStandardDeviations) {</span>
-<span class="fc" id="L211">        internalSetPositionsDistancesAndStandardDeviations(positions, distances, distanceStandardDeviations);</span>
-<span class="fc" id="L212">    }</span>
+<span class="fc" id="L244">    public RobustTrilaterationSolver(P[] positions, double[] distances, double[] distanceStandardDeviations) {</span>
+<span class="fc" id="L245">        internalSetPositionsDistancesAndStandardDeviations(positions, distances, distanceStandardDeviations);</span>
+<span class="fc" id="L246">    }</span>
 
 
     /**
@@ -222,10 +256,10 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * length is smaller than required (3 for 2D points or 4 for 3D points).
      */
     public RobustTrilaterationSolver(P[] positions, double[] distances,
-<span class="fc" id="L225">            RobustTrilaterationSolverListener&lt;P&gt; listener) {</span>
-<span class="fc" id="L226">        internalSetPositionsAndDistances(positions, distances);</span>
-<span class="fc" id="L227">        mListener = listener;</span>
-<span class="fc" id="L228">    }</span>
+<span class="fc" id="L259">            RobustTrilaterationSolverListener&lt;P&gt; listener) {</span>
+<span class="fc" id="L260">        internalSetPositionsAndDistances(positions, distances);</span>
+<span class="fc" id="L261">        mListener = listener;</span>
+<span class="fc" id="L262">    }</span>
 
     /**
      * Constructor.
@@ -237,17 +271,17 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * length is smaller than required (3 for 2D points or 4 for 3D points).
      */
     public RobustTrilaterationSolver(P[] positions, double[] distances, double[] distanceStandardDeviations,
-<span class="fc" id="L240">            RobustTrilaterationSolverListener&lt;P&gt; listener) {</span>
-<span class="fc" id="L241">        internalSetPositionsDistancesAndStandardDeviations(positions, distances, distanceStandardDeviations);</span>
-<span class="fc" id="L242">        mListener = listener;</span>
-<span class="fc" id="L243">    }</span>
+<span class="fc" id="L274">            RobustTrilaterationSolverListener&lt;P&gt; listener) {</span>
+<span class="fc" id="L275">        internalSetPositionsDistancesAndStandardDeviations(positions, distances, distanceStandardDeviations);</span>
+<span class="fc" id="L276">        mListener = listener;</span>
+<span class="fc" id="L277">    }</span>
 
     /**
      * Gets listener to be notified of events raised by this instance.
      * @return listener to be notified of events raised by this instance.
      */
     public RobustTrilaterationSolverListener&lt;P&gt; getListener() {
-<span class="fc" id="L250">        return mListener;</span>
+<span class="fc" id="L284">        return mListener;</span>
     }
 
     /**
@@ -256,11 +290,89 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @throws LockedException if instance is busy solving the trilateration problem.
      */
     public void setListener(RobustTrilaterationSolverListener&lt;P&gt; listener) throws LockedException {
-<span class="fc bfc" id="L259" title="All 2 branches covered.">        if(isLocked()) {</span>
-<span class="fc" id="L260">            throw new LockedException();</span>
+<span class="fc bfc" id="L293" title="All 2 branches covered.">        if(isLocked()) {</span>
+<span class="fc" id="L294">            throw new LockedException();</span>
         }
-<span class="fc" id="L262">        mListener = listener;</span>
-<span class="fc" id="L263">    }</span>
+<span class="fc" id="L296">        mListener = listener;</span>
+<span class="fc" id="L297">    }</span>
+
+    /**
+     * Indicates whether a linear solver is used or not (either homogeneous or inhomogeneous)
+     * for preliminary solutions.
+     * @return true if a linear solver is used, false otherwise.
+     */
+    public boolean isLinearSolverUsed() {
+<span class="fc" id="L305">        return mUseLinearSolver;</span>
+    }
+
+    /**
+     * Specifies whether a linear solver is used or not (either homogeneous or inhomogeneous)
+     * for preliminary solutions.
+     * @param linearSolverUsed true if a linear solver is used, false otherwise.
+     * @throws LockedException if estimator is locked.
+     */
+    public void setLinearSolverUsed(boolean linearSolverUsed) throws LockedException {
+<span class="fc bfc" id="L315" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L316">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L319">        mUseLinearSolver = linearSolverUsed;</span>
+<span class="fc" id="L320">    }</span>
+
+    /**
+     * Indicates whether an homogeneous linear solver is used either to estimate preliminary solutions
+     * or an initial solution for preliminary solutions that will be later refined.
+     * @return true if homogeneous linear solver is used, false otherwise.
+     */
+    public boolean isHomogeneousLinearSolverUsed() {
+<span class="fc" id="L328">        return mUseHomogeneousLinearSolver;</span>
+    }
+
+    /**
+     * Specifies whether an homogeneous linear solver is used either to estimate preliminary solutions
+     * or an initial solution for preliminary solutions that will be later refined.
+     * @param useHomogeneousLinearSolver true if homogeneous linear solver is used, false
+     *                                   otherwise.
+     * @throws LockedException if estimator is locked.
+     */
+    public void setHomogeneousLinearSolverUsed(boolean useHomogeneousLinearSolver)
+            throws LockedException {
+<span class="fc bfc" id="L340" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L341">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L344">        mUseHomogeneousLinearSolver = useHomogeneousLinearSolver;</span>
+<span class="fc" id="L345">    }</span>
+
+    /**
+     * Indicates whether preliminary solutions must be refined after an initial linear solution is found.
+     * If no initial solution is found using a linear solver, a non linear solver will be
+     * used regardless of this value using an average solution as the initial value to be
+     * refined.
+     * @return true if preliminary solutions must be refined after an initial linear solution, false
+     * otherwise.
+     */
+    public boolean isPreliminarySolutionRefined() {
+<span class="fc" id="L356">        return mRefinePreliminarySolutions;</span>
+    }
+
+    /**
+     * Specifies whether preliminary solutions must be refined after an initial linear solution is found.
+     * If no initial solution is found using a linear solver, a non linear solver will be
+     * used regardless of this value using an average solution as the initial value to be
+     * refined.
+     * @param preliminarySolutionRefined true if preliminary solutions must be refined after an
+     *                                   initial linear solution, false otherwise.
+     * @throws LockedException if estimator is locked.
+     */
+    public void setPreliminarySolutionRefined(boolean preliminarySolutionRefined)
+            throws LockedException {
+<span class="fc bfc" id="L370" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L371">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L374">        mRefinePreliminarySolutions = preliminarySolutionRefined;</span>
+<span class="fc" id="L375">    }</span>
 
     /**
      * Returns boolean indicating if solver is locked because estimation is under
@@ -268,7 +380,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @return true if solver is locked, false otherwise.
      */
     public boolean isLocked() {
-<span class="fc" id="L271">        return mLocked;</span>
+<span class="fc" id="L383">        return mLocked;</span>
     }
 
     /**
@@ -278,7 +390,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * estimation.
      */
     public float getProgressDelta() {
-<span class="fc" id="L281">        return mProgressDelta;</span>
+<span class="fc" id="L393">        return mProgressDelta;</span>
     }
 
     /**
@@ -290,15 +402,15 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @throws LockedException if this solver is locked because an estimation is being computed.
      */
     public void setProgressDelta(float progressDelta) throws LockedException {
-<span class="fc bfc" id="L293" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L294">            throw new LockedException();</span>
+<span class="fc bfc" id="L405" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L406">            throw new LockedException();</span>
         }
-<span class="fc bfc" id="L296" title="All 4 branches covered.">        if (progressDelta &lt; MIN_PROGRESS_DELTA ||</span>
+<span class="fc bfc" id="L408" title="All 4 branches covered.">        if (progressDelta &lt; MIN_PROGRESS_DELTA ||</span>
                 progressDelta &gt; MAX_PROGRESS_DELTA) {
-<span class="fc" id="L298">            throw new IllegalArgumentException();</span>
+<span class="fc" id="L410">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L300">        mProgressDelta = progressDelta;</span>
-<span class="fc" id="L301">    }</span>
+<span class="fc" id="L412">        mProgressDelta = progressDelta;</span>
+<span class="fc" id="L413">    }</span>
 
     /**
      * Returns amount of confidence expressed as a value between 0.0 and 1.0
@@ -308,7 +420,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @return amount of confidence as a value between 0.0 and 1.0.
      */
     public double getConfidence() {
-<span class="fc" id="L311">        return mConfidence;</span>
+<span class="fc" id="L423">        return mConfidence;</span>
     }
 
     /**
@@ -321,14 +433,14 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @throws LockedException if solver is locked because an estimation is being computed.
      */
     public void setConfidence(double confidence) throws LockedException {
-<span class="fc bfc" id="L324" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L325">            throw new LockedException();</span>
+<span class="fc bfc" id="L436" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L437">            throw new LockedException();</span>
         }
-<span class="fc bfc" id="L327" title="All 4 branches covered.">        if (confidence &lt; MIN_CONFIDENCE || confidence &gt; MAX_CONFIDENCE) {</span>
-<span class="fc" id="L328">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L439" title="All 4 branches covered.">        if (confidence &lt; MIN_CONFIDENCE || confidence &gt; MAX_CONFIDENCE) {</span>
+<span class="fc" id="L440">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L330">        mConfidence = confidence;</span>
-<span class="fc" id="L331">    }</span>
+<span class="fc" id="L442">        mConfidence = confidence;</span>
+<span class="fc" id="L443">    }</span>
 
     /**
      * Returns maximum allowed number of iterations. If maximum allowed number of
@@ -337,7 +449,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @return maximum allowed number of iterations.
      */
     public int getMaxIterations() {
-<span class="fc" id="L340">        return mMaxIterations;</span>
+<span class="fc" id="L452">        return mMaxIterations;</span>
     }
 
     /**
@@ -350,21 +462,21 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * computed.
      */
     public void setMaxIterations(int maxIterations) throws LockedException {
-<span class="fc bfc" id="L353" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L354">            throw new LockedException();</span>
+<span class="fc bfc" id="L465" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L466">            throw new LockedException();</span>
         }
-<span class="fc bfc" id="L356" title="All 2 branches covered.">        if (maxIterations &lt; MIN_ITERATIONS) {</span>
-<span class="fc" id="L357">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L468" title="All 2 branches covered.">        if (maxIterations &lt; MIN_ITERATIONS) {</span>
+<span class="fc" id="L469">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L359">        mMaxIterations = maxIterations;</span>
-<span class="fc" id="L360">    }</span>
+<span class="fc" id="L471">        mMaxIterations = maxIterations;</span>
+<span class="fc" id="L472">    }</span>
 
     /**
      * Gets data related to inliers found after estimation.
      * @return data related to inliers found after estimation.
      */
     public InliersData getInliersData() {
-<span class="fc" id="L367">        return mInliersData;</span>
+<span class="fc" id="L479">        return mInliersData;</span>
     }
 
     /**
@@ -373,7 +485,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * without further refining.
      */
     public boolean isResultRefined() {
-<span class="fc" id="L376">        return mRefineResult;</span>
+<span class="fc" id="L488">        return mRefineResult;</span>
     }
 
     /**
@@ -383,11 +495,11 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @throws LockedException if solver is locked.
      */
     public void setResultRefined(boolean refineResult) throws LockedException {
-<span class="fc bfc" id="L386" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L387">            throw new LockedException();</span>
+<span class="fc bfc" id="L498" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L499">            throw new LockedException();</span>
         }
-<span class="fc" id="L389">        mRefineResult = refineResult;</span>
-<span class="fc" id="L390">    }</span>
+<span class="fc" id="L501">        mRefineResult = refineResult;</span>
+<span class="fc" id="L502">    }</span>
 
     /**
      * Indicates whether covariance must be kept after refining result.
@@ -395,7 +507,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @return true if covariance must be kept after refining result, false otherwise.
      */
     public boolean isCovarianceKept() {
-<span class="fc" id="L398">        return mKeepCovariance;</span>
+<span class="fc" id="L510">        return mKeepCovariance;</span>
     }
 
     /**
@@ -406,18 +518,18 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @throws LockedException if estimator is locked.
      */
     public void setCovarianceKept(boolean keepCovariance) throws LockedException {
-<span class="fc bfc" id="L409" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L410">            throw new LockedException();</span>
+<span class="fc bfc" id="L521" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L522">            throw new LockedException();</span>
         }
-<span class="fc" id="L412">        mKeepCovariance = keepCovariance;</span>
-<span class="fc" id="L413">    }</span>
+<span class="fc" id="L524">        mKeepCovariance = keepCovariance;</span>
+<span class="fc" id="L525">    }</span>
 
     /**
      * Gets known positions of static nodes.
      * @return known positions of static nodes.
      */
     public P[] getPositions() {
-<span class="fc" id="L420">        return mPositions;</span>
+<span class="fc" id="L532">        return mPositions;</span>
     }
 
     /**
@@ -425,7 +537,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @return euclidean distances from static nodes to mobile node.
      */
     public double[] getDistances() {
-<span class="fc" id="L428">        return mDistances;</span>
+<span class="fc" id="L540">        return mDistances;</span>
     }
 
     /**
@@ -434,7 +546,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @return standard deviations of provided distances.
      */
     public double[] getDistanceStandardDeviations() {
-<span class="fc" id="L437">        return mDistanceStandardDeviations;</span>
+<span class="fc" id="L549">        return mDistanceStandardDeviations;</span>
     }
 
     /**
@@ -442,8 +554,8 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @return true if solver is ready, false otherwise.
      */
     public boolean isReady() {
-<span class="pc bpc" id="L445" title="1 of 4 branches missed.">        return mPositions != null &amp;&amp; mDistances != null &amp;&amp;</span>
-<span class="pc bpc" id="L446" title="1 of 2 branches missed.">                mPositions.length &gt;= getMinRequiredPositionsAndDistances();</span>
+<span class="pc bpc" id="L557" title="1 of 4 branches missed.">        return mPositions != null &amp;&amp; mDistances != null &amp;&amp;</span>
+<span class="pc bpc" id="L558" title="1 of 2 branches missed.">                mPositions.length &gt;= getMinRequiredPositionsAndDistances();</span>
     }
 
     /**
@@ -455,7 +567,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @return quality scores corresponding to each sample.
      */
     public double[] getQualityScores() {
-<span class="fc" id="L458">        return null;</span>
+<span class="fc" id="L570">        return null;</span>
     }
 
     /**
@@ -472,7 +584,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * estimation is already in progress.
      */
     public void setQualityScores(double[] qualityScores)
-<span class="fc" id="L475">            throws LockedException { }</span>
+<span class="fc" id="L587">            throws LockedException { }</span>
 
     /**
      * Gets estimated covariance of estimated position if available.
@@ -481,7 +593,7 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * @return estimated covariance or null.
      */
     public Matrix getCovariance() {
-<span class="fc" id="L484">        return mCovariance;</span>
+<span class="fc" id="L596">        return mCovariance;</span>
     }
 
     /**
@@ -495,11 +607,11 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      */
     public void setPositionsAndDistances(P[] positions, double[] distances)
             throws LockedException {
-<span class="fc bfc" id="L498" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L499">            throw new LockedException();</span>
+<span class="fc bfc" id="L610" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L611">            throw new LockedException();</span>
         }
-<span class="fc" id="L501">        internalSetPositionsAndDistances(positions, distances);</span>
-<span class="fc" id="L502">    }</span>
+<span class="fc" id="L613">        internalSetPositionsAndDistances(positions, distances);</span>
+<span class="fc" id="L614">    }</span>
 
     /**
      * Sets known positions, euclidean distances and the respective standard deviations of
@@ -514,19 +626,19 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      */
     public void setPositionsDistancesAndStandardDeviations(P[] positions, double[] distances,
             double[] distanceStandardDeviations) throws LockedException {
-<span class="fc bfc" id="L517" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L518">            throw new LockedException();</span>
+<span class="fc bfc" id="L629" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L630">            throw new LockedException();</span>
         }
-<span class="fc" id="L520">        internalSetPositionsDistancesAndStandardDeviations(positions, distances,</span>
+<span class="fc" id="L632">        internalSetPositionsDistancesAndStandardDeviations(positions, distances,</span>
                 distanceStandardDeviations);
-<span class="fc" id="L522">    }</span>
+<span class="fc" id="L634">    }</span>
 
     /**
      * Gets estimated position.
      * @return estimated position.
      */
     public P getEstimatedPosition() {
-<span class="fc" id="L529">        return mEstimatedPosition;</span>
+<span class="fc" id="L641">        return mEstimatedPosition;</span>
     }
 
     /**
@@ -568,28 +680,28 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      * length is smaller than required (2 points).
      */
     protected void internalSetPositionsAndDistances(P[] positions, double[] distances) {
-<span class="fc bfc" id="L571" title="All 4 branches covered.">        if(positions == null || distances == null) {</span>
-<span class="fc" id="L572">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L683" title="All 4 branches covered.">        if(positions == null || distances == null) {</span>
+<span class="fc" id="L684">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc bfc" id="L575" title="All 2 branches covered.">        if (positions.length &lt; getMinRequiredPositionsAndDistances()) {</span>
-<span class="fc" id="L576">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L687" title="All 2 branches covered.">        if (positions.length &lt; getMinRequiredPositionsAndDistances()) {</span>
+<span class="fc" id="L688">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc bfc" id="L579" title="All 2 branches covered.">        if (positions.length != distances.length) {</span>
-<span class="fc" id="L580">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L691" title="All 2 branches covered.">        if (positions.length != distances.length) {</span>
+<span class="fc" id="L692">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L583">        mPositions = positions;</span>
-<span class="fc" id="L584">        mDistances = distances;</span>
+<span class="fc" id="L695">        mPositions = positions;</span>
+<span class="fc" id="L696">        mDistances = distances;</span>
 
         //fix distances if needed
-<span class="fc bfc" id="L587" title="All 2 branches covered.">        for (int i = 0; i &lt; mDistances.length; i++) {</span>
-<span class="fc bfc" id="L588" title="All 2 branches covered.">            if (mDistances[i] &lt; EPSILON) {</span>
-<span class="fc" id="L589">                mDistances[i] = EPSILON;</span>
+<span class="fc bfc" id="L699" title="All 2 branches covered.">        for (int i = 0; i &lt; mDistances.length; i++) {</span>
+<span class="fc bfc" id="L700" title="All 2 branches covered.">            if (mDistances[i] &lt; EPSILON) {</span>
+<span class="fc" id="L701">                mDistances[i] = EPSILON;</span>
             }
         }
-<span class="fc" id="L592">    }</span>
+<span class="fc" id="L704">    }</span>
 
     /**
      * Internally sets known positions, euclidean distances and the respective standard
@@ -603,14 +715,14 @@ public abstract class RobustTrilaterationSolver&lt;P extends Point&gt; {
      */
     protected void internalSetPositionsDistancesAndStandardDeviations(P[] positions, double[] distances,
             double[] distanceStandardDeviations) {
-<span class="fc bfc" id="L606" title="All 4 branches covered.">        if(distanceStandardDeviations == null || distances == null) {</span>
-<span class="fc" id="L607">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L718" title="All 4 branches covered.">        if(distanceStandardDeviations == null || distances == null) {</span>
+<span class="fc" id="L719">            throw new IllegalArgumentException();</span>
         }
-<span class="fc bfc" id="L609" title="All 2 branches covered.">        if(distances.length != distanceStandardDeviations.length) {</span>
-<span class="fc" id="L610">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L721" title="All 2 branches covered.">        if(distances.length != distanceStandardDeviations.length) {</span>
+<span class="fc" id="L722">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L612">        internalSetPositionsAndDistances(positions, distances);</span>
-<span class="fc" id="L613">        mDistanceStandardDeviations = distanceStandardDeviations;</span>
-<span class="fc" id="L614">    }</span>
+<span class="fc" id="L724">        internalSetPositionsAndDistances(positions, distances);</span>
+<span class="fc" id="L725">        mDistanceStandardDeviations = distanceStandardDeviations;</span>
+<span class="fc" id="L726">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

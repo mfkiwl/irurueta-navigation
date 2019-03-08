@@ -7,10 +7,7 @@ import com.irurueta.navigation.indoor.Fingerprint;
 import com.irurueta.navigation.indoor.RadioSource;
 import com.irurueta.navigation.indoor.RadioSourceLocated;
 import com.irurueta.navigation.indoor.Reading;
-import com.irurueta.navigation.trilateration.LinearLeastSquaresTrilaterationSolver;
-import com.irurueta.navigation.trilateration.TrilaterationException;
-import com.irurueta.navigation.trilateration.TrilaterationSolver;
-import com.irurueta.navigation.trilateration.TrilaterationSolverListener;
+import com.irurueta.navigation.trilateration.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,9 +24,19 @@ import java.util.List;
 public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends PositionEstimator&lt;P&gt; {
 
     /**
-     * A linear trilateration solver to solve position.
+     * Indicates that by default an homogeneous linear solver is used to estimate position.
      */
-    protected LinearLeastSquaresTrilaterationSolver&lt;P&gt; mTrilaterationSolver;
+    public static final boolean DEFAULT_USE_HOMOGENEOUS_LINEAR_SOLVER = true;
+
+    /**
+     * An homogeneous linear trilateration solver to solve position.
+     */
+    protected HomogeneousLinearLeastSquaresTrilaterationSolver&lt;P&gt; mHomogeneousTrilaterationSolver;
+
+    /**
+     * An inhomogeneous linear trilateration solver to solve position.
+     */
+    protected InhomogeneousLinearLeastSquaresTrilaterationSolver&lt;P&gt; mInhomogeneousTrilaterationSolver;
 
     /**
      * Listener for the trilateration solver.
@@ -37,21 +44,50 @@ public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends Pos
     protected TrilaterationSolverListener&lt;P&gt; mTrilaterationSolverListener;
 
     /**
+     * Indicates whether an homogeneous linear solver is used to estimate position.
+     */
+<span class="fc" id="L49">    protected boolean mUseHomogeneousLinearSolver = DEFAULT_USE_HOMOGENEOUS_LINEAR_SOLVER;</span>
+
+    /**
      * Constructor.
      */
     public LinearPositionEstimator() {
-<span class="fc" id="L43">        super();</span>
-<span class="fc" id="L44">        init();</span>
-<span class="fc" id="L45">    }</span>
+<span class="fc" id="L55">        super();</span>
+<span class="fc" id="L56">        init();</span>
+<span class="fc" id="L57">    }</span>
 
     /**
      * Constructor.
      * @param listener listener in charge of handling events.
      */
     public LinearPositionEstimator(PositionEstimatorListener&lt;P&gt; listener) {
-<span class="fc" id="L52">        super(listener);</span>
-<span class="fc" id="L53">        init();</span>
-<span class="fc" id="L54">    }</span>
+<span class="fc" id="L64">        super(listener);</span>
+<span class="fc" id="L65">        init();</span>
+<span class="fc" id="L66">    }</span>
+
+    /**
+     * Indicates whether an homogeneous linear solver is used to estimate position.
+     * @return true if homogeneous linear solver is used, false if an inhomogeneous linear
+     * one is used instead.
+     */
+    public boolean isHomogeneousLinearSolverUsed() {
+<span class="fc" id="L74">        return mUseHomogeneousLinearSolver;</span>
+    }
+
+    /**
+     * Specifies whether an homogeneous linear solver is used to estimate position.
+     * @param useHomogeneousLinearSolver true if homogeneous linear solver is used, false
+     *                                   if an inhomogeneous linear one is used instead.
+     * @throws LockedException if estimator is locked.
+     */
+    public void setHomogeneousLinearSolverUsed(boolean useHomogeneousLinearSolver)
+            throws LockedException {
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L86">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L89">        mUseHomogeneousLinearSolver = useHomogeneousLinearSolver;</span>
+<span class="fc" id="L90">    }</span>
 
     /**
      * Gets minimum required number of located radio sources to perform trilateration.
@@ -59,7 +95,9 @@ public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends Pos
      */
     @Override
     public int getMinRequiredSources() {
-<span class="fc" id="L62">        return mTrilaterationSolver.getMinRequiredPositionsAndDistances();</span>
+<span class="pc bpc" id="L98" title="1 of 2 branches missed.">        return mUseHomogeneousLinearSolver?</span>
+<span class="fc" id="L99">                mHomogeneousTrilaterationSolver.getMinRequiredPositionsAndDistances() :</span>
+<span class="nc" id="L100">                mInhomogeneousTrilaterationSolver.getMinRequiredPositionsAndDistances();</span>
     }
 
     /**
@@ -68,7 +106,8 @@ public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends Pos
      */
     @Override
     public boolean isReady() {
-<span class="fc" id="L71">        return mTrilaterationSolver.isReady();</span>
+<span class="pc bpc" id="L109" title="2 of 6 branches missed.">        return (!mUseHomogeneousLinearSolver &amp;&amp; mInhomogeneousTrilaterationSolver.isReady()) ||</span>
+<span class="fc bfc" id="L110" title="All 2 branches covered.">                (mUseHomogeneousLinearSolver &amp;&amp; mHomogeneousTrilaterationSolver.isReady());</span>
     }
 
     /**
@@ -77,7 +116,8 @@ public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends Pos
      */
     @Override
     public boolean isLocked() {
-<span class="fc" id="L80">        return mTrilaterationSolver.isLocked();</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">        return mInhomogeneousTrilaterationSolver.isLocked() ||</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">                mHomogeneousTrilaterationSolver.isLocked();</span>
     }
 
     /**
@@ -91,13 +131,19 @@ public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends Pos
     public void estimate() throws LockedException, NotReadyException,
             PositionEstimationException {
         try {
-<span class="fc" id="L94">            mTrilaterationSolver.solve();</span>
-<span class="fc" id="L95">            mEstimatedPositionCoordinates =</span>
-<span class="fc" id="L96">                    mTrilaterationSolver.getEstimatedPositionCoordinates();</span>
-<span class="nc" id="L97">        } catch (TrilaterationException e) {</span>
-<span class="nc" id="L98">            throw new PositionEstimationException(e);</span>
-<span class="fc" id="L99">        }</span>
-<span class="fc" id="L100">    }</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">            if (mUseHomogeneousLinearSolver) {</span>
+<span class="fc" id="L135">                mHomogeneousTrilaterationSolver.solve();</span>
+<span class="fc" id="L136">                mEstimatedPositionCoordinates =</span>
+<span class="fc" id="L137">                        mHomogeneousTrilaterationSolver.getEstimatedPositionCoordinates();</span>
+            } else {
+<span class="fc" id="L139">                mInhomogeneousTrilaterationSolver.solve();</span>
+<span class="fc" id="L140">                mEstimatedPositionCoordinates =</span>
+<span class="fc" id="L141">                        mInhomogeneousTrilaterationSolver.getEstimatedPositionCoordinates();</span>
+            }
+<span class="nc" id="L143">        } catch (TrilaterationException e) {</span>
+<span class="nc" id="L144">            throw new PositionEstimationException(e);</span>
+<span class="fc" id="L145">        }</span>
+<span class="fc" id="L146">    }</span>
 
     /**
      * Gets known positions of radio sources used internally to solve trilateration.
@@ -105,7 +151,9 @@ public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends Pos
      */
     @Override
     public P[] getPositions() {
-<span class="fc" id="L108">        return mTrilaterationSolver.getPositions();</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">        return mUseHomogeneousLinearSolver ?</span>
+<span class="fc" id="L155">                mHomogeneousTrilaterationSolver.getPositions() :</span>
+<span class="fc" id="L156">                mInhomogeneousTrilaterationSolver.getPositions();</span>
     }
 
     /**
@@ -116,7 +164,9 @@ public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends Pos
      */
     @Override
     public double[] getDistances() {
-<span class="fc" id="L119">        return mTrilaterationSolver.getDistances();</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        return mUseHomogeneousLinearSolver ?</span>
+<span class="fc" id="L168">                mHomogeneousTrilaterationSolver.getDistances() :</span>
+<span class="fc" id="L169">                mInhomogeneousTrilaterationSolver.getDistances();</span>
     }
 
     /**
@@ -126,9 +176,9 @@ public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends Pos
      * than the required minimum.
      */
     protected void internalSetSources(List&lt;? extends RadioSourceLocated&lt;P&gt;&gt; sources) {
-<span class="fc" id="L129">        super.internalSetSources(sources);</span>
-<span class="fc" id="L130">        buildPositionsAndDistances();</span>
-<span class="fc" id="L131">    }</span>
+<span class="fc" id="L179">        super.internalSetSources(sources);</span>
+<span class="fc" id="L180">        buildPositionsAndDistances();</span>
+<span class="fc" id="L181">    }</span>
 
     /**
      * Internally sets fingerprint containing readings at an unknown location for provided located radio sources.
@@ -137,9 +187,9 @@ public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends Pos
      */
     protected void internalSetFingerprint(
             Fingerprint&lt;? extends RadioSource, ? extends Reading&lt;? extends RadioSource&gt;&gt; fingerprint) {
-<span class="fc" id="L140">        super.internalSetFingerprint(fingerprint);</span>
-<span class="fc" id="L141">        buildPositionsAndDistances();</span>
-<span class="fc" id="L142">    }</span>
+<span class="fc" id="L190">        super.internalSetFingerprint(fingerprint);</span>
+<span class="fc" id="L191">        buildPositionsAndDistances();</span>
+<span class="fc" id="L192">    }</span>
 
     /**
      * Sets positions and distances on internal trilateration solver.
@@ -153,45 +203,46 @@ public abstract class LinearPositionEstimator&lt;P extends Point&gt; extends Pos
      * Initializes trilateration solver listener.
      */
     private void init() {
-<span class="fc" id="L156">        mTrilaterationSolverListener = new TrilaterationSolverListener&lt;P&gt;() {</span>
+<span class="fc" id="L206">        mTrilaterationSolverListener = new TrilaterationSolverListener&lt;P&gt;() {</span>
             @Override
             public void onSolveStart(TrilaterationSolver&lt;P&gt; solver) {
-<span class="pc bpc" id="L159" title="1 of 2 branches missed.">                if (mListener != null) {</span>
-<span class="fc" id="L160">                    mListener.onEstimateStart(LinearPositionEstimator.this);</span>
+<span class="pc bpc" id="L209" title="1 of 2 branches missed.">                if (mListener != null) {</span>
+<span class="fc" id="L210">                    mListener.onEstimateStart(LinearPositionEstimator.this);</span>
                 }
-<span class="fc" id="L162">            }</span>
+<span class="fc" id="L212">            }</span>
 
             @Override
             public void onSolveEnd(TrilaterationSolver&lt;P&gt; solver) {
-<span class="pc bpc" id="L166" title="1 of 2 branches missed.">                if (mListener != null) {</span>
-<span class="fc" id="L167">                    mListener.onEstimateEnd(LinearPositionEstimator.this);</span>
+<span class="pc bpc" id="L216" title="1 of 2 branches missed.">                if (mListener != null) {</span>
+<span class="fc" id="L217">                    mListener.onEstimateEnd(LinearPositionEstimator.this);</span>
                 }
-<span class="fc" id="L169">            }</span>
+<span class="fc" id="L219">            }</span>
         };
-<span class="fc" id="L171">    }</span>
+<span class="fc" id="L221">    }</span>
 
     /**
      * Builds positions and distances for the internal trilateration solver.
      */
     private void buildPositionsAndDistances() {
-<span class="pc bpc" id="L177" title="1 of 2 branches missed.">        if (mTrilaterationSolver == null) {</span>
-<span class="nc" id="L178">            return;</span>
+<span class="pc bpc" id="L227" title="5 of 8 branches missed.">        if ((mUseHomogeneousLinearSolver &amp;&amp; mHomogeneousTrilaterationSolver == null) ||</span>
+                (!mUseHomogeneousLinearSolver &amp;&amp; mInhomogeneousTrilaterationSolver == null)) {
+<span class="nc" id="L229">            return;</span>
         }
 
-<span class="fc" id="L181">        int min = getMinRequiredSources();</span>
-<span class="fc bfc" id="L182" title="All 4 branches covered.">        if (mSources == null || mFingerprint == null ||</span>
-<span class="pc bpc" id="L183" title="1 of 2 branches missed.">                mSources.size() &lt; min ||</span>
-<span class="pc bpc" id="L184" title="1 of 2 branches missed.">                mFingerprint.getReadings() == null ||</span>
-<span class="fc bfc" id="L185" title="All 2 branches covered.">                mFingerprint.getReadings().size() &lt; min) {</span>
-<span class="fc" id="L186">            return;</span>
+<span class="fc" id="L232">        int min = getMinRequiredSources();</span>
+<span class="fc bfc" id="L233" title="All 4 branches covered.">        if (mSources == null || mFingerprint == null ||</span>
+<span class="pc bpc" id="L234" title="1 of 2 branches missed.">                mSources.size() &lt; min ||</span>
+<span class="pc bpc" id="L235" title="1 of 2 branches missed.">                mFingerprint.getReadings() == null ||</span>
+<span class="fc bfc" id="L236" title="All 2 branches covered.">                mFingerprint.getReadings().size() &lt; min) {</span>
+<span class="fc" id="L237">            return;</span>
         }
 
-<span class="fc" id="L189">        List&lt;P&gt; positions = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L190">        List&lt;Double&gt; distances = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L191">        PositionEstimatorHelper.buildPositionsAndDistances(</span>
+<span class="fc" id="L240">        List&lt;P&gt; positions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L241">        List&lt;Double&gt; distances = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L242">        PositionEstimatorHelper.buildPositionsAndDistances(</span>
                 mSources, mFingerprint, positions, distances);
 
-<span class="fc" id="L194">        setPositionsAndDistances(positions, distances);</span>
-<span class="fc" id="L195">    }</span>
+<span class="fc" id="L245">        setPositionsAndDistances(positions, distances);</span>
+<span class="fc" id="L246">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

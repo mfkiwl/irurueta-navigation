@@ -22,7 +22,8 @@ import com.irurueta.navigation.LockedException;
 import com.irurueta.navigation.NotReadyException;
 import com.irurueta.navigation.indoor.RadioSource;
 import com.irurueta.navigation.indoor.RangingReadingLocated;
-import com.irurueta.navigation.trilateration.LinearLeastSquaresTrilaterationSolver;
+import com.irurueta.navigation.trilateration.HomogeneousLinearLeastSquaresTrilaterationSolver;
+import com.irurueta.navigation.trilateration.InhomogeneousLinearLeastSquaresTrilaterationSolver;
 import com.irurueta.navigation.trilateration.NonLinearLeastSquaresTrilaterationSolver;
 import com.irurueta.navigation.trilateration.TrilaterationException;
 
@@ -49,10 +50,22 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
     public static final boolean DEFAULT_USE_READING_POSITION_COVARIANCES = true;
 
     /**
-     * Internal linear solver to find radio source position when no initial
+     * Indicates that by default an homogeneous linear solver is used to estimate an
+     * initial position.
+     */
+    public static final boolean DEFAULT_USE_HOMOGENEOUS_LINEAR_SOLVER = true;
+
+    /**
+     * Internal homogeneous linear solver to find radio source position when no initial
      * position is provided.
      */
-    protected LinearLeastSquaresTrilaterationSolver&lt;P&gt; mLinearSolver;
+    protected HomogeneousLinearLeastSquaresTrilaterationSolver&lt;P&gt; mHomogeneousLinearSolver;
+
+    /**
+     * Internal inhomogeneous linear solver to find radio source position when no initial
+     * position is provided.
+     */
+    protected InhomogeneousLinearLeastSquaresTrilaterationSolver&lt;P&gt; mInhomogeneousLinearSolver;
 
     /**
      * Internal non linear solver to estimate radio source position and covariance
@@ -77,21 +90,27 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      * If disabled a linear solver is always used, initial position ignored and
      * covariance is not computed.
      */
-<span class="fc" id="L80">    protected boolean mNonLinearSolverEnabled = true;</span>
+<span class="fc" id="L93">    protected boolean mNonLinearSolverEnabled = true;</span>
+
+    /**
+     * Indicates whether an homogeneous linear solver is used to estimate an initial
+     * position.
+     */
+<span class="fc" id="L99">    protected boolean mUseHomogeneousLinearSolver = DEFAULT_USE_HOMOGENEOUS_LINEAR_SOLVER;</span>
 
     /**
      * Indicates whether position covariances of readings must be taken into account to increase
      * the amount of standard deviation of each ranging measure by the amount of position standard deviation
      * assuming that both measures are statistically independent.
      */
-<span class="fc" id="L87">    protected boolean mUseReadingPositionCovariances = DEFAULT_USE_READING_POSITION_COVARIANCES;</span>
+<span class="fc" id="L106">    protected boolean mUseReadingPositionCovariances = DEFAULT_USE_READING_POSITION_COVARIANCES;</span>
 
     /**
      * Constructor.
      */
     public RangingRadioSourceEstimator() {
-<span class="fc" id="L93">        super();</span>
-<span class="fc" id="L94">    }</span>
+<span class="fc" id="L112">        super();</span>
+<span class="fc" id="L113">    }</span>
 
     /**
      * Constructor.
@@ -102,8 +121,8 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      */
     public RangingRadioSourceEstimator(
             List&lt;? extends RangingReadingLocated&lt;S, P&gt;&gt; readings) {
-<span class="fc" id="L105">        super(readings);</span>
-<span class="fc" id="L106">    }</span>
+<span class="fc" id="L124">        super(readings);</span>
+<span class="fc" id="L125">    }</span>
 
     /**
      * Constructor.
@@ -111,8 +130,8 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      */
     public RangingRadioSourceEstimator(
             RangingRadioSourceEstimatorListener&lt;S, P&gt; listener) {
-<span class="fc" id="L114">        super(listener);</span>
-<span class="fc" id="L115">    }</span>
+<span class="fc" id="L133">        super(listener);</span>
+<span class="fc" id="L134">    }</span>
 
     /**
      * Constructor.
@@ -124,17 +143,17 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
     public RangingRadioSourceEstimator(
             List&lt;? extends RangingReadingLocated&lt;S, P&gt;&gt; readings,
             RangingRadioSourceEstimatorListener&lt;S, P&gt; listener) {
-<span class="fc" id="L127">        super(readings, listener);</span>
-<span class="fc" id="L128">    }</span>
+<span class="fc" id="L146">        super(readings, listener);</span>
+<span class="fc" id="L147">    }</span>
 
     /**
      * Constructor.
      * @param initialPosition initial position to start the estimation or radio
      *                        source position.
      */
-<span class="fc" id="L135">    public RangingRadioSourceEstimator(P initialPosition) {</span>
-<span class="fc" id="L136">        mInitialPosition = initialPosition;</span>
-<span class="fc" id="L137">    }</span>
+<span class="fc" id="L154">    public RangingRadioSourceEstimator(P initialPosition) {</span>
+<span class="fc" id="L155">        mInitialPosition = initialPosition;</span>
+<span class="fc" id="L156">    }</span>
 
     /**
      * Constructor.
@@ -147,9 +166,9 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
     public RangingRadioSourceEstimator(
             List&lt;? extends RangingReadingLocated&lt;S, P&gt;&gt; readings,
             P initialPosition) {
-<span class="fc" id="L150">        super(readings);</span>
-<span class="fc" id="L151">        mInitialPosition = initialPosition;</span>
-<span class="fc" id="L152">    }</span>
+<span class="fc" id="L169">        super(readings);</span>
+<span class="fc" id="L170">        mInitialPosition = initialPosition;</span>
+<span class="fc" id="L171">    }</span>
 
     /**
      * Constructor.
@@ -159,9 +178,9 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      */
     public RangingRadioSourceEstimator(P initialPosition,
             RangingRadioSourceEstimatorListener&lt;S, P&gt; listener) {
-<span class="fc" id="L162">        super(listener);</span>
-<span class="fc" id="L163">        mInitialPosition = initialPosition;</span>
-<span class="fc" id="L164">    }</span>
+<span class="fc" id="L181">        super(listener);</span>
+<span class="fc" id="L182">        mInitialPosition = initialPosition;</span>
+<span class="fc" id="L183">    }</span>
 
     /**
      * Constructor.
@@ -176,9 +195,9 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
             List&lt;? extends RangingReadingLocated&lt;S, P&gt;&gt; readings,
             P initialPosition,
             RangingRadioSourceEstimatorListener&lt;S, P&gt; listener) {
-<span class="fc" id="L179">        super(readings, listener);</span>
-<span class="fc" id="L180">        mInitialPosition = initialPosition;</span>
-<span class="fc" id="L181">    }</span>
+<span class="fc" id="L198">        super(readings, listener);</span>
+<span class="fc" id="L199">        mInitialPosition = initialPosition;</span>
+<span class="fc" id="L200">    }</span>
 
     /**
      * Gets initial position to start the non-linear estimation of radio source position.
@@ -186,7 +205,7 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      * @return initial position.
      */
     public P getInitialPosition() {
-<span class="fc" id="L189">        return mInitialPosition;</span>
+<span class="fc" id="L208">        return mInitialPosition;</span>
     }
 
     /**
@@ -197,11 +216,11 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      * @throws LockedException if estimator is locked.
      */
     public void setInitialPosition(P initialPosition) throws LockedException {
-<span class="fc bfc" id="L200" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L201">            throw new LockedException();</span>
+<span class="fc bfc" id="L219" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L220">            throw new LockedException();</span>
         }
-<span class="fc" id="L203">        mInitialPosition = initialPosition;</span>
-<span class="fc" id="L204">    }</span>
+<span class="fc" id="L222">        mInitialPosition = initialPosition;</span>
+<span class="fc" id="L223">    }</span>
 
     /**
      * Indicates whether non-linear solver is enabled.
@@ -210,7 +229,7 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      * @return true if non-linear solver is enabled, false otherwise.
      */
     public boolean isNonLinearSolverEnabled() {
-<span class="fc" id="L213">        return mNonLinearSolverEnabled;</span>
+<span class="fc" id="L232">        return mNonLinearSolverEnabled;</span>
     }
 
     /**
@@ -223,11 +242,38 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      */
     public void setNonLinearSolverEnabled(boolean nonLinearSolverEnabled)
             throws LockedException {
-<span class="fc bfc" id="L226" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L227">            throw new LockedException();</span>
+<span class="fc bfc" id="L245" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L246">            throw new LockedException();</span>
         }
-<span class="fc" id="L229">        mNonLinearSolverEnabled = nonLinearSolverEnabled;</span>
-<span class="fc" id="L230">    }</span>
+<span class="fc" id="L248">        mNonLinearSolverEnabled = nonLinearSolverEnabled;</span>
+<span class="fc" id="L249">    }</span>
+
+    /**
+     * Indicates whether an homogeneous linear solver is used to estimate an initial
+     * position.
+     * @return true if homogeneous linear solver is used, false if an inhomogeneous linear
+     * one is used instead.
+     */
+    public boolean isHomogeneousLinearSolverUsed() {
+<span class="fc" id="L258">        return mUseHomogeneousLinearSolver;</span>
+    }
+
+    /**
+     * Specifies whether an homogeneous linear solver is used to estimate an initial
+     * position.
+     * @param useHomogeneousLinearSolver true if homogeneous linear solver is used, false
+     *                                   if an inhomogeneous linear one is used instead.
+     * @throws LockedException if estimator is locked.
+     */
+    public void setHomogeneousLinearSolverUsed(boolean useHomogeneousLinearSolver)
+            throws LockedException {
+<span class="fc bfc" id="L270" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L271">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L274">        mUseHomogeneousLinearSolver = useHomogeneousLinearSolver;</span>
+<span class="fc" id="L275">    }</span>
+
 
     /**
      * Indicates whether position covariances of readings must be taken into account to increase
@@ -236,7 +282,7 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      * @return true to take into account reading position covariances, false otherwise.
      */
     public boolean getUseReadingPositionCovariance() {
-<span class="fc" id="L239">        return mUseReadingPositionCovariances;</span>
+<span class="fc" id="L285">        return mUseReadingPositionCovariances;</span>
     }
 
     /**
@@ -249,11 +295,11 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      */
     public void setUseReadingPositionCovariances(boolean useReadingPositionCovariances)
             throws LockedException {
-<span class="fc bfc" id="L252" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L253">            throw new LockedException();</span>
+<span class="fc bfc" id="L298" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L299">            throw new LockedException();</span>
         }
-<span class="fc" id="L255">        mUseReadingPositionCovariances = useReadingPositionCovariances;</span>
-<span class="fc" id="L256">    }</span>
+<span class="fc" id="L301">        mUseReadingPositionCovariances = useReadingPositionCovariances;</span>
+<span class="fc" id="L302">    }</span>
 
     /**
      * Indicates whether this instance is ready to start the estimation.
@@ -262,7 +308,7 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
     @Override
     public boolean isReady() {
         //readings must be valid
-<span class="fc" id="L265">        return areValidReadings(mReadings);</span>
+<span class="fc" id="L311">        return areValidReadings(mReadings);</span>
     }
 
     /**
@@ -274,57 +320,69 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
     @Override
     public void estimate() throws RadioSourceEstimationException, NotReadyException,
             LockedException {
-<span class="fc bfc" id="L277" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L278">            throw new LockedException();</span>
+<span class="fc bfc" id="L323" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L324">            throw new LockedException();</span>
         }
-<span class="fc bfc" id="L280" title="All 2 branches covered.">        if (!isReady()) {</span>
-<span class="fc" id="L281">            throw new NotReadyException();</span>
+<span class="fc bfc" id="L326" title="All 2 branches covered.">        if (!isReady()) {</span>
+<span class="fc" id="L327">            throw new NotReadyException();</span>
         }
 
         try {
-<span class="fc" id="L285">            mLocked = true;</span>
+<span class="fc" id="L331">            mLocked = true;</span>
 
-<span class="fc bfc" id="L287" title="All 2 branches covered.">            if (mListener != null) {</span>
-<span class="fc" id="L288">                mListener.onEstimateStart(this);</span>
+<span class="fc bfc" id="L333" title="All 2 branches covered.">            if (mListener != null) {</span>
+<span class="fc" id="L334">                mListener.onEstimateStart(this);</span>
             }
 
-<span class="fc" id="L291">            buildSolversIfNeeded();</span>
-<span class="fc" id="L292">            buildPositionsDistancesAndDistanceStandardDeviations();</span>
+<span class="fc" id="L337">            buildSolversIfNeeded();</span>
+<span class="fc" id="L338">            buildPositionsDistancesAndDistanceStandardDeviations();</span>
 
-<span class="fc bfc" id="L294" title="All 6 branches covered.">            if (mLinearSolver != null &amp;&amp;</span>
+<span class="pc bpc" id="L340" title="1 of 12 branches missed.">            if (((mUseHomogeneousLinearSolver &amp;&amp; mHomogeneousLinearSolver != null) ||</span>
+                    (!mUseHomogeneousLinearSolver &amp;&amp; mInhomogeneousLinearSolver != null)) &amp;&amp;
                     (mInitialPosition == null || !mNonLinearSolverEnabled)) {
                 //if no initial position is provided, use linear solver to estimate one
-<span class="fc" id="L297">                mLinearSolver.solve();</span>
-<span class="fc" id="L298">                mInitialPosition = mLinearSolver.getEstimatedPosition();</span>
+<span class="fc bfc" id="L344" title="All 2 branches covered.">                if (mUseHomogeneousLinearSolver) {</span>
+<span class="fc" id="L345">                    mHomogeneousLinearSolver.solve();</span>
+<span class="fc" id="L346">                    mInitialPosition = mHomogeneousLinearSolver.getEstimatedPosition();</span>
+                } else {
+<span class="fc" id="L348">                    mInhomogeneousLinearSolver.solve();</span>
+<span class="fc" id="L349">                    mInitialPosition = mInhomogeneousLinearSolver.getEstimatedPosition();</span>
+                }
             }
 
-<span class="fc bfc" id="L301" title="All 4 branches covered.">            if (mNonLinearSolver != null &amp;&amp; mNonLinearSolverEnabled) {</span>
-<span class="fc" id="L302">                mNonLinearSolver.setInitialPosition(mInitialPosition);</span>
-<span class="fc" id="L303">                mNonLinearSolver.solve();</span>
+<span class="fc bfc" id="L353" title="All 4 branches covered.">            if (mNonLinearSolver != null &amp;&amp; mNonLinearSolverEnabled) {</span>
+<span class="fc" id="L354">                mNonLinearSolver.setInitialPosition(mInitialPosition);</span>
+<span class="fc" id="L355">                mNonLinearSolver.solve();</span>
 
                 //get position and covariance
-<span class="fc" id="L306">                mEstimatedPositionCoordinates =</span>
-<span class="fc" id="L307">                        mNonLinearSolver.getEstimatedPositionCoordinates();</span>
-<span class="fc" id="L308">                mEstimatedPositionCovariance = mEstimatedCovariance =</span>
-<span class="fc" id="L309">                        mNonLinearSolver.getCovariance();</span>
+<span class="fc" id="L358">                mEstimatedPositionCoordinates =</span>
+<span class="fc" id="L359">                        mNonLinearSolver.getEstimatedPositionCoordinates();</span>
+<span class="fc" id="L360">                mEstimatedPositionCovariance = mEstimatedCovariance =</span>
+<span class="fc" id="L361">                        mNonLinearSolver.getCovariance();</span>
             } else {
                 //non linear solver disabled
-<span class="fc" id="L312">                mEstimatedPositionCoordinates =</span>
-<span class="pc bpc" id="L313" title="1 of 2 branches missed.">                        mLinearSolver != null ?</span>
-<span class="pc" id="L314">                                mLinearSolver.getEstimatedPositionCoordinates() : null;</span>
-<span class="fc" id="L315">                mEstimatedPositionCovariance = mEstimatedCovariance = null;</span>
+<span class="fc bfc" id="L364" title="All 2 branches covered.">                if (mUseHomogeneousLinearSolver) {</span>
+<span class="fc" id="L365">                    mEstimatedPositionCoordinates =</span>
+<span class="pc bpc" id="L366" title="1 of 2 branches missed.">                            mHomogeneousLinearSolver != null ?</span>
+<span class="pc" id="L367">                                    mHomogeneousLinearSolver.getEstimatedPositionCoordinates() : null;</span>
+                } else {
+<span class="fc" id="L369">                    mEstimatedPositionCoordinates =</span>
+<span class="pc bpc" id="L370" title="1 of 2 branches missed.">                            mInhomogeneousLinearSolver != null ?</span>
+<span class="pc" id="L371">                                    mInhomogeneousLinearSolver.getEstimatedPositionCoordinates() : null;</span>
+                }
+<span class="fc" id="L373">                mEstimatedPositionCovariance = mEstimatedCovariance = null;</span>
             }
 
-<span class="fc bfc" id="L318" title="All 2 branches covered.">            if (mListener != null) {</span>
-<span class="fc" id="L319">                mListener.onEstimateEnd(this);</span>
+<span class="fc bfc" id="L376" title="All 2 branches covered.">            if (mListener != null) {</span>
+<span class="fc" id="L377">                mListener.onEstimateEnd(this);</span>
             }
 
-<span class="fc" id="L322">        } catch (TrilaterationException e) {</span>
-<span class="fc" id="L323">            throw new RadioSourceEstimationException(e);</span>
+<span class="fc" id="L380">        } catch (TrilaterationException e) {</span>
+<span class="fc" id="L381">            throw new RadioSourceEstimationException(e);</span>
         } finally {
-<span class="fc" id="L325">            mLocked = false;</span>
+<span class="fc" id="L383">            mLocked = false;</span>
         }
-<span class="fc" id="L327">    }</span>
+<span class="fc" id="L385">    }</span>
 
     /**
      * Builds an instance of a linear trilateration solver if needed.
@@ -358,10 +416,10 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      * Build instances of trilateration solvers if needed.
      */
     private void buildSolversIfNeeded() {
-<span class="fc" id="L361">        buildLinearSolverIfNeeded();</span>
-<span class="fc" id="L362">        buildNonLinearSolverIfNeeded();</span>
-<span class="fc" id="L363">        buildAccuracyIfNeeded();</span>
-<span class="fc" id="L364">    }</span>
+<span class="fc" id="L419">        buildLinearSolverIfNeeded();</span>
+<span class="fc" id="L420">        buildNonLinearSolverIfNeeded();</span>
+<span class="fc" id="L421">        buildAccuracyIfNeeded();</span>
+<span class="fc" id="L422">    }</span>
 
     /**
      * Builds positions, distances and standard deviations of distances for the
@@ -370,54 +428,54 @@ public abstract class RangingRadioSourceEstimator&lt;S extends RadioSource, P ex
      */
     private void buildPositionsDistancesAndDistanceStandardDeviations()
             throws LockedException {
-<span class="fc" id="L373">        int min = getMinReadings();</span>
-<span class="pc bpc" id="L374" title="2 of 4 branches missed.">        if (mReadings == null || mReadings.size() &lt; min) {</span>
-<span class="nc" id="L375">            return;</span>
+<span class="fc" id="L431">        int min = getMinReadings();</span>
+<span class="pc bpc" id="L432" title="2 of 4 branches missed.">        if (mReadings == null || mReadings.size() &lt; min) {</span>
+<span class="nc" id="L433">            return;</span>
         }
 
-<span class="fc" id="L378">        List&lt;P&gt; positions = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L379">        List&lt;Double&gt; distances = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L380">        List&lt;Double&gt; distanceStandardDeviations = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L436">        List&lt;P&gt; positions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L437">        List&lt;Double&gt; distances = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L438">        List&lt;Double&gt; distanceStandardDeviations = new ArrayList&lt;&gt;();</span>
 
-<span class="fc bfc" id="L382" title="All 2 branches covered.">        for (RangingReadingLocated&lt;S, P&gt; reading : mReadings) {</span>
-<span class="fc" id="L383">            P position = reading.getPosition();</span>
-<span class="pc bpc" id="L384" title="1 of 2 branches missed.">            if (position == null) {</span>
-<span class="nc" id="L385">                return;</span>
+<span class="fc bfc" id="L440" title="All 2 branches covered.">        for (RangingReadingLocated&lt;S, P&gt; reading : mReadings) {</span>
+<span class="fc" id="L441">            P position = reading.getPosition();</span>
+<span class="pc bpc" id="L442" title="1 of 2 branches missed.">            if (position == null) {</span>
+<span class="nc" id="L443">                return;</span>
             }
 
-<span class="fc" id="L388">            double positionDistanceStandardDeviation = 0.0;</span>
-<span class="pc bpc" id="L389" title="1 of 6 branches missed.">            if (mUseReadingPositionCovariances &amp;&amp; mAccuracy != null &amp;&amp; reading.getPositionCovariance() != null) {</span>
+<span class="fc" id="L446">            double positionDistanceStandardDeviation = 0.0;</span>
+<span class="pc bpc" id="L447" title="1 of 6 branches missed.">            if (mUseReadingPositionCovariances &amp;&amp; mAccuracy != null &amp;&amp; reading.getPositionCovariance() != null) {</span>
                 try {
-<span class="fc" id="L391">                    mAccuracy.setCovarianceMatrix(reading.getPositionCovariance());</span>
-<span class="fc" id="L392">                    positionDistanceStandardDeviation = mAccuracy.getAverageAccuracy();</span>
-<span class="nc" id="L393">                } catch (NonSymmetricPositiveDefiniteMatrixException e) {</span>
-<span class="nc" id="L394">                    positionDistanceStandardDeviation = 0.0;</span>
-<span class="fc" id="L395">                }</span>
+<span class="fc" id="L449">                    mAccuracy.setCovarianceMatrix(reading.getPositionCovariance());</span>
+<span class="fc" id="L450">                    positionDistanceStandardDeviation = mAccuracy.getAverageAccuracy();</span>
+<span class="nc" id="L451">                } catch (NonSymmetricPositiveDefiniteMatrixException e) {</span>
+<span class="nc" id="L452">                    positionDistanceStandardDeviation = 0.0;</span>
+<span class="fc" id="L453">                }</span>
             }
 
-<span class="fc" id="L398">            double distance = reading.getDistance();</span>
-<span class="fc" id="L399">            Double distanceStandardDeviation = reading.getDistanceStandardDeviation();</span>
-<span class="fc bfc" id="L400" title="All 2 branches covered.">            if (distanceStandardDeviation == null) {</span>
-<span class="fc" id="L401">                distanceStandardDeviation =</span>
-<span class="fc" id="L402">                        NonLinearLeastSquaresTrilaterationSolver.DEFAULT_DISTANCE_STANDARD_DEVIATION;</span>
+<span class="fc" id="L456">            double distance = reading.getDistance();</span>
+<span class="fc" id="L457">            Double distanceStandardDeviation = reading.getDistanceStandardDeviation();</span>
+<span class="fc bfc" id="L458" title="All 2 branches covered.">            if (distanceStandardDeviation == null) {</span>
+<span class="fc" id="L459">                distanceStandardDeviation =</span>
+<span class="fc" id="L460">                        NonLinearLeastSquaresTrilaterationSolver.DEFAULT_DISTANCE_STANDARD_DEVIATION;</span>
             }
 
-<span class="fc bfc" id="L405" title="All 2 branches covered.">            if (mUseReadingPositionCovariances) {</span>
+<span class="fc bfc" id="L463" title="All 2 branches covered.">            if (mUseReadingPositionCovariances) {</span>
                 //assuming that ranging measure and position measure are statistically independent, the
                 //resulting variance would be the sum of their variances, when the resulting standard
                 //deviation is the square root of the resulting variance (which is the sum of the square of
                 //the standard deviations)
-<span class="fc" id="L410">                distanceStandardDeviation = Math.sqrt(Math.pow(distanceStandardDeviation, 2.0) +</span>
-<span class="fc" id="L411">                        Math.pow(positionDistanceStandardDeviation, 2.0));</span>
+<span class="fc" id="L468">                distanceStandardDeviation = Math.sqrt(Math.pow(distanceStandardDeviation, 2.0) +</span>
+<span class="fc" id="L469">                        Math.pow(positionDistanceStandardDeviation, 2.0));</span>
             }
 
-<span class="fc" id="L414">            positions.add(position);</span>
-<span class="fc" id="L415">            distances.add(distance);</span>
-<span class="fc" id="L416">            distanceStandardDeviations.add(distanceStandardDeviation);</span>
-<span class="fc" id="L417">        }</span>
+<span class="fc" id="L472">            positions.add(position);</span>
+<span class="fc" id="L473">            distances.add(distance);</span>
+<span class="fc" id="L474">            distanceStandardDeviations.add(distanceStandardDeviation);</span>
+<span class="fc" id="L475">        }</span>
 
-<span class="fc" id="L419">        setPositionsDistancesAndDistanceStandardDeviations(positions, distances,</span>
+<span class="fc" id="L477">        setPositionsDistancesAndDistanceStandardDeviations(positions, distances,</span>
                 distanceStandardDeviations);
-<span class="fc" id="L421">    }</span>
+<span class="fc" id="L479">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
