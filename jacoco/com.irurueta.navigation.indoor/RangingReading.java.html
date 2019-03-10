@@ -20,7 +20,13 @@ package com.irurueta.navigation.indoor;
  * access point or bluetooth beacon), indicating the distance to such source.
  * @param &lt;S&gt; a {@link RadioSource} type.
  */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
 public class RangingReading&lt;S extends RadioSource&gt; extends Reading&lt;S&gt; {
+
+    /**
+     * Default number of measurements.
+     */
+    public static final int DEFAULT_NUM_MEASUREMENTS = 1;
 
     /**
      * Distance in meters to the radio source.
@@ -33,20 +39,54 @@ public class RangingReading&lt;S extends RadioSource&gt; extends Reading&lt;S&gt
     private Double mDistanceStandardDeviation;
 
     /**
+     * Number of attempted measurements used in the RTT exchange.
+     */
+<span class="fc" id="L44">    private int mNumAttemptedMeasurements = DEFAULT_NUM_MEASUREMENTS;</span>
+
+    /**
+     * Number of successful measurements used to calculate the distance and standard
+     * deviation.
+     */
+<span class="fc" id="L50">    private int mNumSuccessfulMeasurements = DEFAULT_NUM_MEASUREMENTS;</span>
+
+    /**
      * Constructor.
      * @param source radio source associated to this reading.
      * @param distance distance in meters to the radio source.
      * @throws IllegalArgumentException if radio source data is null or distance is negative.
      */
     public RangingReading(S source, double distance) {
-<span class="fc" id="L42">        super(source);</span>
+<span class="fc" id="L59">        super(source);</span>
 
-<span class="fc bfc" id="L44" title="All 2 branches covered.">        if (distance &lt; 0.0) {</span>
-<span class="fc" id="L45">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">        if (distance &lt; 0.0) {</span>
+<span class="fc" id="L62">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L48">        mDistance = distance;</span>
-<span class="fc" id="L49">    }</span>
+<span class="fc" id="L65">        mDistance = distance;</span>
+<span class="fc" id="L66">    }</span>
+
+    /**
+     * Constructor.
+     * @param source radio source associated to this reading.
+     * @param distance distance in meters to the radio source.
+     * @param numAttemptedMeasurements number of attempted measurements used in the RTT exchange.
+     * @param numSuccessfulMeasurements number of successful measurements used to calculate the
+     *                                  distance and standard deviation.
+     * @throws IllegalArgumentException if radio source data is null, distance is negative,
+     * number of attempted measures is less than 1 or number of successful measures is negative.
+     */
+    public RangingReading(S source, double distance, int numAttemptedMeasurements,
+                          int numSuccessfulMeasurements) {
+<span class="fc" id="L80">        this(source, distance);</span>
+
+<span class="fc bfc" id="L82" title="All 4 branches covered.">        if (numAttemptedMeasurements &lt; DEFAULT_NUM_MEASUREMENTS ||</span>
+                numSuccessfulMeasurements &lt; 0) {
+<span class="fc" id="L84">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L87">        mNumAttemptedMeasurements = numAttemptedMeasurements;</span>
+<span class="fc" id="L88">        mNumSuccessfulMeasurements = numSuccessfulMeasurements;</span>
+<span class="fc" id="L89">    }</span>
 
     /**
      * Constructor.
@@ -58,21 +98,48 @@ public class RangingReading&lt;S extends RadioSource&gt; extends Reading&lt;S&gt
      */
     public RangingReading(S source, double distance,
                           Double distanceStandardDeviation) {
-<span class="fc" id="L61">        this(source, distance);</span>
+<span class="fc" id="L101">        this(source, distance);</span>
 
-<span class="fc bfc" id="L63" title="All 4 branches covered.">        if (distanceStandardDeviation != null &amp;&amp; distanceStandardDeviation &lt;= 0.0) {</span>
-<span class="fc" id="L64">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L103" title="All 4 branches covered.">        if (distanceStandardDeviation != null &amp;&amp; distanceStandardDeviation &lt;= 0.0) {</span>
+<span class="fc" id="L104">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L67">        mDistanceStandardDeviation = distanceStandardDeviation;</span>
-<span class="fc" id="L68">    }</span>
+<span class="fc" id="L107">        mDistanceStandardDeviation = distanceStandardDeviation;</span>
+<span class="fc" id="L108">    }</span>
+
+    /**
+     * Constructor.
+     * @param source radio source associated to this reading.
+     * @param distance distance in meters to the radio source.
+     * @param distanceStandardDeviation standard deviation of distance, if available.
+     * @param numAttemptedMeasurements number of attempted measurements used in the RTT exchange.
+     * @param numSuccessfulMeasurements number of successful measurements used to calculate the
+     *                                  distance and standard deviation.
+     * @throws IllegalArgumentException if radio source data is null, distance is negative or
+     * standard deviation is zero or negative, number of attempted measures is less
+     * than 1 or number of successful measures is negative.
+     */
+    public RangingReading(S source, double distance,
+                          Double distanceStandardDeviation,
+                          int numAttemptedMeasurements,
+                          int numSuccessfulMeasurements) {
+<span class="fc" id="L126">        this(source, distance, distanceStandardDeviation);</span>
+
+<span class="fc bfc" id="L128" title="All 4 branches covered.">        if (numAttemptedMeasurements &lt; DEFAULT_NUM_MEASUREMENTS ||</span>
+                numSuccessfulMeasurements &lt; 0) {
+<span class="fc" id="L130">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L133">        mNumAttemptedMeasurements = numAttemptedMeasurements;</span>
+<span class="fc" id="L134">        mNumSuccessfulMeasurements = numSuccessfulMeasurements;</span>
+<span class="fc" id="L135">    }</span>
 
     /**
      * Empty constructor.
      */
     protected RangingReading() {
-<span class="fc" id="L74">        super();</span>
-<span class="fc" id="L75">    }</span>
+<span class="fc" id="L141">        super();</span>
+<span class="fc" id="L142">    }</span>
 
     /**
      * Contains radio source reading type.
@@ -80,7 +147,7 @@ public class RangingReading&lt;S extends RadioSource&gt; extends Reading&lt;S&gt
      */
     @Override
     public ReadingType getType() {
-<span class="fc" id="L83">        return ReadingType.RANGING_READING;</span>
+<span class="fc" id="L150">        return ReadingType.RANGING_READING;</span>
     }
 
     /**
@@ -88,7 +155,7 @@ public class RangingReading&lt;S extends RadioSource&gt; extends Reading&lt;S&gt
      * @return distance in mters to the radio source.
      */
     public double getDistance() {
-<span class="fc" id="L91">        return mDistance;</span>
+<span class="fc" id="L158">        return mDistance;</span>
     }
 
     /**
@@ -96,7 +163,25 @@ public class RangingReading&lt;S extends RadioSource&gt; extends Reading&lt;S&gt
      * @return standard deviation of distance or null.
      */
     public Double getDistanceStandardDeviation() {
-<span class="fc" id="L99">        return mDistanceStandardDeviation;</span>
+<span class="fc" id="L166">        return mDistanceStandardDeviation;</span>
+    }
+
+    /**
+     * Gets number of attempted measurements used in the RTT exchange.
+     * @return number of attempted measurements used in the RTT exchange.
+     */
+    public int getNumAttemptedMeasurements() {
+<span class="fc" id="L174">        return mNumAttemptedMeasurements;</span>
+    }
+
+    /**
+     * Gets number of successful measurements used to calculate the distance and
+     * standard deviation.
+     * @return number of successful measurements used to calculate the distance and
+     * standard deviation.
+     */
+    public int getNumSuccessfulMeasurements() {
+<span class="fc" id="L184">        return mNumSuccessfulMeasurements;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
