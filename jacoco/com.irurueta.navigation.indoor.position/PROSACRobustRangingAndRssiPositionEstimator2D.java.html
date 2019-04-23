@@ -1,0 +1,552 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PROSACRobustRangingAndRssiPositionEstimator2D.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor.position</a> &gt; <span class="el_source">PROSACRobustRangingAndRssiPositionEstimator2D.java</span></div><h1>PROSACRobustRangingAndRssiPositionEstimator2D.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2019 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor.position;
+
+import com.irurueta.geometry.Point2D;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.indoor.RadioSource;
+import com.irurueta.navigation.indoor.RadioSourceLocated;
+import com.irurueta.navigation.indoor.RangingAndRssiFingerprint;
+import com.irurueta.navigation.indoor.RangingAndRssiReading;
+import com.irurueta.navigation.trilateration.PROSACRobustTrilateration2DSolver;
+import com.irurueta.numerical.robust.RobustEstimatorMethod;
+
+import java.util.List;
+
+/**
+ * Robustly estimates 2D position using located radio sources and their
+ * ranging+RSSI readings at unknown locations and using PROSAC algorithm to discard
+ * outliers.
+ * This kind of estimator can be used to robustly determine the 2D position of a given
+ * device by getting ranging+RSSI readings at an unknown location of different radio
+ * sources whose 2D locations are known.
+ */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
+public class PROSACRobustRangingAndRssiPositionEstimator2D extends
+        RobustRangingAndRssiPositionEstimator2D {
+
+    /**
+     * Quality scores corresponding to each provided located radio source.
+     * The larger the score value the better the quality of the radio source.
+     */
+    private double[] mSourceQualityScores;
+
+    /**
+     * Quality scores corresponding to each reading within provided fingerprint.
+     * The larger the score value the better the quality of the reading.
+     */
+    private double[] mFingerprintReadingsQualityScores;
+
+    /**
+     * Constructor.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D() {
+<span class="fc" id="L57">        super();</span>
+<span class="fc" id="L58">        init();</span>
+<span class="fc" id="L59">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sources located radio sources used for trilateration.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources) {
+<span class="fc" id="L70">        super();</span>
+<span class="fc" id="L71">        init();</span>
+<span class="fc" id="L72">        internalSetSources(sources);</span>
+<span class="fc" id="L73">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param fingerprint fingerprint containing ranging+RSSI readings at an unknown
+     *                    location for provided located radio sources.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint) {
+<span class="fc" id="L84">        super();</span>
+<span class="fc" id="L85">        init();</span>
+<span class="fc" id="L86">        internalSetFingerprint(fingerprint);</span>
+<span class="fc" id="L87">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sources       located radio sources used for trilateration.
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided located radio sources.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint) {
+<span class="fc" id="L101">        super();</span>
+<span class="fc" id="L102">        init();</span>
+<span class="fc" id="L103">        internalSetSources(sources);</span>
+<span class="fc" id="L104">        internalSetFingerprint(fingerprint);</span>
+<span class="fc" id="L105">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param listener listener in charge of handling events.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L114">        super(listener);</span>
+<span class="fc" id="L115">        init();</span>
+<span class="fc" id="L116">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sources   located radio sources used for trilateration.
+     * @param listener  listener in charge of handling events.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L129">        super(listener);</span>
+<span class="fc" id="L130">        init();</span>
+<span class="fc" id="L131">        internalSetSources(sources);</span>
+<span class="fc" id="L132">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided location radio sources.
+     * @param listener      listener in charge of handling events.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L145">        super(listener);</span>
+<span class="fc" id="L146">        init();</span>
+<span class="fc" id="L147">        internalSetFingerprint(fingerprint);</span>
+<span class="fc" id="L148">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sources       located radio sources used for trilateration.
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided located radio sources.
+     * @param listener      listener in charge of handling events.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is
+     * null or the number of provided sources is less than the required minimum.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L164">        super(listener);</span>
+<span class="fc" id="L165">        init();</span>
+<span class="fc" id="L166">        internalSetSources(sources);</span>
+<span class="fc" id="L167">        internalSetFingerprint(fingerprint);</span>
+<span class="fc" id="L168">    }</span>
+
+    /**
+     * Constructor.
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores) {
+<span class="fc" id="L183">        this();</span>
+<span class="fc" id="L184">        internalSetSourceQualityScores(sourceQualityScores);</span>
+<span class="fc" id="L185">        internalSetFingerprintReadingsQualityScores(fingerprintReadingQualityScores);</span>
+<span class="fc" id="L186">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources) {
+<span class="fc" id="L207">        this(sources);</span>
+<span class="fc" id="L208">        internalSetSourceQualityScores(sourceQualityScores);</span>
+<span class="fc" id="L209">        internalSetFingerprintReadingsQualityScores(fingerprintReadingQualityScores);</span>
+<span class="fc" id="L210">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param fingerprint                       fingerprint containing ranging+RSSI readings
+     *                                          at an unknown location for provided located
+     *                                          radio sources.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint) {
+<span class="fc" id="L231">        this(fingerprint);</span>
+<span class="fc" id="L232">        internalSetSourceQualityScores(sourceQualityScores);</span>
+<span class="fc" id="L233">        internalSetFingerprintReadingsQualityScores(fingerprintReadingQualityScores);</span>
+<span class="fc" id="L234">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided located radio sources.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint) {
+<span class="fc" id="L259">        this(sources, fingerprint);</span>
+<span class="fc" id="L260">        internalSetSourceQualityScores(sourceQualityScores);</span>
+<span class="fc" id="L261">        internalSetFingerprintReadingsQualityScores(fingerprintReadingQualityScores);</span>
+<span class="fc" id="L262">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param listener                          listener in charge of handling events.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L280">        this(listener);</span>
+<span class="fc" id="L281">        internalSetSourceQualityScores(sourceQualityScores);</span>
+<span class="fc" id="L282">        internalSetFingerprintReadingsQualityScores(fingerprintReadingQualityScores);</span>
+<span class="fc" id="L283">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @param listener                          listener in charge of handling events.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L306">        this(sources, listener);</span>
+<span class="fc" id="L307">        internalSetSourceQualityScores(sourceQualityScores);</span>
+<span class="fc" id="L308">        internalSetFingerprintReadingsQualityScores(fingerprintReadingQualityScores);</span>
+<span class="fc" id="L309">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided location radio sources.
+     * @param listener                          listener in charge of handling events.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L332">        this(fingerprint, listener);</span>
+<span class="fc" id="L333">        internalSetSourceQualityScores(sourceQualityScores);</span>
+<span class="fc" id="L334">        internalSetFingerprintReadingsQualityScores(fingerprintReadingQualityScores);</span>
+<span class="fc" id="L335">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided located radio sources.
+     * @param listener                          listener in charge of handling events.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is
+     * null or the number of provided sources is less than the required minimum.
+     */
+    public PROSACRobustRangingAndRssiPositionEstimator2D(double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L362">        this(sources, fingerprint, listener);</span>
+<span class="fc" id="L363">        internalSetSourceQualityScores(sourceQualityScores);</span>
+<span class="fc" id="L364">        internalSetFingerprintReadingsQualityScores(fingerprintReadingQualityScores);</span>
+<span class="fc" id="L365">    }</span>
+
+    /**
+     * Returns quality scores corresponding to each radio source.
+     * The larger the score value the better the quality of the sample.
+     *
+     * @return quality scores corresponding to each radio source.
+     */
+    public double[] getSourceQualityScores() {
+<span class="fc" id="L374">        return mSourceQualityScores;</span>
+    }
+
+    /**
+     * Sets quality scores corresponding to each radio source.
+     * The larger the score value the better the quality of the radio source.
+     *
+     * @param sourceQualityScores quality scores corresponding to each radio source.
+     * @throws LockedException          if this instance is locked.
+     * @throws IllegalArgumentException if provided quality scores length is smaller
+     *                                  than minimum required samples.
+     */
+    public void setSourceQualityScores(double[] sourceQualityScores)
+            throws LockedException {
+<span class="pc bpc" id="L388" title="1 of 2 branches missed.">        if (isLocked()) {</span>
+<span class="nc" id="L389">            throw new LockedException();</span>
+        }
+<span class="fc" id="L391">        internalSetSourceQualityScores(sourceQualityScores);</span>
+<span class="fc" id="L392">    }</span>
+
+    /**
+     * Gets quality scores corresponding to each reading within provided fingerprint.
+     * The larger the score value the better the quality of the reading.
+     * This implementation always returns null.
+     * Subclasses using quality scores must implement proper behavior.
+     *
+     * @return quality scores corresponding to each reading within provided
+     * fingerprint.
+     */
+    public double[] getFingerprintReadingsQualityScores() {
+<span class="fc" id="L404">        return mFingerprintReadingsQualityScores;</span>
+    }
+
+    /**
+     * Sets quality scores corresponding to each reading within provided fingerprint.
+     * The larger the score value the better the quality of the reading.
+     * This implementation makes no action.
+     * Subclasses using quality scores must implement proper behavior.
+     *
+     * @param fingerprintReadingsQualityScores quality scores corresponding to each
+     *                                         reading within provided fingerprint.
+     * @throws LockedException          if this instance is locked.
+     * @throws IllegalArgumentException if provided quality scores length is smaller
+     *                                  than minimum required samples.
+     */
+    public void setFingerprintReadingsQualityScores(
+            double[] fingerprintReadingsQualityScores) throws LockedException {
+<span class="pc bpc" id="L421" title="1 of 2 branches missed.">        if (isLocked()) {</span>
+<span class="nc" id="L422">            throw new LockedException();</span>
+        }
+<span class="fc" id="L424">        internalSetFingerprintReadingsQualityScores(fingerprintReadingsQualityScores);</span>
+<span class="fc" id="L425">    }</span>
+
+    /**
+     * Gets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on distance between estimated position and distances
+     * provided for each sample.
+     * @return threshold to determine whether samples are inliers or not.
+     */
+    public double getThreshold() {
+<span class="fc" id="L434">        return ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L435">                getThreshold();</span>
+    }
+
+    /**
+     * Sets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on distance between estimated position and distances
+     * provided for each sample.
+     * @param threshold threshold to determine whether samples are inliers or not.
+     * @throws IllegalArgumentException if provided value is equal or less than zero.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setThreshold(double threshold) throws LockedException {
+<span class="fc" id="L447">        ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L448">                setThreshold(threshold);</span>
+<span class="fc" id="L449">    }</span>
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     * @return true if inliers must be computed and kept, false if inliers
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepInliersEnabled() {
+<span class="fc" id="L457">        return ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L458">                isComputeAndKeepInliersEnabled();</span>
+    }
+
+    /**
+     * Specifies whether inliers must be computed and kept.
+     * @param computeAndKeepInliers true if inliers must be computed and kept,
+     *                              false if inliers only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
+            throws LockedException {
+<span class="fc" id="L469">        ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L470">                setComputeAndKeepInliersEnabled(computeAndKeepInliers);</span>
+<span class="fc" id="L471">    }</span>
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     * @return true if residuals must be computed and kept, false if residuals
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepResiduals() {
+<span class="fc" id="L479">        return ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L480">                isComputeAndKeepResiduals();</span>
+    }
+
+    /**
+     * Specifies whether residuals must be computed and kept.
+     * @param computeAndKeepResiduals true if residuals must be computed and kept,
+     *                                false if residuals only need to be computed but not kept.
+     * @throws LockedException if this solver is locked.
+     */
+    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
+            throws LockedException {
+<span class="fc" id="L491">        ((PROSACRobustTrilateration2DSolver)mTrilaterationSolver).</span>
+<span class="fc" id="L492">                setComputeAndKeepResidualsEnabled(computeAndKeepResiduals);</span>
+<span class="fc" id="L493">    }</span>
+
+    /**
+     * Returns method being used for robust estimation.
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+<span class="fc" id="L501">        return RobustEstimatorMethod.PROSAC;</span>
+    }
+
+    /**
+     * Initializes robust trilateration solver.
+     */
+    private void init() {
+<span class="fc" id="L508">        mTrilaterationSolver = new PROSACRobustTrilateration2DSolver(</span>
+                mTrilaterationSolverListener);
+<span class="fc" id="L510">    }</span>
+
+    /**
+     * Sets quality scores corresponding to each provided located radio source.
+     * This method is used internally and does not check whether instance is
+     * locked or not.
+     * @param sourceQualityScores quality scores to be set.
+     * @throws IllegalArgumentException if provided quality scores length
+     * is smaller than 3 samples.
+     */
+    private void internalSetSourceQualityScores(double[] sourceQualityScores) {
+<span class="fc bfc" id="L521" title="All 2 branches covered.">        if (sourceQualityScores == null ||</span>
+<span class="fc bfc" id="L522" title="All 2 branches covered.">                sourceQualityScores.length &lt; getMinRequiredSources()) {</span>
+<span class="fc" id="L523">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L526">        mSourceQualityScores = sourceQualityScores;</span>
+
+<span class="fc" id="L528">        buildPositionsDistancesDistanceStandardDeviationsAndQualityScores();</span>
+<span class="fc" id="L529">    }</span>
+
+    /**
+     * Sets quality scores corresponding to each provided reading within provided
+     * fingerprint.
+     * This method is used internally and does not check whether instance is locked
+     * or not.
+     * @param fingerprintReadingsQualityScores quality scores to be set.
+     * @throws IllegalArgumentException if provided quality scores lengt is
+     * smaller than 3 samples.
+     */
+    private void internalSetFingerprintReadingsQualityScores(
+            double[] fingerprintReadingsQualityScores) {
+<span class="fc bfc" id="L542" title="All 2 branches covered.">        if (fingerprintReadingsQualityScores == null ||</span>
+<span class="fc bfc" id="L543" title="All 2 branches covered.">                fingerprintReadingsQualityScores.length &lt; getMinRequiredSources()) {</span>
+<span class="fc" id="L544">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L547">        mFingerprintReadingsQualityScores = fingerprintReadingsQualityScores;</span>
+
+<span class="fc" id="L549">        buildPositionsDistancesDistanceStandardDeviationsAndQualityScores();</span>
+<span class="fc" id="L550">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

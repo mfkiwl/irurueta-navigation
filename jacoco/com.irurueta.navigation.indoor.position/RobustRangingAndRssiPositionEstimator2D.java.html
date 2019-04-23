@@ -1,0 +1,1020 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RobustRangingAndRssiPositionEstimator2D.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.indoor.position</a> &gt; <span class="el_source">RobustRangingAndRssiPositionEstimator2D.java</span></div><h1>RobustRangingAndRssiPositionEstimator2D.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2019 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.indoor.position;
+
+import com.irurueta.geometry.InhomogeneousPoint2D;
+import com.irurueta.geometry.Point2D;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.indoor.RadioSource;
+import com.irurueta.navigation.indoor.RadioSourceLocated;
+import com.irurueta.navigation.indoor.RangingAndRssiFingerprint;
+import com.irurueta.navigation.indoor.RangingAndRssiReading;
+import com.irurueta.numerical.robust.RobustEstimatorMethod;
+
+import java.util.List;
+
+/**
+ * Base class for robust ranging+RSSI 2D position estimators using located radio sources
+ * and their ranging+RSSI readings at unknown locations.
+ * These kind of estimators can be used to robustly determine the 2D position of a given
+ * device by getting ranging+RSSI readings at an unknown location of different radio
+ * sources whose locations are known.
+ * Implementations of this class should be able to detect and discard outliers in order
+ * to find the best solution.
+ */
+@SuppressWarnings({&quot;WeakerAccess&quot;, &quot;Duplicates&quot;})
+public abstract class RobustRangingAndRssiPositionEstimator2D extends
+        RobustRangingAndRssiPositionEstimator&lt;Point2D&gt; {
+
+    /**
+     * Constructor.
+     */
+    public RobustRangingAndRssiPositionEstimator2D() {
+<span class="fc" id="L46">        super();</span>
+<span class="fc" id="L47">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param listener listener in charge of handling events.
+     */
+    public RobustRangingAndRssiPositionEstimator2D(
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L56">        super(listener);</span>
+<span class="fc" id="L57">    }</span>
+
+    /**
+     * Gets minimum required number of located radio sources to perform trilateration.
+     *
+     * @return minimum required number of located radio sources to perform trilateration.
+     */
+    @Override
+    public int getMinRequiredSources() {
+<span class="fc" id="L66">        return Point2D.POINT2D_HOMOGENEOUS_COORDINATES_LENGTH;</span>
+    }
+
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param method robust estimator method.
+     * @return a robust 2D position estimator.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L78" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L80">                return new RANSACRobustRangingAndRssiPositionEstimator2D();</span>
+            case LMedS:
+<span class="fc" id="L82">                return new LMedSRobustRangingAndRssiPositionEstimator2D();</span>
+            case MSAC:
+<span class="fc" id="L84">                return new MSACRobustRangingAndRssiPositionEstimator2D();</span>
+            case PROSAC:
+<span class="fc" id="L86">                return new PROSACRobustRangingAndRssiPositionEstimator2D();</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L89">                return new PROMedSRobustRangingAndRssiPositionEstimator2D();</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sources   located radio sources used for trilateration.
+     * @param method    robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L105" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L107">                return new RANSACRobustRangingAndRssiPositionEstimator2D(sources);</span>
+            case LMedS:
+<span class="fc" id="L109">                return new LMedSRobustRangingAndRssiPositionEstimator2D(sources);</span>
+            case MSAC:
+<span class="fc" id="L111">                return new MSACRobustRangingAndRssiPositionEstimator2D(sources);</span>
+            case PROSAC:
+<span class="fc" id="L113">                return new PROSACRobustRangingAndRssiPositionEstimator2D(sources);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L116">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(sources);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided located radio sources.
+     * @param method        robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L132" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L134">                return new RANSACRobustRangingAndRssiPositionEstimator2D(fingerprint);</span>
+            case LMedS:
+<span class="fc" id="L136">                return new LMedSRobustRangingAndRssiPositionEstimator2D(fingerprint);</span>
+            case MSAC:
+<span class="fc" id="L138">                return new MSACRobustRangingAndRssiPositionEstimator2D(fingerprint);</span>
+            case PROSAC:
+<span class="fc" id="L140">                return new PROSACRobustRangingAndRssiPositionEstimator2D(fingerprint);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L143">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(fingerprint);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sources       located radio sources used for trilateration.
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided located radio sources.
+     * @param method        robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L162" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L164">                return new RANSACRobustRangingAndRssiPositionEstimator2D(sources, fingerprint);</span>
+            case LMedS:
+<span class="fc" id="L166">                return new LMedSRobustRangingAndRssiPositionEstimator2D(sources, fingerprint);</span>
+            case MSAC:
+<span class="fc" id="L168">                return new MSACRobustRangingAndRssiPositionEstimator2D(sources, fingerprint);</span>
+            case PROSAC:
+<span class="fc" id="L170">                return new PROSACRobustRangingAndRssiPositionEstimator2D(sources, fingerprint);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L173">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(sources, fingerprint);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param listener  listener in charge of handling events.
+     * @param method    robust estimator method.
+     * @return a robust 2D position estimator.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L187" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L189">                return new RANSACRobustRangingAndRssiPositionEstimator2D(listener);</span>
+            case LMedS:
+<span class="fc" id="L191">                return new LMedSRobustRangingAndRssiPositionEstimator2D(listener);</span>
+            case MSAC:
+<span class="fc" id="L193">                return new MSACRobustRangingAndRssiPositionEstimator2D(listener);</span>
+            case PROSAC:
+<span class="fc" id="L195">                return new PROSACRobustRangingAndRssiPositionEstimator2D(listener);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L198">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(listener);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sources   located radio sources used for trilateration.
+     * @param listener  listener in charge of handling events.
+     * @param method    robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L216" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L218">                return new RANSACRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        listener);
+            case LMedS:
+<span class="fc" id="L221">                return new LMedSRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        listener);
+            case MSAC:
+<span class="fc" id="L224">                return new MSACRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        listener);
+            case PROSAC:
+<span class="fc" id="L227">                return new PROSACRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L231">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided located radio sources.
+     * @param listener      listener in charge of handling events.
+     * @param method        robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L250" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L252">                return new RANSACRobustRangingAndRssiPositionEstimator2D(fingerprint,</span>
+                        listener);
+            case LMedS:
+<span class="fc" id="L255">                return new LMedSRobustRangingAndRssiPositionEstimator2D(fingerprint,</span>
+                        listener);
+            case MSAC:
+<span class="fc" id="L258">                return new MSACRobustRangingAndRssiPositionEstimator2D(fingerprint,</span>
+                        listener);
+            case PROSAC:
+<span class="fc" id="L261">                return new PROSACRobustRangingAndRssiPositionEstimator2D(fingerprint,</span>
+                        listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L265">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(fingerprint,</span>
+                        listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sources       located radio sources used for trilateration.
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided located radio sources.
+     * @param listener      listener in charge of handling events.
+     * @param method        robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L287" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L289">                return new RANSACRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        fingerprint, listener);
+            case LMedS:
+<span class="fc" id="L292">                return new LMedSRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        fingerprint, listener);
+            case MSAC:
+<span class="fc" id="L295">                return new MSACRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        fingerprint, listener);
+            case PROSAC:
+<span class="fc" id="L298">                return new PROSACRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        fingerprint, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L302">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        fingerprint, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param method                            robust estimator method.
+     * @return a robust 2D position estimator.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L325" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L327">                return new RANSACRobustRangingAndRssiPositionEstimator2D();</span>
+            case LMedS:
+<span class="fc" id="L329">                return new LMedSRobustRangingAndRssiPositionEstimator2D();</span>
+            case MSAC:
+<span class="fc" id="L331">                return new MSACRobustRangingAndRssiPositionEstimator2D();</span>
+            case PROSAC:
+<span class="fc" id="L333">                return new PROSACRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores);
+            case PROMedS:
+            default:
+<span class="fc" id="L337">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @param method                            robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L365" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L367">                return new RANSACRobustRangingAndRssiPositionEstimator2D(sources);</span>
+            case LMedS:
+<span class="fc" id="L369">                return new LMedSRobustRangingAndRssiPositionEstimator2D(sources);</span>
+            case MSAC:
+<span class="fc" id="L371">                return new MSACRobustRangingAndRssiPositionEstimator2D(sources);</span>
+            case PROSAC:
+<span class="fc" id="L373">                return new PROSACRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        sources);
+            case PROMedS:
+            default:
+<span class="fc" id="L378">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        sources);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided located radio sources.
+     * @param method                            robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L407" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L409">                return new RANSACRobustRangingAndRssiPositionEstimator2D(fingerprint);</span>
+            case LMedS:
+<span class="fc" id="L411">                return new LMedSRobustRangingAndRssiPositionEstimator2D(fingerprint);</span>
+            case MSAC:
+<span class="fc" id="L413">                return new MSACRobustRangingAndRssiPositionEstimator2D(fingerprint);</span>
+            case PROSAC:
+<span class="fc" id="L415">                return new PROSACRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        fingerprint);
+            case PROMedS:
+            default:
+<span class="fc" id="L420">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        fingerprint);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided located radio sources.
+     * @param method                            robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L453" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L455">                return new RANSACRobustRangingAndRssiPositionEstimator2D(sources, fingerprint);</span>
+            case LMedS:
+<span class="fc" id="L457">                return new LMedSRobustRangingAndRssiPositionEstimator2D(sources, fingerprint);</span>
+            case MSAC:
+<span class="fc" id="L459">                return new MSACRobustRangingAndRssiPositionEstimator2D(sources, fingerprint);</span>
+            case PROSAC:
+<span class="fc" id="L461">                return new PROSACRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        sources, fingerprint);
+            case PROMedS:
+            default:
+<span class="fc" id="L466">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        sources, fingerprint);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param listener                          listener in charge of handling events.
+     * @param method                            robust estimator method.
+     * @return a robust 2D position estimator.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L492" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L494">                return new RANSACRobustRangingAndRssiPositionEstimator2D(listener);</span>
+            case LMedS:
+<span class="fc" id="L496">                return new LMedSRobustRangingAndRssiPositionEstimator2D(listener);</span>
+            case MSAC:
+<span class="fc" id="L498">                return new MSACRobustRangingAndRssiPositionEstimator2D(listener);</span>
+            case PROSAC:
+<span class="fc" id="L500">                return new PROSACRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L505">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @param listener                          listener in charge of handling events.
+     * @param method                            robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L536" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L538">                return new RANSACRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        listener);
+            case LMedS:
+<span class="fc" id="L541">                return new LMedSRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        listener);
+            case MSAC:
+<span class="fc" id="L544">                return new MSACRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        listener);
+            case PROSAC:
+<span class="fc" id="L547">                return new PROSACRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        sources, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L552">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        sources, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided located radio sources.
+     * @param listener                          listener in charge of handling events.
+     * @param method                            robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L583" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L585">                return new RANSACRobustRangingAndRssiPositionEstimator2D(fingerprint,</span>
+                        listener);
+            case LMedS:
+<span class="fc" id="L588">                return new LMedSRobustRangingAndRssiPositionEstimator2D(fingerprint,</span>
+                        listener);
+            case MSAC:
+<span class="fc" id="L591">                return new MSACRobustRangingAndRssiPositionEstimator2D(fingerprint,</span>
+                        listener);
+            case PROSAC:
+<span class="fc" id="L594">                return new PROSACRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        fingerprint, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L599">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        fingerprint, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided located radio sources.
+     * @param listener                          listener in charge of handling events.
+     * @param method                            robust estimator method.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L634" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L636">                return new RANSACRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        fingerprint, listener);
+            case LMedS:
+<span class="fc" id="L639">                return new LMedSRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        fingerprint, listener);
+            case MSAC:
+<span class="fc" id="L642">                return new MSACRobustRangingAndRssiPositionEstimator2D(sources,</span>
+                        fingerprint, listener);
+            case PROSAC:
+<span class="fc" id="L645">                return new PROSACRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        sources, fingerprint, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L650">                return new PROMedSRobustRangingAndRssiPositionEstimator2D(</span>
+                        sourceQualityScores, fingerprintReadingQualityScores,
+                        sources, fingerprint, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @return a robust 2D position estimator.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create() {
+<span class="fc" id="L662">        return create(DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sources   located radio sources used for trilateration.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources) {
+<span class="fc" id="L675">        return create(sources, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided located radio sources.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint) {
+<span class="fc" id="L688">        return create(fingerprint, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sources       located radio sources used for trilateration.
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided located radio sources.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint) {
+<span class="fc" id="L704">        return create(sources, fingerprint, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param listener  listener in charge of handling events.
+     * @return a robust 2D position estimator.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L715">        return create(listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sources   located radio sources used for trilateration.
+     * @param listener  listener in charge of handling events.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L730">        return create(sources, listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided located radio sources.
+     * @param listener      listener in charge of handling events.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L745">        return create(fingerprint, listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sources       located radio sources used for trilateration.
+     * @param fingerprint   fingerprint containing ranging+RSSI readings at an unknown
+     *                      location for provided located radio sources.
+     * @param listener      listener in charge of handling events.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L763">        return create(sources, fingerprint, listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @return a robust 2D position estimator.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores) {
+<span class="fc" id="L782">        return create(sourceQualityScores, fingerprintReadingQualityScores,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources) {
+<span class="fc" id="L807">        return create(sourceQualityScores, fingerprintReadingQualityScores,</span>
+                sources, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided located radio sources.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint) {
+<span class="fc" id="L832">        return create(sourceQualityScores, fingerprintReadingQualityScores,</span>
+                fingerprint, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided located radio sources.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint) {
+<span class="fc" id="L861">        return create(sourceQualityScores, fingerprintReadingQualityScores,</span>
+                sources, fingerprint, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param listener                          listener in charge of handling events.
+     * @return a robust 2D position estimator.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L883">        return create(sourceQualityScores, fingerprintReadingQualityScores,</span>
+                listener, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @param listener                          listener in charge of handling events.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided sources is null or the number of
+     * provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L910">        return create(sourceQualityScores, fingerprintReadingQualityScores,</span>
+                sources, listener, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided located radio sources.
+     * @param listener                          listener in charge of handling events.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if provided fingerprint is null.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L937">        return create(sourceQualityScores, fingerprintReadingQualityScores,</span>
+                fingerprint, listener, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D position estimator.
+     *
+     * @param sourceQualityScores               quality scores corresponding to
+     *                                          each provided located radio source.
+     *                                          The larger the score value the better
+     *                                          the quality of the radio source.
+     * @param fingerprintReadingQualityScores   quality scores corresponding to readings
+     *                                          within provided fingerprint. The larger
+     *                                          the score the better the quality of the
+     *                                          reading.
+     * @param sources                           located radio sources used for
+     *                                          trilateration.
+     * @param fingerprint                       fingerprint containing ranging+RSSI
+     *                                          readings at an unknown location for
+     *                                          provided located radio sources.
+     * @param listener                          listener in charge of handling events.
+     * @return a robust 2D position estimator.
+     * @throws IllegalArgumentException if either provided sources or fingerprint is null
+     * or the number of provided sources is less than the required minimum.
+     */
+    public static RobustRangingAndRssiPositionEstimator2D create(
+            double[] sourceQualityScores,
+            double[] fingerprintReadingQualityScores,
+            List&lt;? extends RadioSourceLocated&lt;Point2D&gt;&gt; sources,
+            RangingAndRssiFingerprint&lt;? extends RadioSource, ? extends RangingAndRssiReading&lt;? extends RadioSource&gt;&gt; fingerprint,
+            RobustRangingAndRssiPositionEstimatorListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L968">        return create(sourceQualityScores, fingerprintReadingQualityScores,</span>
+                sources, fingerprint, listener, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Sets positions, distances and standard deviations of distances on internal
+     * trilateration solver.
+     *
+     * @param positions                     positions to be set.
+     * @param distances                     distances to be set.
+     * @param distanceStandardDeviations    standard deviations of distances to be set.
+     * @param distanceQualityScores         distance quality scores or null if not
+     *                                      required.
+     */
+    @Override
+    protected void setPositionsDistancesDistanceStandardDeviationsAndQualityScores(
+            List&lt;Point2D&gt; positions, List&lt;Double&gt; distances,
+            List&lt;Double&gt; distanceStandardDeviations,
+            List&lt;Double&gt; distanceQualityScores) {
+<span class="fc" id="L987">        int size = positions.size();</span>
+<span class="fc" id="L988">        Point2D[] positionsArray = new InhomogeneousPoint2D[size];</span>
+<span class="fc" id="L989">        positionsArray = positions.toArray(positionsArray);</span>
+
+<span class="fc" id="L991">        double[] distancesArray = new double[size];</span>
+<span class="fc" id="L992">        double[] distanceStandardDeviationsArray = new double[size];</span>
+
+<span class="fc" id="L994">        double[] qualityScoresArray = null;</span>
+<span class="pc bpc" id="L995" title="1 of 2 branches missed.">        if (distanceQualityScores != null) {</span>
+<span class="fc" id="L996">            qualityScoresArray = new double[size];</span>
+        }
+
+<span class="fc bfc" id="L999" title="All 2 branches covered.">        for (int i = 0; i &lt; size; i++) {</span>
+<span class="fc" id="L1000">            distancesArray[i] = distances.get(i);</span>
+<span class="fc" id="L1001">            distanceStandardDeviationsArray[i] = distanceStandardDeviations.get(i);</span>
+
+<span class="pc bpc" id="L1003" title="1 of 2 branches missed.">            if (qualityScoresArray != null) {</span>
+<span class="fc" id="L1004">                qualityScoresArray[i] = distanceQualityScores.get(i);</span>
+            }
+        }
+
+        try {
+<span class="fc" id="L1009">            mTrilaterationSolver.setPositionsDistancesAndStandardDeviations(</span>
+                    positionsArray, distancesArray, distanceStandardDeviationsArray);
+
+<span class="pc bpc" id="L1012" title="1 of 2 branches missed.">            if (qualityScoresArray != null) {</span>
+<span class="fc" id="L1013">                mTrilaterationSolver.setQualityScores(qualityScoresArray);</span>
+            }
+<span class="nc" id="L1015">        } catch (LockedException e) {</span>
+<span class="nc" id="L1016">            throw new IllegalArgumentException(e);</span>
+<span class="fc" id="L1017">        }</span>
+<span class="fc" id="L1018">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
