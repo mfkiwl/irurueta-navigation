@@ -172,88 +172,100 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
     protected Matrix mEstimatedPositionCovariance;
 
     /**
+     * Size of subsets to be checked during robust estimation.
+     */
+    protected int mPreliminarySubsetSize;
+
+    /**
      * Constructor.
      */
-<span class="fc" id="L177">    public RobustRadioSourceEstimator() { }</span>
+<span class="fc" id="L182">    public RobustRadioSourceEstimator() { }</span>
 
     /**
      * Constructor.
      * Sets located radio signal readings belonging to the same radio source.
+     *
      * @param readings radio signal readings belonging to the same
      *                 radio source.
      * @throws IllegalArgumentException if readings are not valid.
      */
-<span class="fc" id="L186">    public RobustRadioSourceEstimator(List&lt;? extends R&gt; readings) {</span>
-<span class="fc" id="L187">        internalSetReadings(readings);</span>
-<span class="fc" id="L188">    }</span>
+<span class="fc" id="L192">    public RobustRadioSourceEstimator(List&lt;? extends R&gt; readings) {</span>
+<span class="fc" id="L193">        internalSetReadings(readings);</span>
+<span class="fc" id="L194">    }</span>
 
     /**
      * Constructor.
+     *
      * @param listener listener in charge of attending events raised by this instance.
      */
-<span class="fc" id="L194">    public RobustRadioSourceEstimator(L listener) {</span>
-<span class="fc" id="L195">        mListener = listener;</span>
-<span class="fc" id="L196">    }</span>
+<span class="fc" id="L201">    public RobustRadioSourceEstimator(L listener) {</span>
+<span class="fc" id="L202">        mListener = listener;</span>
+<span class="fc" id="L203">    }</span>
 
     /**
      * Constructor.
      * Sets located radio signal readings belonging to the same radio source.
+     *
      * @param readings radio signal readings belonging to the same
      *                 radio source.
      * @param listener listener in charge of attending events raised by this instance.
      * @throws IllegalArgumentException if readings are not valid.
      */
     public RobustRadioSourceEstimator(List&lt;? extends R&gt; readings, L listener) {
-<span class="fc" id="L207">        this(readings);</span>
-<span class="fc" id="L208">        mListener = listener;</span>
-<span class="fc" id="L209">    }</span>
+<span class="fc" id="L215">        this(readings);</span>
+<span class="fc" id="L216">        mListener = listener;</span>
+<span class="fc" id="L217">    }</span>
 
     /**
      * Indicates whether estimator is locked during estimation.
+     *
      * @return true if estimator is locked, false otherwise.
      */
     public boolean isLocked() {
-<span class="fc" id="L216">        return mLocked;</span>
+<span class="fc" id="L225">        return mLocked;</span>
     }
 
     /**
      * Returns amount of progress variation before notifying a progress change during
      * estimation.
+     *
      * @return amount of progress variation before notifying a progress change during
      * estimation.
      */
     public float getProgressDelta() {
-<span class="fc" id="L226">        return mProgressDelta;</span>
+<span class="fc" id="L236">        return mProgressDelta;</span>
     }
 
     /**
      * Sets amount of progress variation before notifying a progress change during
      * estimation.
+     *
      * @param progressDelta amount of progress variation before notifying a progress
      *                      change during estimation.
      * @throws IllegalArgumentException if progress delta is less than zero or greater than 1.
      * @throws LockedException if this estimator is locked.
      */
     public void setProgressDelta(float progressDelta) throws LockedException {
-<span class="fc bfc" id="L238" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L239">            throw new LockedException();</span>
+<span class="fc bfc" id="L249" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L250">            throw new LockedException();</span>
         }
-<span class="fc bfc" id="L241" title="All 4 branches covered.">        if (progressDelta &lt; MIN_PROGRESS_DELTA ||</span>
+<span class="fc bfc" id="L252" title="All 4 branches covered.">        if (progressDelta &lt; MIN_PROGRESS_DELTA ||</span>
                 progressDelta &gt; MAX_PROGRESS_DELTA) {
-<span class="fc" id="L243">            throw new IllegalArgumentException();</span>
+<span class="fc" id="L254">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L245">        mProgressDelta = progressDelta;</span>
-<span class="fc" id="L246">    }</span>
+<span class="fc" id="L256">        mProgressDelta = progressDelta;</span>
+<span class="fc" id="L257">    }</span>
 
     /**
      * Returns amount of confidence expressed as a value between 0.0 and 1.0
      * (which is equivalent to 100%). The amount of confidence indicates the probability
      * that the estimated result is correct. Usually this value will be close to 1.0, but
      * not exactly 1.0.
+     *
      * @return amount of confidence as a value between 0.0 and 1.0.
      */
     public double getConfidence() {
-<span class="fc" id="L256">        return mConfidence;</span>
+<span class="fc" id="L268">        return mConfidence;</span>
     }
 
     /**
@@ -261,111 +273,121 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
      * equivalent to 100%). The amount of confidence indicates the probability that
      * the estimated result is correct. Usually this value will be close to 1.0, but
      * not exactly 1.0.
+     *
      * @param confidence confidence to be set as a value between 0.0 and 1.0.
      * @throws IllegalArgumentException if provided value is not between 0.0 and 1.0.
      * @throws LockedException if estimator is locked.
      */
     public void setConfidence(double confidence) throws LockedException {
-<span class="fc bfc" id="L269" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L270">            throw new LockedException();</span>
+<span class="fc bfc" id="L282" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L283">            throw new LockedException();</span>
         }
-<span class="fc bfc" id="L272" title="All 4 branches covered.">        if (confidence &lt; MIN_CONFIDENCE || confidence &gt; MAX_CONFIDENCE) {</span>
-<span class="fc" id="L273">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L285" title="All 4 branches covered.">        if (confidence &lt; MIN_CONFIDENCE || confidence &gt; MAX_CONFIDENCE) {</span>
+<span class="fc" id="L286">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L275">        mConfidence = confidence;</span>
-<span class="fc" id="L276">    }</span>
+<span class="fc" id="L288">        mConfidence = confidence;</span>
+<span class="fc" id="L289">    }</span>
 
     /**
      * Returns maximum allowed number of iterations. If maximum allowed number of
      * iterations is achieved without converging to a result when calling estimate(),
      * a RobustEstimatorException will be raised.
+     *
      * @return maximum allowed number of iterations.
      */
     public int getMaxIterations() {
-<span class="fc" id="L285">        return mMaxIterations;</span>
+<span class="fc" id="L299">        return mMaxIterations;</span>
     }
 
     /**
      * Sets maximum allowed number of iterations. When the maximum number of iterations
      * is exceeded, result will not be available, however an approximate result will be
      * available for retrieval.
+     *
      * @param maxIterations maximum allowed number of iterations to be set.
      * @throws IllegalArgumentException if provided value is less than 1.
      * @throws LockedException if this estimator is locked.
      */
     public void setMaxIterations(int maxIterations) throws LockedException {
-<span class="fc bfc" id="L297" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L298">            throw new LockedException();</span>
+<span class="fc bfc" id="L312" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L313">            throw new LockedException();</span>
         }
-<span class="fc bfc" id="L300" title="All 2 branches covered.">        if (maxIterations &lt; MIN_ITERATIONS) {</span>
-<span class="fc" id="L301">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L315" title="All 2 branches covered.">        if (maxIterations &lt; MIN_ITERATIONS) {</span>
+<span class="fc" id="L316">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L303">        mMaxIterations = maxIterations;</span>
-<span class="fc" id="L304">    }</span>
+<span class="fc" id="L318">        mMaxIterations = maxIterations;</span>
+<span class="fc" id="L319">    }</span>
 
     /**
      * Gets data related to inliers found after estimation.
+     *
      * @return data related to inliers found after estimation.
      */
     public InliersData getInliersData() {
-<span class="fc" id="L311">        return mInliersData;</span>
+<span class="fc" id="L327">        return mInliersData;</span>
     }
 
     /**
      * Indicates whether result must be refined using a non-linear solver over found inliers.
+     *
      * @return true to refine result, false to simply use result found by robust estimator
      * without further refining.
      */
     public boolean isResultRefined() {
-<span class="fc" id="L320">        return mRefineResult;</span>
+<span class="fc" id="L337">        return mRefineResult;</span>
     }
 
     /**
      * Specifies whether result must be refined using a non-linear solver over found inliers.
+     *
      * @param refineResult true to refine result, false to simply use result found by robust
      *                     estimator without further refining.
      * @throws LockedException if estimator is locked.
      */
     public void setResultRefined(boolean refineResult) throws LockedException {
-<span class="fc bfc" id="L330" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L331">            throw new LockedException();</span>
+<span class="fc bfc" id="L348" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L349">            throw new LockedException();</span>
         }
-<span class="fc" id="L333">        mRefineResult = refineResult;</span>
-<span class="fc" id="L334">    }</span>
+<span class="fc" id="L351">        mRefineResult = refineResult;</span>
+<span class="fc" id="L352">    }</span>
 
     /**
      * Indicates whether covariance must be kept after refining result.
      * This setting is only taken into account if result is refined.
+     *
      * @return true if covariance must be kept after refining result, false otherwise.
      */
     public boolean isCovarianceKept() {
-<span class="fc" id="L342">        return mKeepCovariance;</span>
+<span class="fc" id="L361">        return mKeepCovariance;</span>
     }
 
     /**
      * Specifies whether covariance must be kept after refining result.
      * This setting is only taken into account if result is refined.
+     *
      * @param keepCovariance true if covariance must be kept after refining result,
      *                       false otherwise.
      * @throws LockedException if estimator is locked.
      */
     public void setCovarianceKept(boolean keepCovariance) throws LockedException {
-<span class="fc bfc" id="L353" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L354">            throw new LockedException();</span>
+<span class="fc bfc" id="L373" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L374">            throw new LockedException();</span>
         }
-<span class="fc" id="L356">        mKeepCovariance = keepCovariance;</span>
-<span class="fc" id="L357">    }</span>
+<span class="fc" id="L376">        mKeepCovariance = keepCovariance;</span>
+<span class="fc" id="L377">    }</span>
 
     /**
      * Gets signal readings belonging to the same radio source.
+     *
      * @return signal readings belonging to the same radio source.
      */
     public List&lt;? extends R&gt; getReadings() {
-<span class="fc" id="L364">        return mReadings;</span>
+<span class="fc" id="L385">        return mReadings;</span>
     }
 
     /**
      * Sets signal readings belonging to the same radio source.
+     *
      * @param readings signal readings belonging to the same
      *                 radio source.
      * @throws LockedException if estimator is locked.
@@ -373,34 +395,36 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
      */
     public void setReadings(List&lt;? extends R&gt; readings)
             throws LockedException {
-<span class="fc bfc" id="L376" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L377">            throw new LockedException();</span>
+<span class="fc bfc" id="L398" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L399">            throw new LockedException();</span>
         }
 
-<span class="fc" id="L380">        internalSetReadings(readings);</span>
-<span class="fc" id="L381">    }</span>
+<span class="fc" id="L402">        internalSetReadings(readings);</span>
+<span class="fc" id="L403">    }</span>
 
     /**
      * Gets listener in charge of attending events raised by this instance.
+     *
      * @return listener in charge of attending events raised by this instance.
      */
     public L getListener() {
-<span class="fc" id="L388">        return mListener;</span>
+<span class="fc" id="L411">        return mListener;</span>
     }
 
     /**
      * Sets listener in charge of attending events raised by this instance.
+     *
      * @param listener listener in charge of attending events raised by this
      *                 instance.
      * @throws LockedException if estimator is locked.
      */
     public void setListener(L listener) throws LockedException {
-<span class="fc bfc" id="L398" title="All 2 branches covered.">        if (isLocked()) {</span>
-<span class="fc" id="L399">            throw new LockedException();</span>
+<span class="fc bfc" id="L422" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L423">            throw new LockedException();</span>
         }
 
-<span class="fc" id="L402">        mListener = listener;</span>
-<span class="fc" id="L403">    }</span>
+<span class="fc" id="L426">        mListener = listener;</span>
+<span class="fc" id="L427">    }</span>
 
     /**
      * Returns quality scores corresponding to each pair of
@@ -408,10 +432,11 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
      * The larger the score value the better the quality of the sample.
      * This implementation always returns null.
      * Subclasses using quality scores must implement proper behavior.
+     *
      * @return quality scores corresponding to each sample.
      */
     public double[] getQualityScores() {
-<span class="fc" id="L414">        return null;</span>
+<span class="fc" id="L439">        return null;</span>
     }
 
     /**
@@ -420,6 +445,7 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
      * The larger the score value the better the quality of the sample.
      * This implementation makes no action.
      * Subclasses using quality scores must implement proper behaviour.
+     *
      * @param qualityScores quality scores corresponding to each pair of
      *                      matched points.
      * @throws IllegalArgumentException if provided quality scores length
@@ -428,7 +454,36 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
      * estimation is already in progress.
      */
     public void setQualityScores(double[] qualityScores)
-<span class="fc" id="L431">            throws LockedException { }</span>
+<span class="fc" id="L457">            throws LockedException { }</span>
+
+    /**
+     * Gets size of subsets to be checked during robust estimation.
+     * This has to be at least {@link #getMinReadings()}
+     *
+     * @return size of subsets to be checked during robust estimation.
+     */
+    public int getPreliminarySubsetSize() {
+<span class="fc" id="L466">        return mPreliminarySubsetSize;</span>
+    }
+
+    /**
+     * Sets size of subsets to be checked during estimation.
+     * This has to be at least {@link #getMinReadings()}.
+     *
+     * @param preliminarySubsetSize size of subsets to be checked during robust estimation.
+     * @throws LockedException if instance is busy solving the lateration problem.
+     * @throws IllegalArgumentException if provided value is less than {@link #getMinReadings()}.
+     */
+    public void setPreliminarySubsetSize(int preliminarySubsetSize) throws LockedException {
+<span class="fc bfc" id="L478" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L479">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L481" title="All 2 branches covered.">        if (preliminarySubsetSize &lt; getMinReadings()) {</span>
+<span class="fc" id="L482">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L485">        mPreliminarySubsetSize = preliminarySubsetSize;</span>
+<span class="fc" id="L486">    }</span>
 
     /**
      * Gets covariance for estimated position, power and pathloss.
@@ -437,43 +492,48 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
      * then follows transmitted power variance, and finally
      * the last element contains pathloss exponent variance.
      * This is only available when result has been refined and covariance is kept.
+     *
      * @return covariance for estimated position and power.
      */
     public Matrix getCovariance() {
-<span class="fc" id="L443">        return mCovariance;</span>
+<span class="fc" id="L499">        return mCovariance;</span>
     }
 
     /**
      * Gets estimated position covariance.
      * Size of this matrix will depend on the number of dimensions
-     * of estimated position (either 2 or 3).*
+     * of estimated position (either 2 or 3).
      * This is only available when result has been refined and covariance is kept.
+     *
      * @return estimated position covariance.
      */
     public Matrix getEstimatedPositionCovariance() {
-<span class="fc" id="L454">        return mEstimatedPositionCovariance;</span>
+<span class="fc" id="L511">        return mEstimatedPositionCovariance;</span>
     }
 
     /**
      * Gets estimated position.
+     *
      * @return estimated position.
      */
     public P getEstimatedPosition() {
-<span class="fc" id="L462">        return mEstimatedPosition;</span>
+<span class="fc" id="L520">        return mEstimatedPosition;</span>
     }
 
     /**
      * Indicates whether readings are valid or not.
      * Readings are considered valid when there are enough readings.
+     *
      * @param readings readings to be validated.
      * @return true if readings are valid, false otherwise.
      */
     public boolean areValidReadings(List&lt;? extends R&gt; readings) {
-<span class="fc bfc" id="L472" title="All 4 branches covered.">        return readings != null &amp;&amp; readings.size() &gt;= getMinReadings();</span>
+<span class="fc bfc" id="L531" title="All 4 branches covered.">        return readings != null &amp;&amp; readings.size() &gt;= getMinReadings();</span>
     }
 
     /**
      * Indicates whether this instance is ready to start the estimation.
+     *
      * @return true if this instance is ready, false otherwise.
      */
     public abstract boolean isReady();
@@ -484,12 +544,14 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
      * This value depends on the number of parameters to
      * be estimated, but for position only, this is 3
      * readings for 2D, and 4 readings for 3D.
+     *
      * @return minimum required number of readings.
      */
     public abstract int getMinReadings();
 
     /**
      * Gets number of dimensions of position points.
+     *
      * @return number of dimensions of position points.
      */
     public abstract int getNumberOfDimensions();
@@ -497,6 +559,7 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
     /**
      * Robustly estimates position, transmitted power and pathloss exponent for a
      * radio source.
+     *
      * @throws LockedException if instance is busy during estimation.
      * @throws NotReadyException if estimator is not ready.
      * @throws RobustEstimatorException if estimation fails for any reason
@@ -507,6 +570,7 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
 
     /**
      * Gets estimated located radio source.
+     *
      * @return estimated located radio source.
      * @param &lt;S&gt; type of located radio source.
      */
@@ -514,16 +578,17 @@ public abstract class RobustRadioSourceEstimator&lt;P extends Point,
 
     /**
      * Internally sets signal readings belonging to the same radio source.
+     *
      * @param readings signal readings belonging to the same radio source.
      * @throws IllegalArgumentException if readings are null, not enough readings
      * are available, or readings do not belong to the same access point.
      */
     protected void internalSetReadings(List&lt;? extends R&gt; readings) {
-<span class="fc bfc" id="L522" title="All 2 branches covered.">        if (!areValidReadings(readings)) {</span>
-<span class="fc" id="L523">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L587" title="All 2 branches covered.">        if (!areValidReadings(readings)) {</span>
+<span class="fc" id="L588">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L526">        mReadings = readings;</span>
-<span class="fc" id="L527">    }</span>
+<span class="fc" id="L591">        mReadings = readings;</span>
+<span class="fc" id="L592">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

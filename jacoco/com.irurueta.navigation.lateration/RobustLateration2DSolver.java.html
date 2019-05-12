@@ -1,0 +1,1419 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RobustLateration2DSolver.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.lateration</a> &gt; <span class="el_source">RobustLateration2DSolver.java</span></div><h1>RobustLateration2DSolver.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2018 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.lateration;
+
+import com.irurueta.geometry.Circle;
+import com.irurueta.geometry.Point2D;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NavigationException;
+import com.irurueta.numerical.robust.RobustEstimatorMethod;
+
+import java.util.BitSet;
+import java.util.List;
+
+/**
+ * This is an abstract class to robustly solve the lateration problem by
+ * finding the best pairs of 2D positions and distances among the provided
+ * ones.
+ * Implementations of this class should be able to detect and discard outliers
+ * in order to find the best solution.
+ */
+@SuppressWarnings({&quot;WeakerAccess&quot;, &quot;Duplicates&quot;})
+public abstract class RobustLateration2DSolver extends RobustLaterationSolver&lt;Point2D&gt; {
+
+    /**
+     * Linear lateration solver internally used by a robust algorithm.
+     */
+    protected InhomogeneousLinearLeastSquaresLateration2DSolver mInhomogeneousLinearSolver;
+
+    /**
+     * Homogeneous linear lateration solver internally used by a robust algorithm.
+     */
+    protected HomogeneousLinearLeastSquaresLateration2DSolver mHomogeneousLinearSolver;
+
+    /**
+     * Non linear lateration solver internally used to refine solution
+     * found by robust algorithm.
+     */
+    protected NonLinearLeastSquaresLateration2DSolver mNonLinearSolver;
+
+    /**
+     * Positions for linear inner solver used during robust estimation.
+     */
+    protected Point2D[] mInnerPositions;
+
+    /**
+     * Distances for linear inner solver used during robust estimation.
+     */
+    protected double[] mInnerDistances;
+
+    /**
+     * Standard deviations for non-linear inner solver used during robut estimation.
+     */
+    protected double[] mInnerDistanceStandardDeviations;
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L71">    public RobustLateration2DSolver() {</span>
+<span class="fc" id="L72">        init();</span>
+<span class="fc" id="L73">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     */
+    public RobustLateration2DSolver(
+            RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L82">        super(listener);</span>
+<span class="fc" id="L83">        init();</span>
+<span class="fc" id="L84">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (3 points).
+     */
+    public RobustLateration2DSolver(Point2D[] positions, double[] distances) {
+<span class="fc" id="L95">        super(positions, distances);</span>
+<span class="fc" id="L96">        init();</span>
+<span class="fc" id="L97">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (3 points).
+     */
+    public RobustLateration2DSolver(Point2D[] positions, double[] distances,
+                                    double[] distanceStandardDeviations) {
+<span class="fc" id="L110">        super(positions, distances, distanceStandardDeviations);</span>
+<span class="fc" id="L111">        init();</span>
+<span class="fc" id="L112">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (3 points).
+     */
+    public RobustLateration2DSolver(Point2D[] positions, double[] distances,
+                                    RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L125">        super(positions, distances, listener);</span>
+<span class="fc" id="L126">        init();</span>
+<span class="fc" id="L127">    }</span>
+
+    /**
+     * Constructor.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if either positions, distances or
+     * standard deviations are null, don't have the same length or their length is smaller
+     * than required (3 points).
+     */
+    public RobustLateration2DSolver(Point2D[] positions, double[] distances,
+                                    double[] distanceStandardDeviations,
+                                    RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L143">        super(positions, distances, distanceStandardDeviations, listener);</span>
+<span class="fc" id="L144">        init();</span>
+<span class="fc" id="L145">    }</span>
+
+    /**
+     * Constructor.
+     * @param circles circles defining positions and distances.
+     * @throws IllegalArgumentException if circles is null or if length of circles array
+     * is less than required (3 points).
+     */
+    public RobustLateration2DSolver(Circle[] circles) {
+<span class="fc" id="L154">        this();</span>
+<span class="fc" id="L155">        internalSetCircles(circles);</span>
+<span class="fc" id="L156">    }</span>
+
+    /**
+     * Constructor.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @throws IllegalArgumentException if circles is null, length of circles array is less
+     * than required (3 points) or don't have the same length.
+     */
+    public RobustLateration2DSolver(Circle[] circles,
+                                    double[] distanceStandardDeviations) {
+<span class="fc" id="L167">        this();</span>
+<span class="fc" id="L168">        internalSetCirclesAndStandardDeviations(circles,</span>
+                distanceStandardDeviations);
+<span class="fc" id="L170">    }</span>
+
+    /**
+     * Constructor.
+     * @param circles circles defining positions and distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if circles is null or if length of circles array
+     * is less than required (3 points).
+     */
+    public RobustLateration2DSolver(Circle[] circles,
+                                    RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L182">        this(listener);</span>
+<span class="fc" id="L183">        internalSetCircles(circles);</span>
+<span class="fc" id="L184">    }</span>
+
+    /**
+     * Constructor.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured distances.
+     * @param listener listener to be notified of events such as when estimation starts,
+     *                 ends or its progress significantly changes.
+     * @throws IllegalArgumentException if circles is null, length of circles array is less
+     * than required (3 points) or don't have the same length.
+     */
+    public RobustLateration2DSolver(Circle[] circles,
+                                    double[] distanceStandardDeviations,
+                                    RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L198">        this(listener);</span>
+<span class="fc" id="L199">        internalSetCirclesAndStandardDeviations(circles,</span>
+                distanceStandardDeviations);
+<span class="fc" id="L201">    }</span>
+
+    /**
+     * Gets number of dimensions of provided points.
+     * @return always returns 2 dimensions.
+     */
+    @Override
+    public int getNumberOfDimensions() {
+<span class="fc" id="L209">        return Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH;</span>
+    }
+
+    /**
+     * Minimum required number of positions and distances.
+     * At least 3 positions will be required.
+     * @return minimum required number of positions and distances.
+     */
+    @Override
+    public int getMinRequiredPositionsAndDistances() {
+<span class="fc" id="L219">        return Point2D.POINT2D_INHOMOGENEOUS_COORDINATES_LENGTH + 1;</span>
+    }
+
+    /**
+     * Sets size of subsets to be checked during robust estimation.
+     * This has to be at least {@link #getMinRequiredPositionsAndDistances()}.
+     *
+     * @param preliminarySubsetSize size of subsets to be checked during robust estimation.
+     * @throws LockedException if instance is busy solving the lateration problem.
+     * @throws IllegalArgumentException if provided value is less than {@link #getMinRequiredPositionsAndDistances()}.
+     */
+    @Override
+    public void setPreliminarySubsetSize(int preliminarySubsetSize) throws LockedException {
+<span class="fc" id="L232">        super.setPreliminarySubsetSize(preliminarySubsetSize);</span>
+
+<span class="fc" id="L234">        mInnerPositions = new Point2D[preliminarySubsetSize];</span>
+<span class="fc" id="L235">        mInnerDistances = new double[preliminarySubsetSize];</span>
+<span class="fc" id="L236">        mInnerDistanceStandardDeviations = new double[preliminarySubsetSize];</span>
+<span class="fc" id="L237">    }</span>
+
+    /**
+     * Gets circles defined by provided positions and distances.
+     * @return circles defined by provided positions and distances.
+     */
+    public Circle[] getCircles() {
+<span class="fc bfc" id="L244" title="All 2 branches covered.">        if (mPositions == null) {</span>
+<span class="fc" id="L245">            return null;</span>
+        }
+
+<span class="fc" id="L248">        Circle[] result = new Circle[mPositions.length];</span>
+
+<span class="fc bfc" id="L250" title="All 2 branches covered.">        for (int i = 0; i &lt; mPositions.length; i++) {</span>
+<span class="fc" id="L251">            result[i] = new Circle(mPositions[i], mDistances[i]);</span>
+        }
+<span class="fc" id="L253">        return result;</span>
+    }
+
+    /**
+     * Sets circles defining positions and euclidean distances.
+     * @param circles circles defining positions and distances.
+     * @throws IllegalArgumentException if circles is null or length of array of circles
+     * is less than 3.
+     * @throws LockedException if instance is busy solving the lateration problem.
+     */
+    public void setCircles(Circle[] circles) throws LockedException {
+<span class="fc bfc" id="L264" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L265">            throw new LockedException();</span>
+        }
+<span class="fc" id="L267">        internalSetCircles(circles);</span>
+<span class="fc" id="L268">    }</span>
+
+    /**
+     * Sets circles defining positions and euclidean distances along with the standard
+     * deviations of provided circles radii.
+     * @param circles circles defining positions and distances.
+     * @param radiusStandardDeviations standard deviations of circles radii.
+     * @throws IllegalArgumentException if circles is null, length of arrays is less than
+     * 3 or don't have the same length.
+     * @throws LockedException if instance is busy solving the lateration problem.
+     */
+    public void setCirclesAndStandardDeviations(Circle[] circles, double[] radiusStandardDeviations)
+            throws LockedException {
+<span class="fc bfc" id="L281" title="All 2 branches covered.">        if (isLocked()) {</span>
+<span class="fc" id="L282">            throw new LockedException();</span>
+        }
+<span class="fc" id="L284">        internalSetCirclesAndStandardDeviations(circles, radiusStandardDeviations);</span>
+<span class="fc" id="L285">    }</span>
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     */
+    public static RobustLateration2DSolver create(RobustEstimatorMethod method) {
+<span class="fc bfc" id="L293" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L295">                return new RANSACRobustLateration2DSolver();</span>
+            case LMedS:
+<span class="fc" id="L297">                return new LMedSRobustLateration2DSolver();</span>
+            case MSAC:
+<span class="fc" id="L299">                return new MSACRobustLateration2DSolver();</span>
+            case PROSAC:
+<span class="fc" id="L301">                return new PROSACRobustLateration2DSolver();</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L304">                return new PROMedSRobustLateration2DSolver();</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     */
+    public static RobustLateration2DSolver create(
+            RobustLaterationSolverListener&lt;Point2D&gt; listener,
+            RobustEstimatorMethod method) {
+<span class="fc bfc" id="L318" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L320">                return new RANSACRobustLateration2DSolver(listener);</span>
+            case LMedS:
+<span class="fc" id="L322">                return new LMedSRobustLateration2DSolver(listener);</span>
+            case MSAC:
+<span class="fc" id="L324">                return new MSACRobustLateration2DSolver(listener);</span>
+            case PROSAC:
+<span class="fc" id="L326">                return new PROSACRobustLateration2DSolver(listener);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L329">                return new PROMedSRobustLateration2DSolver(listener);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required
+     * (3 points).
+     */
+    public static RobustLateration2DSolver create(Point2D[] positions,
+                                                  double[] distances, RobustEstimatorMethod method) {
+<span class="fc bfc" id="L346" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L348">                return new RANSACRobustLateration2DSolver(positions, distances);</span>
+            case LMedS:
+<span class="fc" id="L350">                return new LMedSRobustLateration2DSolver(positions, distances);</span>
+            case MSAC:
+<span class="fc" id="L352">                return new MSACRobustLateration2DSolver(positions, distances);</span>
+            case PROSAC:
+<span class="fc" id="L354">                return new PROSACRobustLateration2DSolver(positions, distances);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L357">                return new PROMedSRobustLateration2DSolver(positions, distances);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations if either positions or distances are null,
+     *                                   don't have the same length or their length
+     *                                   is smaller than required (3 points).
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaler than required
+     * (3 points).
+     */
+    public static RobustLateration2DSolver create(Point2D[] positions,
+                                                  double[] distances, double[] distanceStandardDeviations,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L378" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L380">                return new RANSACRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case LMedS:
+<span class="fc" id="L383">                return new LMedSRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case MSAC:
+<span class="fc" id="L386">                return new MSACRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case PROSAC:
+<span class="fc" id="L389">                return new PROSACRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case PROMedS:
+            default:
+<span class="fc" id="L393">                return new PROMedSRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required (3 points).
+     */
+    public static RobustLateration2DSolver create(Point2D[] positions,
+                                                  double[] distances, RobustLaterationSolverListener&lt;Point2D&gt; listener,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L413" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L415">                return new RANSACRobustLateration2DSolver(positions, distances,</span>
+                        listener);
+            case LMedS:
+<span class="fc" id="L418">                return new LMedSRobustLateration2DSolver(positions, distances,</span>
+                        listener);
+            case MSAC:
+<span class="fc" id="L421">                return new MSACRobustLateration2DSolver(positions, distances,</span>
+                        listener);
+            case PROSAC:
+<span class="fc" id="L424">                return new PROSACRobustLateration2DSolver(positions, distances,</span>
+                        listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L428">                return new PROMedSRobustLateration2DSolver(positions, distances,</span>
+                        listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions, distances or
+     * standard deviations are null, don't have the same length or their length
+     * is smaller than required (3 points).
+     */
+    public static RobustLateration2DSolver create(Point2D[] positions,
+                                                  double[] distances, double[] distanceStandardDeviations,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L452" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L454">                return new RANSACRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case LMedS:
+<span class="fc" id="L457">                return new LMedSRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case MSAC:
+<span class="fc" id="L460">                return new MSACRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case PROSAC:
+<span class="fc" id="L463">                return new PROSACRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L467">                return new PROMedSRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param circles circles defining positions and distances.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if circles is null, length of circles array
+     * is less than required (3 points) or don't have the same length.
+     */
+    public static RobustLateration2DSolver create(Circle[] circles,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L482" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L484">                return new RANSACRobustLateration2DSolver(circles);</span>
+            case LMedS:
+<span class="fc" id="L486">                return new LMedSRobustLateration2DSolver(circles);</span>
+            case MSAC:
+<span class="fc" id="L488">                return new MSACRobustLateration2DSolver(circles);</span>
+            case PROSAC:
+<span class="fc" id="L490">                return new PROSACRobustLateration2DSolver(circles);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L493">                return new PROMedSRobustLateration2DSolver(circles);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if circles is null, length of circles array
+     * is less than required (3 points) or don't have the same length.
+     */
+    public static RobustLateration2DSolver create(Circle[] circles,
+                                                  double[] distanceStandardDeviations, RobustEstimatorMethod method) {
+<span class="fc bfc" id="L509" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L511">                return new RANSACRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations);
+            case LMedS:
+<span class="fc" id="L514">                return new LMedSRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations);
+            case MSAC:
+<span class="fc" id="L517">                return new MSACRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations);
+            case PROSAC:
+<span class="fc" id="L520">                return new PROSACRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations);
+            case PROMedS:
+            default:
+<span class="fc" id="L524">                return new PROMedSRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param circles circles defining positions and distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if circles is null or if length of circles
+     * array is less than required (3 points).
+     */
+    public static RobustLateration2DSolver create(Circle[] circles,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L542" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L544">                return new RANSACRobustLateration2DSolver(circles, listener);</span>
+            case LMedS:
+<span class="fc" id="L546">                return new LMedSRobustLateration2DSolver(circles, listener);</span>
+            case MSAC:
+<span class="fc" id="L548">                return new MSACRobustLateration2DSolver(circles, listener);</span>
+            case PROSAC:
+<span class="fc" id="L550">                return new PROSACRobustLateration2DSolver(circles, listener);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L553">                return new PROMedSRobustLateration2DSolver(circles, listener);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if circles is null, length of circles array
+     * is less than required (3 points) or don't have the same length.
+     */
+    public static RobustLateration2DSolver create(Circle[] circles,
+                                                  double[] distanceStandardDeviations,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L573" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L575">                return new RANSACRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations, listener);
+            case LMedS:
+<span class="fc" id="L578">                return new LMedSRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations, listener);
+            case MSAC:
+<span class="fc" id="L581">                return new MSACRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations, listener);
+            case PROSAC:
+<span class="fc" id="L584">                return new PROSACRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L588">                return new PROMedSRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if quality scores is null, length of
+     * quality scores is less than required minimum (3 samples).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L605" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L607">                return new RANSACRobustLateration2DSolver();</span>
+            case LMedS:
+<span class="fc" id="L609">                return new LMedSRobustLateration2DSolver();</span>
+            case MSAC:
+<span class="fc" id="L611">                return new MSACRobustLateration2DSolver();</span>
+            case PROSAC:
+<span class="fc" id="L613">                return new PROSACRobustLateration2DSolver(qualityScores);</span>
+            case PROMedS:
+            default:
+<span class="fc" id="L616">                return new PROMedSRobustLateration2DSolver(qualityScores);</span>
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if quality scores is null, length of
+     * quality scores is less than required minimum (3 samples).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L635" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L637">                return new RANSACRobustLateration2DSolver(listener);</span>
+            case LMedS:
+<span class="fc" id="L639">                return new LMedSRobustLateration2DSolver(listener);</span>
+            case MSAC:
+<span class="fc" id="L641">                return new MSACRobustLateration2DSolver(listener);</span>
+            case PROSAC:
+<span class="fc" id="L643">                return new PROSACRobustLateration2DSolver(qualityScores,</span>
+                        listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L647">                return new PROMedSRobustLateration2DSolver(qualityScores,</span>
+                        listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions, distances or quality
+     * scores are null, don't have the same length or their length is smaller than
+     * required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Point2D[] positions, double[] distances, RobustEstimatorMethod method) {
+<span class="fc bfc" id="L668" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L670">                return new RANSACRobustLateration2DSolver(positions, distances);</span>
+            case LMedS:
+<span class="fc" id="L672">                return new LMedSRobustLateration2DSolver(positions, distances);</span>
+            case MSAC:
+<span class="fc" id="L674">                return new MSACRobustLateration2DSolver(positions, distances);</span>
+            case PROSAC:
+<span class="fc" id="L676">                return new PROSACRobustLateration2DSolver(qualityScores,</span>
+                        positions, distances);
+            case PROMedS:
+            default:
+<span class="fc" id="L680">                return new PROMedSRobustLateration2DSolver(qualityScores,</span>
+                        positions, distances);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions, distances, quality
+     * scores or standard deviations are null, don't have the same length or the
+     * length is smaller than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Point2D[] positions, double[] distances,
+                                                  double[] distanceStandardDeviations, RobustEstimatorMethod method) {
+<span class="fc bfc" id="L704" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L706">                return new RANSACRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case LMedS:
+<span class="fc" id="L709">                return new LMedSRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case MSAC:
+<span class="fc" id="L712">                return new MSACRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations);
+            case PROSAC:
+<span class="fc" id="L715">                return new PROSACRobustLateration2DSolver(qualityScores,</span>
+                        positions, distances, distanceStandardDeviations);
+            case PROMedS:
+            default:
+<span class="fc" id="L719">                return new PROMedSRobustLateration2DSolver(qualityScores,</span>
+                        positions, distances, distanceStandardDeviations);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions, distances or standard
+     * deviations are null, don't have the same length or their length is smaller
+     * than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Point2D[] positions, double[] distances,
+                                                  double[] distanceStandardDeviations,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L746" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L748">                return new RANSACRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case LMedS:
+<span class="fc" id="L751">                return new LMedSRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case MSAC:
+<span class="fc" id="L754">                return new MSACRobustLateration2DSolver(positions, distances,</span>
+                        distanceStandardDeviations, listener);
+            case PROSAC:
+<span class="fc" id="L757">                return new PROSACRobustLateration2DSolver(qualityScores,</span>
+                        positions, distances, distanceStandardDeviations, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L761">                return new PROMedSRobustLateration2DSolver(qualityScores,</span>
+                        positions, distances, distanceStandardDeviations, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions, distances, quality
+     * scores or standard deviations are null, don't have the same length or their
+     * length is smaller than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Point2D[] positions, double[] distances,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L785" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L787">                return new RANSACRobustLateration2DSolver(positions, distances,</span>
+                        listener);
+            case LMedS:
+<span class="fc" id="L790">                return new LMedSRobustLateration2DSolver(positions, distances,</span>
+                        listener);
+            case MSAC:
+<span class="fc" id="L793">                return new MSACRobustLateration2DSolver(positions, distances,</span>
+                        listener);
+            case PROSAC:
+<span class="fc" id="L796">                return new PROSACRobustLateration2DSolver(qualityScores,</span>
+                        positions, distances, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L800">                return new PROMedSRobustLateration2DSolver(qualityScores,</span>
+                        positions, distances, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param circles circles defining positions and distances.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either circles or quality scores are
+     * null don't have the same length or their length is less than required
+     * (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Circle[] circles, RobustEstimatorMethod method) {
+<span class="fc bfc" id="L819" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L821">                return new RANSACRobustLateration2DSolver(circles);</span>
+            case LMedS:
+<span class="fc" id="L823">                return new LMedSRobustLateration2DSolver(circles);</span>
+            case MSAC:
+<span class="fc" id="L825">                return new MSACRobustLateration2DSolver(circles);</span>
+            case PROSAC:
+<span class="fc" id="L827">                return new PROSACRobustLateration2DSolver(qualityScores,</span>
+                        circles);
+            case PROMedS:
+            default:
+<span class="fc" id="L831">                return new PROMedSRobustLateration2DSolver(qualityScores,</span>
+                        circles);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either circles, quality scores or
+     * standard deviations are null, don't have the same length or their length
+     * is less than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Circle[] circles, double[] distanceStandardDeviations,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L853" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L855">                return new RANSACRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations);
+            case LMedS:
+<span class="fc" id="L858">                return new LMedSRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations);
+            case MSAC:
+<span class="fc" id="L861">                return new MSACRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations);
+            case PROSAC:
+<span class="fc" id="L864">                return new PROSACRobustLateration2DSolver(qualityScores,</span>
+                        circles, distanceStandardDeviations);
+            case PROMedS:
+            default:
+<span class="fc" id="L868">                return new PROMedSRobustLateration2DSolver(qualityScores,</span>
+                        circles, distanceStandardDeviations);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @param method robust estimator method.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either circles, quality scores or
+     * standard deviations are null, don't have the same length or their length
+     * is less than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Circle[] circles, double[] distanceStandardDeviations,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener,
+                                                  RobustEstimatorMethod method) {
+<span class="fc bfc" id="L893" title="All 5 branches covered.">        switch (method) {</span>
+            case RANSAC:
+<span class="fc" id="L895">                return new RANSACRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations, listener);
+            case LMedS:
+<span class="fc" id="L898">                return new LMedSRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations, listener);
+            case MSAC:
+<span class="fc" id="L901">                return new MSACRobustLateration2DSolver(circles,</span>
+                        distanceStandardDeviations, listener);
+            case PROSAC:
+<span class="fc" id="L904">                return new PROSACRobustLateration2DSolver(qualityScores,</span>
+                        circles, distanceStandardDeviations, listener);
+            case PROMedS:
+            default:
+<span class="fc" id="L908">                return new PROMedSRobustLateration2DSolver(qualityScores,</span>
+                        circles, distanceStandardDeviations, listener);
+        }
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @return a new robust 2D lateration solver.
+     */
+    public static RobustLateration2DSolver create() {
+<span class="fc" id="L918">        return create(DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 2D lateration solver.
+     */
+    public static RobustLateration2DSolver create(
+            RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L929">        return create(listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required
+     * (3 points).
+     */
+    public static RobustLateration2DSolver create(Point2D[] positions,
+                                                  double[] distances) {
+<span class="fc" id="L944">        return create(positions, distances, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations if either positions or distances are null,
+     *                                   don't have the same length or their length
+     *                                   is smaller than required (3 points).
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required
+     * (3 points).
+     */
+    public static RobustLateration2DSolver create(Point2D[] positions,
+                                                  double[] distances, double[] distanceStandardDeviations) {
+<span class="fc" id="L962">        return create(positions, distances, distanceStandardDeviations,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions or distances are null,
+     * don't have the same length or their length is smaller than required
+     * (3 points).
+     */
+    public static RobustLateration2DSolver create(Point2D[] positions,
+                                                  double[] distances, RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L980">        return create(positions, distances, listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions, distances or
+     * standard deviations are null, don't have the same length or their length
+     * is smaller than required (3 points).
+     */
+    public static RobustLateration2DSolver create(Point2D[] positions,
+                                                  double[] distances, double[] distanceStandardDeviations,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L1000">        return create(positions, distances, distanceStandardDeviations,</span>
+                listener, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param circles circles defining positions and distances.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if circles is null, length of circles array
+     * is less than required (3 points) or don't have the same length.
+     */
+    public static RobustLateration2DSolver create(Circle[] circles) {
+<span class="fc" id="L1012">        return create(circles, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if circles is null, length of circles array
+     * is less than required (3 points) or don't have the same length.
+     */
+    public static RobustLateration2DSolver create(Circle[] circles,
+                                                  double[] distanceStandardDeviations) {
+<span class="fc" id="L1026">        return create(circles, distanceStandardDeviations,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param circles circles defining positions and distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if circles is null or if length of circles
+     * array is less than required (3 points).
+     */
+    public static RobustLateration2DSolver create(Circle[] circles,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L1041">        return create(circles, listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if circles is null, length of circles array
+     * is less than required (3 points) or don't have the same length.
+     */
+    public static RobustLateration2DSolver create(Circle[] circles,
+                                                  double[] distanceStandardDeviations,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L1058">        return create(circles, distanceStandardDeviations, listener,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if quality scores is null, length of
+     * quality scores is less than required (3 samples).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores) {
+<span class="fc" id="L1072">        return create(qualityScores, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if quality scores is null, length of
+     * quality scores is less than required minimum (3 samples).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L1088">        return create(qualityScores, listener, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node to be
+     *                  estimated.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions, distances or quality
+     * scores are null, don't have the same length or their length is smaller
+     * than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Point2D[] positions, double[] distances) {
+<span class="fc" id="L1106">        return create(qualityScores, positions, distances, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distance from static nodes to mobile node to be
+     *                  estimated.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions, distances, quality
+     * scores or standard deviations are null, don't have the same length or their
+     * length is smaller than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Point2D[] positions, double[] distances,
+                                                  double[] distanceStandardDeviations) {
+<span class="fc" id="L1127">        return create(qualityScores, positions, distances,</span>
+                distanceStandardDeviations, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static nodes to mobile node.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 3D lateration solver.
+     * @throws IllegalArgumentException if either positions, distances or standard
+     * deviations are null, don't have the same length or their length is smaller
+     * than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Point2D[] positions, double[] distances,
+                                                  double[] distanceStandardDeviations,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L1151">        return create (qualityScores, positions, distances,</span>
+                distanceStandardDeviations,listener, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param positions known positions of static nodes.
+     * @param distances euclidean distances from static ndoes to mobile node.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either positions, distances, quality
+     * scores or standard deviations are null, don't have the same length or their
+     * length is smaller than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Point2D[] positions, double[] distances,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L1172">        return create(qualityScores, positions, distances, listener,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param circles circles defining positions and distances.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either circles or quality scores are
+     * null, don't have the same length or their length is less than required
+     * (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Circle[] circles) {
+<span class="fc" id="L1189">        return create(qualityScores, circles, DEFAULT_ROBUST_METHOD);</span>
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either circles, quality scores or
+     * standard deviations are null, don't have the same length or their length
+     * is less than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Circle[] circles, double[] distanceStandardDeviations) {
+<span class="fc" id="L1207">        return create(qualityScores, circles, distanceStandardDeviations,</span>
+                DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Creates a robust 2D lateration solver using default robust method.
+     * @param qualityScores quality scores corresponding to each provided sample.
+     *                      The larger the score value the better the quality of
+     *                      the sample.
+     * @param circles circles defining positions and distances.
+     * @param distanceStandardDeviations standard deviations of provided measured
+     *                                   distances.
+     * @param listener listener to be notified of events such as when estimation
+     *                 starts, ends or its progress significantly changes.
+     * @return a new robust 2D lateration solver.
+     * @throws IllegalArgumentException if either circles, quality scores or
+     * standard deviations are null, don't have the same length or their length
+     * is less than required (3 points).
+     */
+    public static RobustLateration2DSolver create(double[] qualityScores,
+                                                  Circle[] circles, double[] distanceStandardDeviations,
+                                                  RobustLaterationSolverListener&lt;Point2D&gt; listener) {
+<span class="fc" id="L1229">        return create(qualityScores, circles, distanceStandardDeviations,</span>
+                listener, DEFAULT_ROBUST_METHOD);
+    }
+
+    /**
+     * Attempts to refine estimated position if refinement is requested.
+     * This method returns a refined solution or provided input if refinement is not
+     * requested or has failed.
+     * If refinement is enabled and it is requested to keep covariance, this method
+     * will also keep covariance of refined position.
+     * @param position position estimated by a robust estimator without refinement.
+     * @return solution after refinement (if requested) or provided non-refined
+     * estimated position if not requested or refinement failed.
+     */
+    protected Point2D attemptRefine(Point2D position) {
+<span class="fc bfc" id="L1244" title="All 4 branches covered.">        if (mRefineResult &amp;&amp; mInliersData != null) {</span>
+<span class="fc" id="L1245">            BitSet inliers = mInliersData.getInliers();</span>
+<span class="fc" id="L1246">            int nSamples = mDistances.length;</span>
+<span class="fc" id="L1247">            int nInliers = mInliersData.getNumInliers();</span>
+<span class="fc" id="L1248">            Point2D[] inlierPositions = new Point2D[nInliers];</span>
+<span class="fc" id="L1249">            double[] inlierDistances = new double[nInliers];</span>
+<span class="fc" id="L1250">            double[] inlierStandardDeviations = null;</span>
+<span class="fc bfc" id="L1251" title="All 2 branches covered.">            if (mDistanceStandardDeviations != null) {</span>
+<span class="fc" id="L1252">                inlierStandardDeviations = new double[nInliers];</span>
+            }
+<span class="fc" id="L1254">            int pos = 0;</span>
+<span class="fc bfc" id="L1255" title="All 2 branches covered.">            for (int i = 0; i &lt; nSamples; i++) {</span>
+<span class="fc bfc" id="L1256" title="All 2 branches covered.">                if (inliers.get(i)) {</span>
+                    //sample is inlier
+<span class="fc" id="L1258">                    inlierPositions[pos] = mPositions[i];</span>
+<span class="fc" id="L1259">                    inlierDistances[pos] = mDistances[i];</span>
+<span class="fc bfc" id="L1260" title="All 2 branches covered.">                    if (inlierStandardDeviations != null) {</span>
+<span class="fc" id="L1261">                        inlierStandardDeviations[pos] = mDistanceStandardDeviations[i];</span>
+                    }
+<span class="fc" id="L1263">                    pos++;</span>
+                }
+            }
+
+            try {
+<span class="fc" id="L1268">                mNonLinearSolver.setInitialPosition(position);</span>
+<span class="fc bfc" id="L1269" title="All 2 branches covered.">                if (inlierStandardDeviations != null) {</span>
+<span class="fc" id="L1270">                    mNonLinearSolver.setPositionsDistancesAndStandardDeviations(</span>
+                            inlierPositions, inlierDistances, inlierStandardDeviations);
+                } else {
+<span class="fc" id="L1273">                    mNonLinearSolver.setPositionsAndDistances(</span>
+                            inlierPositions, inlierDistances);
+                }
+<span class="fc" id="L1276">                mNonLinearSolver.solve();</span>
+
+<span class="pc bpc" id="L1278" title="1 of 2 branches missed.">                if (mKeepCovariance) {</span>
+                    //keep covariance
+<span class="fc" id="L1280">                    mCovariance = mNonLinearSolver.getCovariance();</span>
+                } else {
+<span class="nc" id="L1282">                    mCovariance = null;</span>
+                }
+
+<span class="fc" id="L1285">                mEstimatedPosition = mNonLinearSolver.getEstimatedPosition();</span>
+<span class="fc" id="L1286">            } catch (Exception e) {</span>
+                //refinement failed, so we return input value
+<span class="fc" id="L1288">                mCovariance = null;</span>
+<span class="fc" id="L1289">                mEstimatedPosition = position;</span>
+<span class="fc" id="L1290">            }</span>
+<span class="fc" id="L1291">        } else {</span>
+<span class="fc" id="L1292">            mCovariance = null;</span>
+<span class="fc" id="L1293">            mEstimatedPosition = position;</span>
+        }
+
+<span class="fc" id="L1296">        return mEstimatedPosition;</span>
+    }
+
+    /**
+     * Solves a preliminar solution for a subset of samples picked by a robust estimator.
+     * @param samplesIndices indices of samples picked by the robust estimator.
+     * @param solutions list where estimated preliminar solution will be stored.
+     */
+    protected void solvePreliminarSolutions(int[] samplesIndices, List&lt;Point2D&gt; solutions) {
+        try {
+<span class="fc" id="L1306">            int length = samplesIndices.length;</span>
+            int index;
+<span class="fc bfc" id="L1308" title="All 2 branches covered.">            for (int i = 0; i &lt; length; i++) {</span>
+<span class="fc" id="L1309">                index = samplesIndices[i];</span>
+<span class="fc" id="L1310">                mInnerPositions[i] = mPositions[index];</span>
+<span class="fc" id="L1311">                mInnerDistances[i] = mDistances[index];</span>
+<span class="fc bfc" id="L1312" title="All 2 branches covered.">                mInnerDistanceStandardDeviations[i] = mDistanceStandardDeviations != null ?</span>
+<span class="fc" id="L1313">                        mDistanceStandardDeviations[index] :</span>
+<span class="fc" id="L1314">                        NonLinearLeastSquaresLaterationSolver.DEFAULT_DISTANCE_STANDARD_DEVIATION;</span>
+            }
+
+<span class="fc" id="L1317">            Point2D estimatedPosition = mInitialPosition;</span>
+<span class="fc bfc" id="L1318" title="All 2 branches covered.">            if (mUseLinearSolver) {</span>
+<span class="fc bfc" id="L1319" title="All 2 branches covered.">                if (mUseHomogeneousLinearSolver) {</span>
+<span class="fc" id="L1320">                    mHomogeneousLinearSolver.setPositionsAndDistances(mInnerPositions, mInnerDistances);</span>
+<span class="fc" id="L1321">                    mHomogeneousLinearSolver.solve();</span>
+<span class="fc" id="L1322">                    estimatedPosition = mHomogeneousLinearSolver.getEstimatedPosition();</span>
+                } else {
+<span class="fc" id="L1324">                    mInhomogeneousLinearSolver.setPositionsAndDistances(mInnerPositions, mInnerDistances);</span>
+<span class="fc" id="L1325">                    mInhomogeneousLinearSolver.solve();</span>
+<span class="fc" id="L1326">                    estimatedPosition = mInhomogeneousLinearSolver.getEstimatedPosition();</span>
+                }
+            }
+
+<span class="fc bfc" id="L1330" title="All 4 branches covered.">            if (mRefinePreliminarySolutions || estimatedPosition == null) {</span>
+<span class="fc" id="L1331">                mNonLinearSolver.setInitialPosition(estimatedPosition);</span>
+<span class="fc bfc" id="L1332" title="All 2 branches covered.">                if (mDistanceStandardDeviations != null) {</span>
+<span class="fc" id="L1333">                    mNonLinearSolver.setPositionsDistancesAndStandardDeviations(mInnerPositions,</span>
+                            mInnerDistances, mInnerDistanceStandardDeviations);
+                } else {
+<span class="fc" id="L1336">                    mNonLinearSolver.setPositionsAndDistances(mInnerPositions, mInnerDistances);</span>
+                }
+<span class="fc" id="L1338">                mNonLinearSolver.solve();</span>
+<span class="fc" id="L1339">                estimatedPosition = mNonLinearSolver.getEstimatedPosition();</span>
+            }
+
+<span class="fc" id="L1342">            solutions.add(estimatedPosition);</span>
+<span class="fc" id="L1343">        } catch (NavigationException ignore) {</span>
+            //if anything fails, no solution is added
+<span class="fc" id="L1345">        }</span>
+<span class="fc" id="L1346">    }</span>
+
+    /**
+     * Internally sets circles defining positions and euclidean distances.
+     * @param circles circles defining positions and distances.
+     * @throws IllegalArgumentException if circles is null or length of array of circles
+     * is less than {@link #getMinRequiredPositionsAndDistances}.
+     */
+    private void internalSetCircles(Circle[] circles) {
+<span class="fc bfc" id="L1355" title="All 4 branches covered.">        if (circles == null || circles.length &lt; getMinRequiredPositionsAndDistances()) {</span>
+<span class="fc" id="L1356">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L1359">        Point2D[] positions = new Point2D[circles.length];</span>
+<span class="fc" id="L1360">        double[] distances = new double[circles.length];</span>
+<span class="fc bfc" id="L1361" title="All 2 branches covered.">        for (int i = 0; i &lt; circles.length; i++) {</span>
+<span class="fc" id="L1362">            Circle circle = circles[i];</span>
+<span class="fc" id="L1363">            positions[i] = circle.getCenter();</span>
+<span class="fc" id="L1364">            distances[i] = circle.getRadius();</span>
+        }
+
+<span class="fc" id="L1367">        internalSetPositionsAndDistances(positions, distances);</span>
+<span class="fc" id="L1368">    }</span>
+
+    /**
+     * Internally sets circles defining positions and euclidean distances along with the standard
+     * deviations of provided circles radii.
+     * @param circles circles defining positions and distances.
+     * @param radiusStandardDeviations standard deviations of circles radii.
+     * @throws IllegalArgumentException if circles is null, length of arrays is less than
+     * 3 or don't have the same length.
+     */
+    private void internalSetCirclesAndStandardDeviations(Circle[] circles,
+            double[] radiusStandardDeviations) {
+<span class="fc bfc" id="L1380" title="All 4 branches covered.">        if (circles == null || circles.length &lt; getMinRequiredPositionsAndDistances()) {</span>
+<span class="fc" id="L1381">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc bfc" id="L1384" title="All 2 branches covered.">        if (radiusStandardDeviations == null) {</span>
+<span class="fc" id="L1385">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc bfc" id="L1388" title="All 2 branches covered.">        if (radiusStandardDeviations.length != circles.length) {</span>
+<span class="fc" id="L1389">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L1392">        Point2D[] positions = new Point2D[circles.length];</span>
+<span class="fc" id="L1393">        double[] distances = new double[circles.length];</span>
+<span class="fc bfc" id="L1394" title="All 2 branches covered.">        for (int i = 0; i &lt; circles.length; i++) {</span>
+<span class="fc" id="L1395">            Circle circle = circles[i];</span>
+<span class="fc" id="L1396">            positions[i] = circle.getCenter();</span>
+<span class="fc" id="L1397">            distances[i] = circle.getRadius();</span>
+        }
+
+<span class="fc" id="L1400">        internalSetPositionsDistancesAndStandardDeviations(positions, distances,</span>
+                radiusStandardDeviations);
+<span class="fc" id="L1402">    }</span>
+
+    /**
+     * Setup inner positions and distances.
+     */
+    private void init() {
+<span class="fc" id="L1408">        int points = getMinRequiredPositionsAndDistances();</span>
+<span class="fc" id="L1409">        mPreliminarySubsetSize = points;</span>
+<span class="fc" id="L1410">        mInnerPositions = new Point2D[points];</span>
+<span class="fc" id="L1411">        mInnerDistances = new double[points];</span>
+<span class="fc" id="L1412">        mInnerDistanceStandardDeviations = new double[points];</span>
+
+<span class="fc" id="L1414">        mInhomogeneousLinearSolver = new InhomogeneousLinearLeastSquaresLateration2DSolver();</span>
+<span class="fc" id="L1415">        mHomogeneousLinearSolver = new HomogeneousLinearLeastSquaresLateration2DSolver();</span>
+<span class="fc" id="L1416">        mNonLinearSolver = new NonLinearLeastSquaresLateration2DSolver();</span>
+<span class="fc" id="L1417">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

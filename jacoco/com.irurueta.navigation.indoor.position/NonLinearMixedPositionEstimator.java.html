@@ -20,10 +20,10 @@ import com.irurueta.geometry.Point;
 import com.irurueta.navigation.LockedException;
 import com.irurueta.navigation.NotReadyException;
 import com.irurueta.navigation.indoor.*;
-import com.irurueta.navigation.trilateration.NonLinearLeastSquaresTrilaterationSolver;
-import com.irurueta.navigation.trilateration.TrilaterationException;
-import com.irurueta.navigation.trilateration.TrilaterationSolver;
-import com.irurueta.navigation.trilateration.TrilaterationSolverListener;
+import com.irurueta.navigation.lateration.NonLinearLeastSquaresLaterationSolver;
+import com.irurueta.navigation.lateration.LaterationException;
+import com.irurueta.navigation.lateration.LaterationSolver;
+import com.irurueta.navigation.lateration.LaterationSolverListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,17 +46,17 @@ public abstract class NonLinearMixedPositionEstimator&lt;P extends Point&gt; ext
      * none can be determined.
      */
     public static final double FALLBACK_DISTANCE_STANDARD_DEVIATION =
-            NonLinearLeastSquaresTrilaterationSolver.DEFAULT_DISTANCE_STANDARD_DEVIATION;
+            NonLinearLeastSquaresLaterationSolver.DEFAULT_DISTANCE_STANDARD_DEVIATION;
 
     /**
-     * A non-linear trilateration solver to solve position.
+     * A non-linear lateration solver to solve position.
      */
-    protected NonLinearLeastSquaresTrilaterationSolver&lt;P&gt; mTrilaterationSolver;
+    protected NonLinearLeastSquaresLaterationSolver&lt;P&gt; mTrilaterationSolver;
 
     /**
-     * Listener for the trilateration solver.
+     * Listener for the lateration solver.
      */
-    protected TrilaterationSolverListener&lt;P&gt; mTrilaterationSolverListener;
+    protected LaterationSolverListener&lt;P&gt; mLaterationSolverListener;
 
     /**
      * Initial position to start position estimation.
@@ -198,9 +198,9 @@ public abstract class NonLinearMixedPositionEstimator&lt;P extends Point&gt; ext
 <span class="fc" id="L198">    }</span>
 
     /**
-     * Gets minimum required number of located radio sources to perform trilateration.
+     * Gets minimum required number of located radio sources to perform lateration.
      *
-     * @return minimum required number of located radio sources to perform trilateration.
+     * @return minimum required number of located radio sources to perform lateration.
      */
     @Override
     public int getMinRequiredSources() {
@@ -231,7 +231,7 @@ public abstract class NonLinearMixedPositionEstimator&lt;P extends Point&gt; ext
     /**
      * Gets standard deviations of distances from known located radio sources to the
      * location of provided readings in a fingerprint.
-     * Distance standard deviations are used internally to solve trilateration.
+     * Distance standard deviations are used internally to solve lateration.
      *
      * @return standard deviations used internally.
      */
@@ -256,13 +256,13 @@ public abstract class NonLinearMixedPositionEstimator&lt;P extends Point&gt; ext
 <span class="fc" id="L256">            mTrilaterationSolver.solve();</span>
 <span class="fc" id="L257">            mEstimatedPositionCoordinates =</span>
 <span class="fc" id="L258">                    mTrilaterationSolver.getEstimatedPositionCoordinates();</span>
-<span class="nc" id="L259">        } catch (TrilaterationException e) {</span>
+<span class="nc" id="L259">        } catch (LaterationException e) {</span>
 <span class="nc" id="L260">            throw new PositionEstimationException(e);</span>
 <span class="fc" id="L261">        }</span>
 <span class="fc" id="L262">    }</span>
 
     /**
-     * Gets known positions of radio sources used internally to solve trilateration.
+     * Gets known positions of radio sources used internally to solve lateration.
      *
      * @return known positions used internally.
      */
@@ -274,7 +274,7 @@ public abstract class NonLinearMixedPositionEstimator&lt;P extends Point&gt; ext
     /**
      * Gets euclidean distances from known located radio sources to the location of
      * provided readings in a fingerprint.
-     * Distance values are used internally to solve trilateration.
+     * Distance values are used internally to solve lateration.
      *
      * @return euclidean distances used internally.
      */
@@ -293,8 +293,8 @@ public abstract class NonLinearMixedPositionEstimator&lt;P extends Point&gt; ext
     }
 
     /**
-     * Internally sets located radio sources used for trilateration.
-     * @param sources located radio sources used for trilateration.
+     * Internally sets located radio sources used for lateration.
+     * @param sources located radio sources used for lateration.
      * @throws IllegalArgumentException if provided value is null or the number of
      * provided sources is less than the required minimum.
      */
@@ -319,7 +319,7 @@ public abstract class NonLinearMixedPositionEstimator&lt;P extends Point&gt; ext
 
     /**
      * Sets positions, distnaces and standard deviations of distances on internal
-     * trilateration solver.
+     * lateration solver.
      * @param positions                     positions to be set.
      * @param distances                     distances to be set.
      * @param distanceStandardDeviations    standard deviations of distances to be set.
@@ -329,13 +329,13 @@ public abstract class NonLinearMixedPositionEstimator&lt;P extends Point&gt; ext
             List&lt;Double&gt; distanceStandardDeviations);
 
     /**
-     * Initializes trilateration solver listener.
+     * Initializes lateration solver listener.
      */
     @SuppressWarnings(&quot;Duplicates&quot;)
     private void init() {
-<span class="fc" id="L336">        mTrilaterationSolverListener = new TrilaterationSolverListener&lt;P&gt;() {</span>
+<span class="fc" id="L336">        mLaterationSolverListener = new LaterationSolverListener&lt;P&gt;() {</span>
             @Override
-            public void onSolveStart(TrilaterationSolver&lt;P&gt; solver) {
+            public void onSolveStart(LaterationSolver&lt;P&gt; solver) {
 <span class="pc bpc" id="L339" title="1 of 2 branches missed.">                if (mListener != null) {</span>
 <span class="fc" id="L340">                    mListener.onEstimateStart(</span>
                             NonLinearMixedPositionEstimator.this);
@@ -343,7 +343,7 @@ public abstract class NonLinearMixedPositionEstimator&lt;P extends Point&gt; ext
 <span class="fc" id="L343">            }</span>
 
             @Override
-            public void onSolveEnd(TrilaterationSolver&lt;P&gt; solver) {
+            public void onSolveEnd(LaterationSolver&lt;P&gt; solver) {
 <span class="pc bpc" id="L347" title="1 of 2 branches missed.">                if (mListener != null) {</span>
 <span class="fc" id="L348">                    mListener.onEstimateEnd(</span>
                             NonLinearMixedPositionEstimator.this);
@@ -354,7 +354,7 @@ public abstract class NonLinearMixedPositionEstimator&lt;P extends Point&gt; ext
 
     /**
      * Builds positions, distances and standard deviation of distances for the internal
-     * trilateration solver.
+     * lateration solver.
      */
     @SuppressWarnings(&quot;Duplicates&quot;)
     private void buildPositionsDistancesAndDistanceStandardDeviations() {
