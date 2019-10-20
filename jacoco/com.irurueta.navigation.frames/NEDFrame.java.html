@@ -1,0 +1,459 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NEDFrame.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.frames</a> &gt; <span class="el_source">NEDFrame.java</span></div><h1>NEDFrame.java</h1><pre class="source lang-java linenums">package com.irurueta.navigation.frames;
+
+import java.io.Serializable;
+import java.util.Objects;
+
+/**
+ * Contains position, velocity and coordinates transformation matrix expressed in NED frame.
+ * Position is expressed as latitude, longitude and height.
+ * Velocity of body frame is expressed with respect ECEF frame and resolved along north, east and down axes,
+ * as defined in {@link FrameType#LOCAL_NAVIGATION_FRAME}.
+ */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
+public class NEDFrame implements Frame, Serializable, Cloneable {
+
+    /**
+     * Number of coordinates representing velocity.
+     */
+    public static final int NUM_VELOCITY_COORDINATES = 3;
+
+    /**
+     * Latitude expressed in radians.
+     */
+    private double mLatitude;
+
+    /**
+     * Longitude expressed in radians.
+     */
+    private double mLongitude;
+
+    /**
+     * Height expressed in meters.
+     */
+    private double mHeight;
+
+    /**
+     * Coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame and
+     * resolved along North axis.
+     */
+    private double mVn;
+
+    /**
+     * Coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame and
+     * resolved along East axis.
+     */
+    private double mVe;
+
+    /**
+     * Coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame and
+     * resolved along Down axis.
+     */
+    private double mVd;
+
+    /**
+     * Body to NED coordinate transformation matrix.
+     */
+    private CoordinateTransformationMatrix mC;
+
+    /**
+     * Constructor.
+     * Initializes position and velocity coordinates to zero and the coordinate transformation matrix to the
+     * identity.
+     */
+<span class="fc" id="L63">    public NEDFrame() {</span>
+<span class="fc" id="L64">        mC = new CoordinateTransformationMatrix(FrameType.BODY_FRAME, FrameType.LOCAL_NAVIGATION_FRAME);</span>
+<span class="fc" id="L65">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param c Body to NED (Local Navigation frame) coordinate transformation matrix to be set.
+     * @throws InvalidSourceAndDestinationFrameTypeException if source or destination frame types are invalid.
+     */
+<span class="fc" id="L73">    public NEDFrame(final CoordinateTransformationMatrix c) throws InvalidSourceAndDestinationFrameTypeException {</span>
+<span class="fc" id="L74">        setCoordinateTransformationMatrix(c);</span>
+<span class="fc" id="L75">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @param height    height expressed in meters.
+     */
+    public NEDFrame(final double latitude, final double longitude, final double height) {
+<span class="fc" id="L85">        this();</span>
+<span class="fc" id="L86">        setPosition(latitude, longitude, height);</span>
+<span class="fc" id="L87">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @param height    height expressed in meters.
+     * @param vn        coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame
+     *                  and resolved along North axis.
+     * @param ve        coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame
+     *                  and resolved along East axis.
+     * @param vd        coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame
+     *                  and resolved along Down axis.
+     */
+    public NEDFrame(final double latitude, final double longitude, final double height,
+                    final double vn, final double ve, final double vd) {
+<span class="fc" id="L104">        this(latitude, longitude, height);</span>
+<span class="fc" id="L105">        setVelocityCoordinates(vn, ve, vd);</span>
+<span class="fc" id="L106">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @param height    height expressed in meters.
+     * @param c         Body to NED (Local Navigation frame) coordinate transformation matrix to be set.
+     * @throws InvalidSourceAndDestinationFrameTypeException if source or destination frame types are invalid.
+     */
+    public NEDFrame(final double latitude, final double longitude, final double height,
+                    final CoordinateTransformationMatrix c) throws InvalidSourceAndDestinationFrameTypeException {
+<span class="fc" id="L119">        this(latitude, longitude, height);</span>
+<span class="fc" id="L120">        setCoordinateTransformationMatrix(c);</span>
+<span class="fc" id="L121">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @param height    height expressed in meters.
+     * @param vn        coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame
+     *                  and resolved along North axis.
+     * @param ve        coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame
+     *                  and resolved along East axis.
+     * @param vd        coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame
+     *                  and resolved along Down axis.
+     * @param c         Body to NED (Local Navigation frame) coordinate transformation matrix to be set.
+     * @throws InvalidSourceAndDestinationFrameTypeException if source or destination frame types are invalid.
+     */
+    public NEDFrame(final double latitude, final double longitude, final double height,
+                    final double vn, final double ve, final double vd,
+                    final CoordinateTransformationMatrix c) throws InvalidSourceAndDestinationFrameTypeException {
+<span class="fc" id="L141">        this(latitude, longitude, height, vn, ve, vd);</span>
+<span class="fc" id="L142">        setCoordinateTransformationMatrix(c);</span>
+<span class="fc" id="L143">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param input NED frame to copy data from.
+     */
+    public NEDFrame(final NEDFrame input) {
+<span class="fc" id="L151">        this();</span>
+<span class="fc" id="L152">        copyFrom(input);</span>
+<span class="fc" id="L153">    }</span>
+
+    /**
+     * Gets latitude expressed in radians.
+     *
+     * @return latitude expressed in radians.
+     */
+    public double getLatitude() {
+<span class="fc" id="L161">        return mLatitude;</span>
+    }
+
+    /**
+     * Sets latitude expressed in radians.
+     *
+     * @param latitude latitude expressed in radians.
+     */
+    public void setLatitude(final double latitude) {
+<span class="fc" id="L170">        mLatitude = latitude;</span>
+<span class="fc" id="L171">    }</span>
+
+    /**
+     * Gets longitude expressed in radians.
+     *
+     * @return longitude expressed in radians.
+     */
+    public double getLongitude() {
+<span class="fc" id="L179">        return mLongitude;</span>
+    }
+
+    /**
+     * Sets longitude expressed in radians.
+     *
+     * @param longitude longitude expressed in radians.
+     */
+    public void setLongitude(final double longitude) {
+<span class="fc" id="L188">        mLongitude = longitude;</span>
+<span class="fc" id="L189">    }</span>
+
+    /**
+     * Gets height expressed in meters.
+     *
+     * @return height expressed in meters.
+     */
+    public double getHeight() {
+<span class="fc" id="L197">        return mHeight;</span>
+    }
+
+    /**
+     * Sets height expressed in meters.
+     *
+     * @param height height expressed in meters.
+     */
+    public void setHeight(double height) {
+<span class="fc" id="L206">        mHeight = height;</span>
+<span class="fc" id="L207">    }</span>
+
+    /**
+     * Sets body position.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @param height    height expressed in meters.
+     */
+    public void setPosition(final double latitude, final double longitude, final double height) {
+<span class="fc" id="L217">        mLatitude = latitude;</span>
+<span class="fc" id="L218">        mLongitude = longitude;</span>
+<span class="fc" id="L219">        mHeight = height;</span>
+<span class="fc" id="L220">    }</span>
+
+    /**
+     * Gets coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame and
+     * resolved along North axis.
+     *
+     * @return North velocity coordinate value.
+     */
+    public double getVn() {
+<span class="fc" id="L229">        return mVn;</span>
+    }
+
+    /**
+     * Sets coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame and
+     * resolved along North axis.
+     *
+     * @param vn North velocity coordinate value.
+     */
+    public void setVn(final double vn) {
+<span class="fc" id="L239">        mVn = vn;</span>
+<span class="fc" id="L240">    }</span>
+
+    /**
+     * Gets coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame and
+     * resolved along East axis.
+     *
+     * @return East velocity coordinate value.
+     */
+    public double getVe() {
+<span class="fc" id="L249">        return mVe;</span>
+    }
+
+    /**
+     * Sets coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame and
+     * resolved along East axis.
+     *
+     * @param ve East velocity coordinate value.
+     */
+    public void setVe(final double ve) {
+<span class="fc" id="L259">        mVe = ve;</span>
+<span class="fc" id="L260">    }</span>
+
+    /**
+     * Gets coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame and
+     * resolved along Down axis.
+     *
+     * @return Down velocity coordinate value.
+     */
+    public double getVd() {
+<span class="fc" id="L269">        return mVd;</span>
+    }
+
+    /**
+     * Sets coordinate of velocity of body frame expressed in meters per second (m/s) with respect ECEF frame and
+     * resolved along Down axis.
+     *
+     * @param vd Down velocity coordinate value.
+     */
+    public void setVd(final double vd) {
+<span class="fc" id="L279">        mVd = vd;</span>
+<span class="fc" id="L280">    }</span>
+
+    /**
+     * Sets velocity coordinates of body frame expressed in meters per second (m/s) resolved along North, East, Down
+     * axes.
+     *
+     * @param vn North velocity coordinate value.
+     * @param ve East velocity coordinate value.
+     * @param vd Down velocity coordinate value.
+     */
+    public void setVelocityCoordinates(final double vn, final double ve, final double vd) {
+<span class="fc" id="L291">        mVn = vn;</span>
+<span class="fc" id="L292">        mVe = ve;</span>
+<span class="fc" id="L293">        mVd = vd;</span>
+<span class="fc" id="L294">    }</span>
+
+    /**
+     * Gets coordinate transformation matrix.
+     *
+     * @return coordinate transformation matrix.
+     */
+    @Override
+    public CoordinateTransformationMatrix getCoordinateTransformationMatrix() {
+<span class="fc" id="L303">        CoordinateTransformationMatrix result = new CoordinateTransformationMatrix(FrameType.BODY_FRAME,</span>
+                FrameType.LOCAL_NAVIGATION_FRAME);
+<span class="fc" id="L305">        getCoordinateTransformationMatrix(result);</span>
+<span class="fc" id="L306">        return result;</span>
+    }
+
+    /**
+     * Gets coordinate transformation matrix.
+     *
+     * @param result instance where coordinate transformation matrix will be copied to.
+     */
+    @Override
+    public void getCoordinateTransformationMatrix(final CoordinateTransformationMatrix result) {
+<span class="fc" id="L316">        mC.copyTo(result);</span>
+<span class="fc" id="L317">    }</span>
+
+    /**
+     * Sets coordinate transformation matrix.
+     * Provided value must be a body to NED transformation matrix.
+     *
+     * @param c coordinate transformation matrix to be set.
+     * @throws InvalidSourceAndDestinationFrameTypeException if source or destination frame types are invalid.
+     */
+    @Override
+    public void setCoordinateTransformationMatrix(final CoordinateTransformationMatrix c)
+            throws InvalidSourceAndDestinationFrameTypeException {
+<span class="fc bfc" id="L329" title="All 2 branches covered.">        if (!isValidCoordinateTransformationMatrix(c)) {</span>
+<span class="fc" id="L330">            throw new InvalidSourceAndDestinationFrameTypeException();</span>
+        }
+
+<span class="fc" id="L333">        mC = c;</span>
+<span class="fc" id="L334">    }</span>
+
+    /**
+     * Checks whether provided coordinate transformation matrix is valid or not.
+     * Only body to NED transformation matrices are considered to be valid.
+     *
+     * @param c coordinate transformation matrix to be checked.
+     * @return true if provided value is valid, false otherwise.
+     */
+    public static boolean isValidCoordinateTransformationMatrix(final CoordinateTransformationMatrix c) {
+<span class="fc bfc" id="L344" title="All 2 branches covered.">        return c.getSourceType() == FrameType.BODY_FRAME &amp;&amp;</span>
+<span class="fc bfc" id="L345" title="All 2 branches covered.">                c.getDestinationType() == FrameType.LOCAL_NAVIGATION_FRAME;</span>
+    }
+
+    /**
+     * Copies this instance data into provided instance.
+     *
+     * @param output destination instance where data will be copied to.
+     */
+    public void copyTo(final NEDFrame output) {
+<span class="fc" id="L354">        output.mLatitude = mLatitude;</span>
+<span class="fc" id="L355">        output.mLongitude = mLongitude;</span>
+<span class="fc" id="L356">        output.mHeight = mHeight;</span>
+
+<span class="fc" id="L358">        output.mVn = mVn;</span>
+<span class="fc" id="L359">        output.mVe = mVe;</span>
+<span class="fc" id="L360">        output.mVd = mVd;</span>
+
+<span class="fc" id="L362">        mC.copyTo(output.mC);</span>
+<span class="fc" id="L363">    }</span>
+
+    /**
+     * Copies data of provided instance into this instance.
+     *
+     * @param input instance to copy data from.
+     */
+    public void copyFrom(final NEDFrame input) {
+<span class="fc" id="L371">        mLatitude = input.mLatitude;</span>
+<span class="fc" id="L372">        mLongitude = input.mLongitude;</span>
+<span class="fc" id="L373">        mHeight = input.mHeight;</span>
+
+<span class="fc" id="L375">        mVn = input.mVn;</span>
+<span class="fc" id="L376">        mVe = input.mVe;</span>
+<span class="fc" id="L377">        mVd = input.mVd;</span>
+
+<span class="fc" id="L379">        mC.copyFrom(input.mC);</span>
+<span class="fc" id="L380">    }</span>
+
+    /**
+     * Computes and returns hash code for this instance. Hash codes are almost unique
+     * values that are useful for fast classification and storage of objects in collections.
+     *
+     * @return Hash code.
+     */
+    @Override
+    public int hashCode() {
+<span class="fc" id="L390">        return Objects.hash(mLatitude, mLongitude, mHeight, mVn, mVe, mVd, mC);</span>
+    }
+
+    /**
+     * Checks if provided object is an ECEFFrame having exactly the same contents as
+     * this instance.
+     *
+     * @param obj Object to be compared.
+     * @return true if both objects are considered to be equal, false otherwise.
+     */
+    @Override
+    public boolean equals(final Object obj) {
+<span class="pc bpc" id="L402" title="1 of 2 branches missed.">        if (obj == null) {</span>
+<span class="nc" id="L403">            return false;</span>
+        }
+<span class="pc bpc" id="L405" title="1 of 2 branches missed.">        if (obj == this) {</span>
+<span class="nc" id="L406">            return true;</span>
+        }
+<span class="fc bfc" id="L408" title="All 2 branches covered.">        if (!(obj instanceof NEDFrame)) {</span>
+<span class="fc" id="L409">            return false;</span>
+        }
+
+<span class="fc" id="L412">        NEDFrame other = (NEDFrame) obj;</span>
+<span class="fc" id="L413">        return equals(other);</span>
+    }
+
+    /**
+     * Checks if provided instance has exactly the same contents as this instance.
+     *
+     * @param other instance to be compared.
+     * @return true if both instances are considered to be equal, false otherwise.
+     */
+    public boolean equals(final NEDFrame other) {
+<span class="fc" id="L423">        return equals(other, 0.0);</span>
+    }
+
+    /**
+     * Checks if provided instance has contents similar to this instance up to provided
+     * threshold value.
+     *
+     * @param other     instance to be compared.
+     * @param threshold maximum difference allowed between position, velocity and coordinate transformation matrix.
+     * @return true if both instances are considered to be equal (up to provided threshold), false otherwise.
+     */
+    public boolean equals(final NEDFrame other, final double threshold) {
+<span class="fc bfc" id="L435" title="All 2 branches covered.">        if (other == null) {</span>
+<span class="fc" id="L436">            return false;</span>
+        }
+
+<span class="fc bfc" id="L439" title="All 2 branches covered.">        return Math.abs(mLatitude - other.mLatitude) &lt;= threshold &amp;&amp;</span>
+<span class="pc bpc" id="L440" title="1 of 2 branches missed.">                Math.abs(mLongitude - other.mLongitude) &lt;= threshold &amp;&amp;</span>
+<span class="pc bpc" id="L441" title="1 of 2 branches missed.">                Math.abs(mHeight - other.mHeight) &lt;= threshold &amp;&amp;</span>
+<span class="pc bpc" id="L442" title="1 of 2 branches missed.">                Math.abs(mVn - other.mVn) &lt;= threshold &amp;&amp;</span>
+<span class="pc bpc" id="L443" title="1 of 2 branches missed.">                Math.abs(mVe - other.mVe) &lt;= threshold &amp;&amp;</span>
+<span class="pc bpc" id="L444" title="1 of 2 branches missed.">                Math.abs(mVd - other.mVd) &lt;= threshold &amp;&amp;</span>
+<span class="pc bpc" id="L445" title="1 of 2 branches missed.">                mC.equals(other.mC, threshold);</span>
+    }
+
+    /**
+     * Makes a copy of this instance.
+     *
+     * @return a copy of this instance.
+     */
+    @SuppressWarnings({&quot;MethodDoesntCallSuperMethod&quot;, &quot;CloneDoesntDeclareCloneNotSupportedException&quot;})
+    @Override
+    protected Object clone() {
+<span class="fc" id="L456">        return new NEDFrame(this);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

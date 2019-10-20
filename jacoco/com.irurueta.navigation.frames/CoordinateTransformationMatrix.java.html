@@ -1,0 +1,559 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CoordinateTransformationMatrix.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.frames</a> &gt; <span class="el_source">CoordinateTransformationMatrix.java</span></div><h1>CoordinateTransformationMatrix.java</h1><pre class="source lang-java linenums">package com.irurueta.navigation.frames;
+
+import com.irurueta.algebra.AlgebraException;
+import com.irurueta.algebra.Matrix;
+import com.irurueta.algebra.Utils;
+import com.irurueta.algebra.WrongSizeException;
+import com.irurueta.geometry.InvalidRotationMatrixException;
+import com.irurueta.geometry.MatrixRotation3D;
+import com.irurueta.geometry.Rotation3D;
+
+import java.io.Serializable;
+import java.util.Objects;
+
+/**
+ * Contains a coordinate transformation matrix, or rotation matrix. The coordinate transformation matrix is a 3x3
+ * matrix where a vector may be transformed in one step from one set of resolving axes to another by pre-multiplying it
+ * by the appropriate coordinate transformation matrix. The coordinate transformation matrix is associated to a source
+ * and destination frame.
+ */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
+public class CoordinateTransformationMatrix implements Serializable, Cloneable {
+
+    /**
+     * Number of rows of a coordinate transformation matrix.
+     */
+    public static final int ROWS = MatrixRotation3D.ROTATION3D_INHOM_MATRIX_ROWS;
+
+    /**
+     * Number of columns of a coordinate transformation matrix.
+     */
+    public static final int COLS = MatrixRotation3D.ROTATION3D_INHOM_MATRIX_ROWS;
+
+    /**
+     * Default threshold to consider a matrix valid.
+     */
+    public static final double DEFAULT_THRESHOLD = Rotation3D.DEFAULT_VALID_THRESHOLD;
+
+    /**
+     * 3x3 matrix containing a rotation.
+     */
+    private Matrix mMatrix;
+
+    /**
+     * Source frame type.
+     */
+    private FrameType mSourceType;
+
+    /**
+     * Destination frame type.
+     */
+    private FrameType mDestinationType;
+
+    /**
+     * Constructor.
+     * Initializes rotation as the identify (no rotation).
+     *
+     * @param sourceType      source frame type.
+     * @param destinationType destination frame type.
+     * @throws NullPointerException if either source or destination frame types are null.
+     */
+<span class="fc" id="L61">    public CoordinateTransformationMatrix(final FrameType sourceType, final FrameType destinationType) {</span>
+        try {
+<span class="fc" id="L63">            mMatrix = Matrix.identity(ROWS, COLS);</span>
+<span class="nc" id="L64">        } catch (final WrongSizeException ignore) {</span>
+            // never happens
+<span class="fc" id="L66">        }</span>
+
+<span class="fc" id="L68">        setSourceType(sourceType);</span>
+<span class="fc" id="L69">        setDestinationType(destinationType);</span>
+<span class="fc" id="L70">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param matrix          a 3x3 matrix containing a rotation.
+     * @param sourceType      source frame type.
+     * @param destinationType destination frame type.
+     * @param threshold       threshold to validate rotation matrix.
+     * @throws InvalidRotationMatrixException if provided matrix is not a valid rotation matrix (3x3 and orthonormal).
+     * @throws NullPointerException           if either source or destination frame types are null.
+     * @throws IllegalArgumentException       if provided threshold is negative.
+     */
+    public CoordinateTransformationMatrix(final Matrix matrix, final FrameType sourceType,
+                                          final FrameType destinationType,
+<span class="fc" id="L85">                                          final double threshold) throws InvalidRotationMatrixException {</span>
+<span class="fc" id="L86">        setMatrix(matrix, threshold);</span>
+<span class="fc" id="L87">        setSourceType(sourceType);</span>
+<span class="fc" id="L88">        setDestinationType(destinationType);</span>
+<span class="fc" id="L89">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param matrix          a 3x3 matrix containing a rotation.
+     * @param sourceType      source frame type.
+     * @param destinationType destination frame type.
+     * @throws InvalidRotationMatrixException if provided matrix is not a valid rotation matrix (3x3 and orthonormal).
+     * @throws NullPointerException           if either source or destination frame types are null.
+     */
+    public CoordinateTransformationMatrix(final Matrix matrix, final FrameType sourceType,
+                                          final FrameType destinationType) throws InvalidRotationMatrixException {
+<span class="fc" id="L102">        this(matrix, sourceType, destinationType, DEFAULT_THRESHOLD);</span>
+<span class="fc" id="L103">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param input other coordinate transformation matrix to copy data from.
+     */
+    public CoordinateTransformationMatrix(final CoordinateTransformationMatrix input) {
+<span class="fc" id="L111">        this(input.mSourceType, input.mDestinationType);</span>
+<span class="fc" id="L112">        copyFrom(input);</span>
+<span class="fc" id="L113">    }</span>
+
+    /**
+     * Gets matrix containing a rotation.
+     *
+     * @return 3x3 matrix containing a rotation.
+     */
+    public Matrix getMatrix() {
+        Matrix result;
+        try {
+<span class="fc" id="L123">            result = new Matrix(ROWS, COLS);</span>
+<span class="fc" id="L124">            getMatrix(result);</span>
+<span class="nc" id="L125">        } catch (final WrongSizeException ignore) {</span>
+            // never happens
+<span class="nc" id="L127">            result = null;</span>
+<span class="fc" id="L128">        }</span>
+<span class="fc" id="L129">        return result;</span>
+    }
+
+    /**
+     * Gets matrix containing a rotation.
+     *
+     * @param result instance where internal 3x3 matrix containing a rotation will be copied to.
+     */
+    public void getMatrix(Matrix result) {
+<span class="fc" id="L138">        mMatrix.copyTo(result);</span>
+<span class="fc" id="L139">    }</span>
+
+    /**
+     * Sets matrix containing a rotation.
+     *
+     * @param matrix    a 3x3 matrix containing a rotation.
+     * @param threshold threshold to validate rotation matrix.
+     * @throws InvalidRotationMatrixException if provided matrix is not a valid rotation matrix (3x3 and orthonormal).
+     * @throws IllegalArgumentException       if provided threshold is negative.
+     */
+    public void setMatrix(final Matrix matrix, final double threshold) throws InvalidRotationMatrixException {
+
+<span class="fc bfc" id="L151" title="All 2 branches covered.">        if (!isValidMatrix(matrix, threshold)) {</span>
+<span class="fc" id="L152">            throw new InvalidRotationMatrixException();</span>
+        }
+
+<span class="fc" id="L155">        mMatrix = matrix;</span>
+<span class="fc" id="L156">    }</span>
+
+    /**
+     * Sets matrix containing a rotation.
+     *
+     * @param matrix a 3x3 matrix containing a rotation.
+     * @throws InvalidRotationMatrixException if provided matrix is not a valid rotation matrix (3x3 and orthonormal).
+     */
+    public void setMatrix(final Matrix matrix) throws InvalidRotationMatrixException {
+<span class="fc" id="L165">        setMatrix(matrix, Rotation3D.DEFAULT_VALID_THRESHOLD);</span>
+<span class="fc" id="L166">    }</span>
+
+    /**
+     * Determines whether provided matrix is a valid rotation matrix (3x3 and orthonormal)
+     * up to provided threshold.
+     *
+     * @param matrix    matrix to be checked.
+     * @param threshold threshold to determine whether matrix is valid.
+     * @return true if matrix is valid, false otherwise.
+     * @throws IllegalArgumentException if provided threshold value is negative.
+     */
+    public static boolean isValidMatrix(final Matrix matrix, final double threshold) {
+<span class="fc bfc" id="L178" title="All 2 branches covered.">        if (threshold &lt; Rotation3D.MIN_THRESHOLD) {</span>
+<span class="fc" id="L179">            throw new IllegalArgumentException();</span>
+        }
+
+        try {
+            //TODO: use Rotation3D.isValidRotationMatrix when geometry library is updated
+            // instead of Utils.isOrthogonal and checking determinant (note that size must also
+            // be checked anyways)
+<span class="fc bfc" id="L186" title="All 2 branches covered.">            return matrix.getRows() == Rotation3D.INHOM_COORDS</span>
+<span class="fc bfc" id="L187" title="All 2 branches covered.">                    &amp;&amp; matrix.getColumns() == Rotation3D.INHOM_COORDS</span>
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">                    &amp;&amp; Utils.isOrthogonal(matrix, threshold) &amp;&amp;</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">                    Math.abs(Math.abs(Utils.det(matrix)) - 1.0) &lt; threshold;</span>
+<span class="nc" id="L190">        } catch (final AlgebraException e) {</span>
+<span class="nc" id="L191">            return false;</span>
+        }
+    }
+
+    /**
+     * Determines whether provided matrix is a valid rotation matrix (3x3 and orthonormal)
+     * up to default threshold {@link #DEFAULT_THRESHOLD}.
+     *
+     * @param matrix matrix to be checked.
+     * @return true if matrix is valid, false otherwise.
+     */
+    public static boolean isValidMatrix(final Matrix matrix) {
+<span class="fc" id="L203">        return isValidMatrix(matrix, DEFAULT_THRESHOLD);</span>
+    }
+
+    /**
+     * Gets source frame type.
+     *
+     * @return source frame type.
+     */
+    public FrameType getSourceType() {
+<span class="fc" id="L212">        return mSourceType;</span>
+    }
+
+    /**
+     * Sets source frame type.
+     *
+     * @param sourceType source frame type.
+     * @throws NullPointerException if provided value is null.
+     */
+    public void setSourceType(final FrameType sourceType) {
+<span class="fc bfc" id="L222" title="All 2 branches covered.">        if (sourceType == null) {</span>
+<span class="fc" id="L223">            throw new NullPointerException();</span>
+        }
+
+<span class="fc" id="L226">        mSourceType = sourceType;</span>
+<span class="fc" id="L227">    }</span>
+
+    /**
+     * Gets destination frame type.
+     *
+     * @return destination frame type.
+     */
+    public FrameType getDestinationType() {
+<span class="fc" id="L235">        return mDestinationType;</span>
+    }
+
+    /**
+     * Sets destination frame type.
+     *
+     * @param destinationType destination frame type.
+     * @throws NullPointerException if provided value is null.
+     */
+    public void setDestinationType(final FrameType destinationType) {
+<span class="fc bfc" id="L245" title="All 2 branches covered.">        if (destinationType == null) {</span>
+<span class="fc" id="L246">            throw new NullPointerException();</span>
+        }
+
+<span class="fc" id="L249">        mDestinationType = destinationType;</span>
+<span class="fc" id="L250">    }</span>
+
+    /**
+     * Gets internal matrix as a 3D rotation.
+     *
+     * @return a 3D rotation representing the internal matrix.
+     * @throws InvalidRotationMatrixException if internal matrix cannot be converted to a 3D rotation.
+     */
+    public Rotation3D asRotation() throws InvalidRotationMatrixException {
+<span class="fc" id="L259">        return new MatrixRotation3D(mMatrix);</span>
+    }
+
+    /**
+     * Gets internal matrix as a 3D rotation.
+     *
+     * @param result instance where 3D rotation will be stored.
+     * @throws InvalidRotationMatrixException if internal matrix cannot be converted to a 3D rotation.
+     */
+    public void asRotation(final Rotation3D result) throws InvalidRotationMatrixException {
+<span class="fc" id="L269">        result.fromMatrix(mMatrix);</span>
+<span class="fc" id="L270">    }</span>
+
+    /**
+     * Copies this instance data into provided instance.
+     *
+     * @param output destination instance where data will be copied to.
+     */
+    public void copyTo(final CoordinateTransformationMatrix output) {
+<span class="fc" id="L278">        output.mSourceType = mSourceType;</span>
+<span class="fc" id="L279">        output.mDestinationType = mDestinationType;</span>
+<span class="fc" id="L280">        mMatrix.copyTo(output.mMatrix);</span>
+<span class="fc" id="L281">    }</span>
+
+    /**
+     * Copies data of provided instance into this instance.
+     *
+     * @param input instance to copy data from.
+     */
+    public void copyFrom(final CoordinateTransformationMatrix input) {
+<span class="fc" id="L289">        mSourceType = input.mSourceType;</span>
+<span class="fc" id="L290">        mDestinationType = input.mDestinationType;</span>
+<span class="fc" id="L291">        mMatrix.copyFrom(input.mMatrix);</span>
+<span class="fc" id="L292">    }</span>
+
+    /**
+     * Computes and returns hash code for this instance. Hash codes are almost unique
+     * values that are useful for fast classification and storage of objects in collections.
+     *
+     * @return Hash code.
+     */
+    @Override
+    public int hashCode() {
+<span class="fc" id="L302">        return Objects.hash(mSourceType, mDestinationType, mMatrix);</span>
+    }
+
+    /**
+     * Checks if provided object is a CoordinateTransformationMatrix having exactly the same
+     * contents as this instance.
+     *
+     * @param obj Object to be compared.
+     * @return true if both objects are considered to be equal, false otherwise.
+     */
+    @Override
+    public boolean equals(final Object obj) {
+<span class="pc bpc" id="L314" title="1 of 2 branches missed.">        if (obj == null) {</span>
+<span class="nc" id="L315">            return false;</span>
+        }
+<span class="pc bpc" id="L317" title="1 of 2 branches missed.">        if (obj == this) {</span>
+<span class="nc" id="L318">            return true;</span>
+        }
+<span class="fc bfc" id="L320" title="All 2 branches covered.">        if (!(obj instanceof CoordinateTransformationMatrix)) {</span>
+<span class="fc" id="L321">            return false;</span>
+        }
+
+<span class="fc" id="L324">        final CoordinateTransformationMatrix other = (CoordinateTransformationMatrix) obj;</span>
+<span class="fc" id="L325">        return equals(other);</span>
+    }
+
+    /**
+     * Checks if provided instance has exactly the same contents as this instance.
+     *
+     * @param other instance to be compared.
+     * @return true if both instances are considered to be equal, false otherwise.
+     */
+    public boolean equals(final CoordinateTransformationMatrix other) {
+<span class="fc" id="L335">        return equals(other, 0.0);</span>
+    }
+
+    /**
+     * Checks if provided instance has contents similar to this instance up to
+     * provided threshold value.
+     *
+     * @param other     instance to be compared.
+     * @param threshold maximum difference allowed between values on internal matrix.
+     * @return true if both instances are considered to be equal (up to provided threshold),
+     * false otherwise.
+     */
+    public boolean equals(final CoordinateTransformationMatrix other, final double threshold) {
+<span class="fc bfc" id="L348" title="All 2 branches covered.">        if (other == null) {</span>
+<span class="fc" id="L349">            return false;</span>
+        }
+<span class="pc bpc" id="L351" title="1 of 4 branches missed.">        return other.mSourceType == mSourceType &amp;&amp; other.mDestinationType == mDestinationType &amp;&amp;</span>
+<span class="pc bpc" id="L352" title="1 of 2 branches missed.">                other.mMatrix.equals(mMatrix, threshold);</span>
+    }
+
+    /**
+     * Computes the inverse of this coordinate transformation matrix and stores the result into provided instance.
+     *
+     * @param result instance where inverse will be stored.
+     */
+    public void inverse(final CoordinateTransformationMatrix result) {
+        try {
+<span class="fc" id="L362">            final FrameType source = mSourceType;</span>
+<span class="fc" id="L363">            final FrameType destination = mDestinationType;</span>
+<span class="fc" id="L364">            final Matrix matrix = Matrix.identity(ROWS, COLS);</span>
+<span class="fc" id="L365">            matrix.copyFrom(mMatrix);</span>
+
+<span class="fc" id="L367">            result.setSourceType(destination);</span>
+<span class="fc" id="L368">            result.setDestinationType(source);</span>
+
+            // Because matrix needs to be a rotation (3x3 and orthonormal), its inverse is the transpose
+<span class="fc" id="L371">            matrix.transpose();</span>
+<span class="fc" id="L372">            result.setMatrix(matrix);</span>
+<span class="nc" id="L373">        } catch (WrongSizeException | InvalidRotationMatrixException ignore) {</span>
+            // never happens
+<span class="fc" id="L375">        }</span>
+<span class="fc" id="L376">    }</span>
+
+    /**
+     * Converts this instance into its inverse coordinate transformation matrix.
+     */
+    public void inverse() {
+<span class="fc" id="L382">        inverse(this);</span>
+<span class="fc" id="L383">    }</span>
+
+    /**
+     * Computes the inverse of this coordinate transformation matrix and returns it as a new instance.
+     *
+     * @return the inverse of this coordinate transformation matrix.
+     */
+    public CoordinateTransformationMatrix inverseAndReturnNew() {
+<span class="fc" id="L391">        final CoordinateTransformationMatrix result = new CoordinateTransformationMatrix(mDestinationType, mSourceType);</span>
+<span class="fc" id="L392">        inverse(result);</span>
+<span class="fc" id="L393">        return result;</span>
+    }
+
+    /**
+     * Computes matrix to convert ECEF to NED coordinates.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @param result    instance where computed matrix will be stored.
+     */
+    public static void ecefToNedMatrix(final double latitude, final double longitude, final Matrix result) {
+<span class="pc bpc" id="L404" title="1 of 4 branches missed.">        if (result.getRows() != ROWS || result.getColumns() != COLS) {</span>
+            try {
+<span class="fc" id="L406">                result.resize(ROWS, COLS);</span>
+<span class="nc" id="L407">            } catch (final WrongSizeException ignore) {</span>
+<span class="fc" id="L408">            }</span>
+        }
+        // Calculate ECEF to NED coordinate transformation matrix using (2.150)
+<span class="fc" id="L411">        final double cosLat = Math.cos(latitude);</span>
+<span class="fc" id="L412">        final double sinLat = Math.sin(latitude);</span>
+<span class="fc" id="L413">        final double cosLong = Math.cos(longitude);</span>
+<span class="fc" id="L414">        final double sinLong = Math.sin(longitude);</span>
+
+<span class="fc" id="L416">        result.setElementAtIndex(0, -sinLat * cosLong);</span>
+<span class="fc" id="L417">        result.setElementAtIndex(1, -sinLong);</span>
+<span class="fc" id="L418">        result.setElementAtIndex(2, -cosLat * cosLong);</span>
+
+<span class="fc" id="L420">        result.setElementAtIndex(3, -sinLat * sinLong);</span>
+<span class="fc" id="L421">        result.setElementAtIndex(4, cosLong);</span>
+<span class="fc" id="L422">        result.setElementAtIndex(5, -cosLat * sinLong);</span>
+
+<span class="fc" id="L424">        result.setElementAtIndex(6, cosLat);</span>
+<span class="fc" id="L425">        result.setElementAtIndex(7, 0.0);</span>
+<span class="fc" id="L426">        result.setElementAtIndex(8, -sinLat);</span>
+<span class="fc" id="L427">    }</span>
+
+    /**
+     * Computes matrix to convert ECEF to NED coordinates.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @return a new matrix to convert ECEF to NED coordinates.
+     */
+    public static Matrix ecefToNedMatrix(final double latitude, final double longitude) {
+        Matrix result;
+        try {
+<span class="fc" id="L439">            result = new Matrix(CoordinateTransformationMatrix.ROWS, CoordinateTransformationMatrix.COLS);</span>
+<span class="fc" id="L440">            ecefToNedMatrix(latitude, longitude, result);</span>
+<span class="nc" id="L441">        } catch (WrongSizeException ignore) {</span>
+            // never happens
+<span class="nc" id="L443">            result = null;</span>
+<span class="fc" id="L444">        }</span>
+<span class="fc" id="L445">        return result;</span>
+    }
+
+    /**
+     * Computes ECEF to NED coordinate transformation matrix.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @param result    instance where result will be stored.
+     */
+    public static void ecefToNedCoordinateTransformationMatrix(final double latitude, final double longitude,
+                                                               final CoordinateTransformationMatrix result) {
+        try {
+<span class="fc" id="L458">            result.setSourceType(FrameType.EARTH_CENTERED_EARTH_FIXED_FRAME);</span>
+<span class="fc" id="L459">            result.setDestinationType(FrameType.LOCAL_NAVIGATION_FRAME);</span>
+<span class="fc" id="L460">            result.setMatrix(ecefToNedMatrix(latitude, longitude));</span>
+<span class="nc" id="L461">        } catch (InvalidRotationMatrixException ignore) {</span>
+            // never happens
+<span class="fc" id="L463">        }</span>
+<span class="fc" id="L464">    }</span>
+
+    /**
+     * Computes ECEF to NED coordinate transformation matrix.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @return a new ECEF to NED coordinate transformation matrix.
+     */
+    public static CoordinateTransformationMatrix ecefToNedCoordinateTransformationMatrix(final double latitude,
+                                                                                         final double longitude) {
+<span class="fc" id="L475">        final CoordinateTransformationMatrix result = new CoordinateTransformationMatrix(</span>
+                FrameType.EARTH_CENTERED_EARTH_FIXED_FRAME, FrameType.LOCAL_NAVIGATION_FRAME);
+<span class="fc" id="L477">        ecefToNedCoordinateTransformationMatrix(latitude, longitude, result);</span>
+<span class="fc" id="L478">        return result;</span>
+    }
+
+    /**
+     * Computes matrix to convert NED to ECEF coordinates.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @param result    instance where computed matrix will be stored.
+     */
+    public static void nedToEcefMatrix(final double latitude, final double longitude, final Matrix result) {
+        //NED to ECEF matrix is the inverse of ECEF to NED matrix.
+        //Since ECEF to NED matrix is a rotation (3x3 and orthonormal), its inverse is the transpose.
+<span class="fc" id="L491">        ecefToNedMatrix(latitude, longitude, result);</span>
+<span class="fc" id="L492">        result.transpose();</span>
+<span class="fc" id="L493">    }</span>
+
+    /**
+     * Computes matrix to convert NED to ECEF coordinates.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @return a new matrix to convert NED to ECEF coordinates.
+     */
+    public static Matrix nedToEcefMatrix(final double latitude, final double longitude) {
+        Matrix result;
+        try {
+<span class="fc" id="L505">            result = new Matrix(CoordinateTransformationMatrix.ROWS, CoordinateTransformationMatrix.COLS);</span>
+<span class="fc" id="L506">            nedToEcefMatrix(latitude, longitude, result);</span>
+<span class="nc" id="L507">        } catch (WrongSizeException ignore) {</span>
+            // never happens
+<span class="nc" id="L509">            result = null;</span>
+<span class="fc" id="L510">        }</span>
+
+<span class="fc" id="L512">        return result;</span>
+    }
+
+    /**
+     * Computes NED to ECEF coordinate transformation matrix.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @param result    instance where result will be stored.
+     */
+    public static void nedToEcefCoordinateTransformationMatrix(final double latitude, final double longitude,
+                                                               final CoordinateTransformationMatrix result) {
+        try {
+<span class="fc" id="L525">            result.setSourceType(FrameType.LOCAL_NAVIGATION_FRAME);</span>
+<span class="fc" id="L526">            result.setDestinationType(FrameType.EARTH_CENTERED_EARTH_FIXED_FRAME);</span>
+<span class="fc" id="L527">            result.setMatrix(nedToEcefMatrix(latitude, longitude));</span>
+<span class="nc" id="L528">        } catch (InvalidRotationMatrixException ignore) {</span>
+            // never happens
+<span class="fc" id="L530">        }</span>
+<span class="fc" id="L531">    }</span>
+
+    /**
+     * Computes NED to ECEF coordinate transformation matrix.
+     *
+     * @param latitude  latitude expressed in radians.
+     * @param longitude longitude expressed in radians.
+     * @return instance where computed matrix will be stored.
+     */
+    public static CoordinateTransformationMatrix nedToEcefCoordinateTransformationMatrix(final double latitude,
+                                                                                         final double longitude) {
+<span class="fc" id="L542">        final CoordinateTransformationMatrix result = new CoordinateTransformationMatrix(</span>
+                FrameType.LOCAL_NAVIGATION_FRAME, FrameType.EARTH_CENTERED_EARTH_FIXED_FRAME);
+<span class="fc" id="L544">        nedToEcefCoordinateTransformationMatrix(latitude, longitude, result);</span>
+<span class="fc" id="L545">        return result;</span>
+    }
+
+    /**
+     * Makes a copy of this instance.
+     *
+     * @return a copy of this instance.
+     */
+    @SuppressWarnings({&quot;MethodDoesntCallSuperMethod&quot;, &quot;CloneDoesntDeclareCloneNotSupportedException&quot;})
+    @Override
+    protected Object clone() {
+<span class="fc" id="L556">        return new CoordinateTransformationMatrix(this);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
