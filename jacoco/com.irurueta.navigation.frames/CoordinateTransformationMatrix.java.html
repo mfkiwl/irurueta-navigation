@@ -103,14 +103,31 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
 <span class="fc" id="L103">    }</span>
 
     /**
+     * Constructor with Euler angles.
+     * Notice that these angles do not match angles obtained from {@link com.irurueta.geometry.Rotation3D} or
+     * {@link com.irurueta.geometry.Quaternion} because they are referred to different axes.
+     *
+     * @param roll            roll Euler angle (around x-axis) expressed in radians.
+     * @param pitch           pitch Euler angle (around y-axis) expressed in radians.
+     * @param yaw             yaw Euler angle (around z-axis) expressed in radians.
+     * @param sourceType      source frame type.
+     * @param destinationType destination frame type.
+     */
+    public CoordinateTransformationMatrix(final double roll, final double pitch, final double yaw,
+                                          final FrameType sourceType, final FrameType destinationType) {
+<span class="fc" id="L118">        this(sourceType, destinationType);</span>
+<span class="fc" id="L119">        setEulerAngles(roll, pitch, yaw);</span>
+<span class="fc" id="L120">    }</span>
+
+    /**
      * Constructor.
      *
      * @param input other coordinate transformation matrix to copy data from.
      */
     public CoordinateTransformationMatrix(final CoordinateTransformationMatrix input) {
-<span class="fc" id="L111">        this(input.mSourceType, input.mDestinationType);</span>
-<span class="fc" id="L112">        copyFrom(input);</span>
-<span class="fc" id="L113">    }</span>
+<span class="fc" id="L128">        this(input.mSourceType, input.mDestinationType);</span>
+<span class="fc" id="L129">        copyFrom(input);</span>
+<span class="fc" id="L130">    }</span>
 
     /**
      * Gets matrix containing a rotation.
@@ -120,13 +137,13 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
     public Matrix getMatrix() {
         Matrix result;
         try {
-<span class="fc" id="L123">            result = new Matrix(ROWS, COLS);</span>
-<span class="fc" id="L124">            getMatrix(result);</span>
-<span class="nc" id="L125">        } catch (final WrongSizeException ignore) {</span>
+<span class="fc" id="L140">            result = new Matrix(ROWS, COLS);</span>
+<span class="fc" id="L141">            getMatrix(result);</span>
+<span class="nc" id="L142">        } catch (final WrongSizeException ignore) {</span>
             // never happens
-<span class="nc" id="L127">            result = null;</span>
-<span class="fc" id="L128">        }</span>
-<span class="fc" id="L129">        return result;</span>
+<span class="nc" id="L144">            result = null;</span>
+<span class="fc" id="L145">        }</span>
+<span class="fc" id="L146">        return result;</span>
     }
 
     /**
@@ -135,8 +152,8 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @param result instance where internal 3x3 matrix containing a rotation will be copied to.
      */
     public void getMatrix(Matrix result) {
-<span class="fc" id="L138">        mMatrix.copyTo(result);</span>
-<span class="fc" id="L139">    }</span>
+<span class="fc" id="L155">        mMatrix.copyTo(result);</span>
+<span class="fc" id="L156">    }</span>
 
     /**
      * Sets matrix containing a rotation.
@@ -148,12 +165,12 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      */
     public void setMatrix(final Matrix matrix, final double threshold) throws InvalidRotationMatrixException {
 
-<span class="fc bfc" id="L151" title="All 2 branches covered.">        if (!isValidMatrix(matrix, threshold)) {</span>
-<span class="fc" id="L152">            throw new InvalidRotationMatrixException();</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        if (!isValidMatrix(matrix, threshold)) {</span>
+<span class="fc" id="L169">            throw new InvalidRotationMatrixException();</span>
         }
 
-<span class="fc" id="L155">        mMatrix = matrix;</span>
-<span class="fc" id="L156">    }</span>
+<span class="fc" id="L172">        mMatrix = matrix;</span>
+<span class="fc" id="L173">    }</span>
 
     /**
      * Sets matrix containing a rotation.
@@ -162,8 +179,8 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @throws InvalidRotationMatrixException if provided matrix is not a valid rotation matrix (3x3 and orthonormal).
      */
     public void setMatrix(final Matrix matrix) throws InvalidRotationMatrixException {
-<span class="fc" id="L165">        setMatrix(matrix, Rotation3D.DEFAULT_VALID_THRESHOLD);</span>
-<span class="fc" id="L166">    }</span>
+<span class="fc" id="L182">        setMatrix(matrix, Rotation3D.DEFAULT_VALID_THRESHOLD);</span>
+<span class="fc" id="L183">    }</span>
 
     /**
      * Determines whether provided matrix is a valid rotation matrix (3x3 and orthonormal)
@@ -175,20 +192,20 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @throws IllegalArgumentException if provided threshold value is negative.
      */
     public static boolean isValidMatrix(final Matrix matrix, final double threshold) {
-<span class="fc bfc" id="L178" title="All 2 branches covered.">        if (threshold &lt; Rotation3D.MIN_THRESHOLD) {</span>
-<span class="fc" id="L179">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L195" title="All 2 branches covered.">        if (threshold &lt; Rotation3D.MIN_THRESHOLD) {</span>
+<span class="fc" id="L196">            throw new IllegalArgumentException();</span>
         }
 
         try {
             //TODO: use Rotation3D.isValidRotationMatrix when geometry library is updated
             // instead of Utils.isOrthogonal and checking determinant (note that size must also
             // be checked anyways)
-<span class="fc bfc" id="L186" title="All 2 branches covered.">            return matrix.getRows() == Rotation3D.INHOM_COORDS</span>
-<span class="fc bfc" id="L187" title="All 2 branches covered.">                    &amp;&amp; matrix.getColumns() == Rotation3D.INHOM_COORDS</span>
-<span class="pc bpc" id="L188" title="1 of 2 branches missed.">                    &amp;&amp; Utils.isOrthogonal(matrix, threshold) &amp;&amp;</span>
-<span class="fc bfc" id="L189" title="All 2 branches covered.">                    Math.abs(Math.abs(Utils.det(matrix)) - 1.0) &lt; threshold;</span>
-<span class="nc" id="L190">        } catch (final AlgebraException e) {</span>
-<span class="nc" id="L191">            return false;</span>
+<span class="fc bfc" id="L203" title="All 2 branches covered.">            return matrix.getRows() == Rotation3D.INHOM_COORDS</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">                    &amp;&amp; matrix.getColumns() == Rotation3D.INHOM_COORDS</span>
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">                    &amp;&amp; Utils.isOrthogonal(matrix, threshold) &amp;&amp;</span>
+<span class="fc bfc" id="L206" title="All 2 branches covered.">                    Math.abs(Math.abs(Utils.det(matrix)) - 1.0) &lt; threshold;</span>
+<span class="nc" id="L207">        } catch (final AlgebraException e) {</span>
+<span class="nc" id="L208">            return false;</span>
         }
     }
 
@@ -200,8 +217,72 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @return true if matrix is valid, false otherwise.
      */
     public static boolean isValidMatrix(final Matrix matrix) {
-<span class="fc" id="L203">        return isValidMatrix(matrix, DEFAULT_THRESHOLD);</span>
+<span class="fc" id="L220">        return isValidMatrix(matrix, DEFAULT_THRESHOLD);</span>
     }
+
+    /**
+     * Gets roll Euler angle (around x-axis) expressed in radians.
+     * Notice that this angle does not match angles obtained from {@link com.irurueta.geometry.Rotation3D} or
+     * {@link com.irurueta.geometry.Quaternion} because they are referred to different axes.
+     *
+     * @return roll Euler angle.
+     */
+    public double getRollEulerAngle() {
+<span class="fc" id="L231">        return Math.atan2(mMatrix.getElementAt(1, 2), mMatrix.getElementAt(2, 2));</span>
+    }
+
+    /**
+     * Gets pitch Euler angle (around y-axis) expressed in radians.
+     * Notice that this angle does not match angles obtained from {@link com.irurueta.geometry.Rotation3D} or
+     * {@link com.irurueta.geometry.Quaternion} because they are referred to different axes.
+     *
+     * @return pitch Euler angle.
+     */
+    public double getPitchEulerAngle() {
+<span class="fc" id="L242">        return -Math.asin(mMatrix.getElementAt(0, 2));</span>
+    }
+
+    /**
+     * Gets yaw Euler angle (around z-axis) expressed in radians.
+     * Notice that this angle does not match angles obtained from {@link com.irurueta.geometry.Rotation3D} or
+     * {@link com.irurueta.geometry.Quaternion} because they are referred to different axes.
+     *
+     * @return yaw Euler angle.
+     */
+    public double getYawEulerAngle() {
+<span class="fc" id="L253">        return Math.atan2(mMatrix.getElementAt(0, 1), mMatrix.getElementAt(0, 0));</span>
+    }
+
+    /**
+     * Sets euler angles (roll, pitch and yaw) expressed in radians.
+     * Notice that these angles do not match angles obtained from {@link com.irurueta.geometry.Rotation3D} or
+     * {@link com.irurueta.geometry.Quaternion} because they are referred to different axes.
+     *
+     * @param roll  roll Euler angle (around x-axis) expressed in radians.
+     * @param pitch pitch Euler angle (around y-axis) expressed in radians.
+     * @param yaw   yaw Euler angle (around z-axis) expressed in radians.
+     */
+    public void setEulerAngles(final double roll, final double pitch, final double yaw) {
+<span class="fc" id="L266">        final double sinPhi = Math.sin(roll);</span>
+<span class="fc" id="L267">        final double cosPhi = Math.cos(roll);</span>
+<span class="fc" id="L268">        final double sinTheta = Math.sin(pitch);</span>
+<span class="fc" id="L269">        final double cosTheta = Math.cos(pitch);</span>
+<span class="fc" id="L270">        final double sinPsi = Math.sin(yaw);</span>
+<span class="fc" id="L271">        final double cosPsi = Math.cos(yaw);</span>
+
+        // Calculate coordinate transformation matrix using (2.22)
+<span class="fc" id="L274">        mMatrix.setElementAt(0, 0, cosTheta * cosPsi);</span>
+<span class="fc" id="L275">        mMatrix.setElementAt(0, 1, cosTheta * sinPsi);</span>
+<span class="fc" id="L276">        mMatrix.setElementAt(0, 2, -sinTheta);</span>
+
+<span class="fc" id="L278">        mMatrix.setElementAt(1, 0, -cosPhi * sinPsi + sinPhi * sinTheta * cosPsi);</span>
+<span class="fc" id="L279">        mMatrix.setElementAt(1, 1, cosPhi * cosPsi + sinPhi * sinTheta * sinPsi);</span>
+<span class="fc" id="L280">        mMatrix.setElementAt(1, 2, sinPhi * cosTheta);</span>
+
+<span class="fc" id="L282">        mMatrix.setElementAt(2, 0, sinPhi * sinPsi + cosPhi * sinTheta * cosPsi);</span>
+<span class="fc" id="L283">        mMatrix.setElementAt(2, 1, -sinPhi * cosPsi + cosPhi * sinTheta * sinPsi);</span>
+<span class="fc" id="L284">        mMatrix.setElementAt(2, 2, cosPhi * cosTheta);</span>
+<span class="fc" id="L285">    }</span>
 
     /**
      * Gets source frame type.
@@ -209,7 +290,7 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @return source frame type.
      */
     public FrameType getSourceType() {
-<span class="fc" id="L212">        return mSourceType;</span>
+<span class="fc" id="L293">        return mSourceType;</span>
     }
 
     /**
@@ -219,12 +300,12 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @throws NullPointerException if provided value is null.
      */
     public void setSourceType(final FrameType sourceType) {
-<span class="fc bfc" id="L222" title="All 2 branches covered.">        if (sourceType == null) {</span>
-<span class="fc" id="L223">            throw new NullPointerException();</span>
+<span class="fc bfc" id="L303" title="All 2 branches covered.">        if (sourceType == null) {</span>
+<span class="fc" id="L304">            throw new NullPointerException();</span>
         }
 
-<span class="fc" id="L226">        mSourceType = sourceType;</span>
-<span class="fc" id="L227">    }</span>
+<span class="fc" id="L307">        mSourceType = sourceType;</span>
+<span class="fc" id="L308">    }</span>
 
     /**
      * Gets destination frame type.
@@ -232,7 +313,7 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @return destination frame type.
      */
     public FrameType getDestinationType() {
-<span class="fc" id="L235">        return mDestinationType;</span>
+<span class="fc" id="L316">        return mDestinationType;</span>
     }
 
     /**
@@ -242,12 +323,12 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @throws NullPointerException if provided value is null.
      */
     public void setDestinationType(final FrameType destinationType) {
-<span class="fc bfc" id="L245" title="All 2 branches covered.">        if (destinationType == null) {</span>
-<span class="fc" id="L246">            throw new NullPointerException();</span>
+<span class="fc bfc" id="L326" title="All 2 branches covered.">        if (destinationType == null) {</span>
+<span class="fc" id="L327">            throw new NullPointerException();</span>
         }
 
-<span class="fc" id="L249">        mDestinationType = destinationType;</span>
-<span class="fc" id="L250">    }</span>
+<span class="fc" id="L330">        mDestinationType = destinationType;</span>
+<span class="fc" id="L331">    }</span>
 
     /**
      * Gets internal matrix as a 3D rotation.
@@ -256,7 +337,7 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @throws InvalidRotationMatrixException if internal matrix cannot be converted to a 3D rotation.
      */
     public Rotation3D asRotation() throws InvalidRotationMatrixException {
-<span class="fc" id="L259">        return new MatrixRotation3D(mMatrix);</span>
+<span class="fc" id="L340">        return new MatrixRotation3D(mMatrix);</span>
     }
 
     /**
@@ -266,8 +347,8 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @throws InvalidRotationMatrixException if internal matrix cannot be converted to a 3D rotation.
      */
     public void asRotation(final Rotation3D result) throws InvalidRotationMatrixException {
-<span class="fc" id="L269">        result.fromMatrix(mMatrix);</span>
-<span class="fc" id="L270">    }</span>
+<span class="fc" id="L350">        result.fromMatrix(mMatrix);</span>
+<span class="fc" id="L351">    }</span>
 
     /**
      * Copies this instance data into provided instance.
@@ -275,10 +356,10 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @param output destination instance where data will be copied to.
      */
     public void copyTo(final CoordinateTransformationMatrix output) {
-<span class="fc" id="L278">        output.mSourceType = mSourceType;</span>
-<span class="fc" id="L279">        output.mDestinationType = mDestinationType;</span>
-<span class="fc" id="L280">        mMatrix.copyTo(output.mMatrix);</span>
-<span class="fc" id="L281">    }</span>
+<span class="fc" id="L359">        output.mSourceType = mSourceType;</span>
+<span class="fc" id="L360">        output.mDestinationType = mDestinationType;</span>
+<span class="fc" id="L361">        mMatrix.copyTo(output.mMatrix);</span>
+<span class="fc" id="L362">    }</span>
 
     /**
      * Copies data of provided instance into this instance.
@@ -286,10 +367,10 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @param input instance to copy data from.
      */
     public void copyFrom(final CoordinateTransformationMatrix input) {
-<span class="fc" id="L289">        mSourceType = input.mSourceType;</span>
-<span class="fc" id="L290">        mDestinationType = input.mDestinationType;</span>
-<span class="fc" id="L291">        mMatrix.copyFrom(input.mMatrix);</span>
-<span class="fc" id="L292">    }</span>
+<span class="fc" id="L370">        mSourceType = input.mSourceType;</span>
+<span class="fc" id="L371">        mDestinationType = input.mDestinationType;</span>
+<span class="fc" id="L372">        mMatrix.copyFrom(input.mMatrix);</span>
+<span class="fc" id="L373">    }</span>
 
     /**
      * Computes and returns hash code for this instance. Hash codes are almost unique
@@ -299,7 +380,7 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      */
     @Override
     public int hashCode() {
-<span class="fc" id="L302">        return Objects.hash(mSourceType, mDestinationType, mMatrix);</span>
+<span class="fc" id="L383">        return Objects.hash(mSourceType, mDestinationType, mMatrix);</span>
     }
 
     /**
@@ -311,18 +392,18 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      */
     @Override
     public boolean equals(final Object obj) {
-<span class="pc bpc" id="L314" title="1 of 2 branches missed.">        if (obj == null) {</span>
-<span class="nc" id="L315">            return false;</span>
+<span class="fc bfc" id="L395" title="All 2 branches covered.">        if (obj == null) {</span>
+<span class="fc" id="L396">            return false;</span>
         }
-<span class="pc bpc" id="L317" title="1 of 2 branches missed.">        if (obj == this) {</span>
-<span class="nc" id="L318">            return true;</span>
+<span class="pc bpc" id="L398" title="1 of 2 branches missed.">        if (obj == this) {</span>
+<span class="nc" id="L399">            return true;</span>
         }
-<span class="fc bfc" id="L320" title="All 2 branches covered.">        if (!(obj instanceof CoordinateTransformationMatrix)) {</span>
-<span class="fc" id="L321">            return false;</span>
+<span class="fc bfc" id="L401" title="All 2 branches covered.">        if (!(obj instanceof CoordinateTransformationMatrix)) {</span>
+<span class="fc" id="L402">            return false;</span>
         }
 
-<span class="fc" id="L324">        final CoordinateTransformationMatrix other = (CoordinateTransformationMatrix) obj;</span>
-<span class="fc" id="L325">        return equals(other);</span>
+<span class="fc" id="L405">        final CoordinateTransformationMatrix other = (CoordinateTransformationMatrix) obj;</span>
+<span class="fc" id="L406">        return equals(other);</span>
     }
 
     /**
@@ -332,7 +413,7 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @return true if both instances are considered to be equal, false otherwise.
      */
     public boolean equals(final CoordinateTransformationMatrix other) {
-<span class="fc" id="L335">        return equals(other, 0.0);</span>
+<span class="fc" id="L416">        return equals(other, 0.0);</span>
     }
 
     /**
@@ -345,11 +426,11 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * false otherwise.
      */
     public boolean equals(final CoordinateTransformationMatrix other, final double threshold) {
-<span class="fc bfc" id="L348" title="All 2 branches covered.">        if (other == null) {</span>
-<span class="fc" id="L349">            return false;</span>
+<span class="fc bfc" id="L429" title="All 2 branches covered.">        if (other == null) {</span>
+<span class="fc" id="L430">            return false;</span>
         }
-<span class="pc bpc" id="L351" title="1 of 4 branches missed.">        return other.mSourceType == mSourceType &amp;&amp; other.mDestinationType == mDestinationType &amp;&amp;</span>
-<span class="pc bpc" id="L352" title="1 of 2 branches missed.">                other.mMatrix.equals(mMatrix, threshold);</span>
+<span class="pc bpc" id="L432" title="1 of 4 branches missed.">        return other.mSourceType == mSourceType &amp;&amp; other.mDestinationType == mDestinationType &amp;&amp;</span>
+<span class="pc bpc" id="L433" title="1 of 2 branches missed.">                other.mMatrix.equals(mMatrix, threshold);</span>
     }
 
     /**
@@ -359,28 +440,28 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      */
     public void inverse(final CoordinateTransformationMatrix result) {
         try {
-<span class="fc" id="L362">            final FrameType source = mSourceType;</span>
-<span class="fc" id="L363">            final FrameType destination = mDestinationType;</span>
-<span class="fc" id="L364">            final Matrix matrix = Matrix.identity(ROWS, COLS);</span>
-<span class="fc" id="L365">            matrix.copyFrom(mMatrix);</span>
+<span class="fc" id="L443">            final FrameType source = mSourceType;</span>
+<span class="fc" id="L444">            final FrameType destination = mDestinationType;</span>
+<span class="fc" id="L445">            final Matrix matrix = Matrix.identity(ROWS, COLS);</span>
+<span class="fc" id="L446">            matrix.copyFrom(mMatrix);</span>
 
-<span class="fc" id="L367">            result.setSourceType(destination);</span>
-<span class="fc" id="L368">            result.setDestinationType(source);</span>
+<span class="fc" id="L448">            result.setSourceType(destination);</span>
+<span class="fc" id="L449">            result.setDestinationType(source);</span>
 
             // Because matrix needs to be a rotation (3x3 and orthonormal), its inverse is the transpose
-<span class="fc" id="L371">            matrix.transpose();</span>
-<span class="fc" id="L372">            result.setMatrix(matrix);</span>
-<span class="nc" id="L373">        } catch (WrongSizeException | InvalidRotationMatrixException ignore) {</span>
+<span class="fc" id="L452">            matrix.transpose();</span>
+<span class="fc" id="L453">            result.setMatrix(matrix);</span>
+<span class="nc" id="L454">        } catch (WrongSizeException | InvalidRotationMatrixException ignore) {</span>
             // never happens
-<span class="fc" id="L375">        }</span>
-<span class="fc" id="L376">    }</span>
+<span class="fc" id="L456">        }</span>
+<span class="fc" id="L457">    }</span>
 
     /**
      * Converts this instance into its inverse coordinate transformation matrix.
      */
     public void inverse() {
-<span class="fc" id="L382">        inverse(this);</span>
-<span class="fc" id="L383">    }</span>
+<span class="fc" id="L463">        inverse(this);</span>
+<span class="fc" id="L464">    }</span>
 
     /**
      * Computes the inverse of this coordinate transformation matrix and returns it as a new instance.
@@ -388,9 +469,9 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @return the inverse of this coordinate transformation matrix.
      */
     public CoordinateTransformationMatrix inverseAndReturnNew() {
-<span class="fc" id="L391">        final CoordinateTransformationMatrix result = new CoordinateTransformationMatrix(mDestinationType, mSourceType);</span>
-<span class="fc" id="L392">        inverse(result);</span>
-<span class="fc" id="L393">        return result;</span>
+<span class="fc" id="L472">        final CoordinateTransformationMatrix result = new CoordinateTransformationMatrix(mDestinationType, mSourceType);</span>
+<span class="fc" id="L473">        inverse(result);</span>
+<span class="fc" id="L474">        return result;</span>
     }
 
     /**
@@ -401,30 +482,30 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      * @param result    instance where computed matrix will be stored.
      */
     public static void ecefToNedMatrix(final double latitude, final double longitude, final Matrix result) {
-<span class="pc bpc" id="L404" title="1 of 4 branches missed.">        if (result.getRows() != ROWS || result.getColumns() != COLS) {</span>
+<span class="pc bpc" id="L485" title="1 of 4 branches missed.">        if (result.getRows() != ROWS || result.getColumns() != COLS) {</span>
             try {
-<span class="fc" id="L406">                result.resize(ROWS, COLS);</span>
-<span class="nc" id="L407">            } catch (final WrongSizeException ignore) {</span>
-<span class="fc" id="L408">            }</span>
+<span class="fc" id="L487">                result.resize(ROWS, COLS);</span>
+<span class="nc" id="L488">            } catch (final WrongSizeException ignore) {</span>
+<span class="fc" id="L489">            }</span>
         }
         // Calculate ECEF to NED coordinate transformation matrix using (2.150)
-<span class="fc" id="L411">        final double cosLat = Math.cos(latitude);</span>
-<span class="fc" id="L412">        final double sinLat = Math.sin(latitude);</span>
-<span class="fc" id="L413">        final double cosLong = Math.cos(longitude);</span>
-<span class="fc" id="L414">        final double sinLong = Math.sin(longitude);</span>
+<span class="fc" id="L492">        final double cosLat = Math.cos(latitude);</span>
+<span class="fc" id="L493">        final double sinLat = Math.sin(latitude);</span>
+<span class="fc" id="L494">        final double cosLong = Math.cos(longitude);</span>
+<span class="fc" id="L495">        final double sinLong = Math.sin(longitude);</span>
 
-<span class="fc" id="L416">        result.setElementAtIndex(0, -sinLat * cosLong);</span>
-<span class="fc" id="L417">        result.setElementAtIndex(1, -sinLong);</span>
-<span class="fc" id="L418">        result.setElementAtIndex(2, -cosLat * cosLong);</span>
+<span class="fc" id="L497">        result.setElementAtIndex(0, -sinLat * cosLong);</span>
+<span class="fc" id="L498">        result.setElementAtIndex(1, -sinLong);</span>
+<span class="fc" id="L499">        result.setElementAtIndex(2, -cosLat * cosLong);</span>
 
-<span class="fc" id="L420">        result.setElementAtIndex(3, -sinLat * sinLong);</span>
-<span class="fc" id="L421">        result.setElementAtIndex(4, cosLong);</span>
-<span class="fc" id="L422">        result.setElementAtIndex(5, -cosLat * sinLong);</span>
+<span class="fc" id="L501">        result.setElementAtIndex(3, -sinLat * sinLong);</span>
+<span class="fc" id="L502">        result.setElementAtIndex(4, cosLong);</span>
+<span class="fc" id="L503">        result.setElementAtIndex(5, -cosLat * sinLong);</span>
 
-<span class="fc" id="L424">        result.setElementAtIndex(6, cosLat);</span>
-<span class="fc" id="L425">        result.setElementAtIndex(7, 0.0);</span>
-<span class="fc" id="L426">        result.setElementAtIndex(8, -sinLat);</span>
-<span class="fc" id="L427">    }</span>
+<span class="fc" id="L505">        result.setElementAtIndex(6, cosLat);</span>
+<span class="fc" id="L506">        result.setElementAtIndex(7, 0.0);</span>
+<span class="fc" id="L507">        result.setElementAtIndex(8, -sinLat);</span>
+<span class="fc" id="L508">    }</span>
 
     /**
      * Computes matrix to convert ECEF to NED coordinates.
@@ -436,13 +517,13 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
     public static Matrix ecefToNedMatrix(final double latitude, final double longitude) {
         Matrix result;
         try {
-<span class="fc" id="L439">            result = new Matrix(CoordinateTransformationMatrix.ROWS, CoordinateTransformationMatrix.COLS);</span>
-<span class="fc" id="L440">            ecefToNedMatrix(latitude, longitude, result);</span>
-<span class="nc" id="L441">        } catch (WrongSizeException ignore) {</span>
+<span class="fc" id="L520">            result = new Matrix(CoordinateTransformationMatrix.ROWS, CoordinateTransformationMatrix.COLS);</span>
+<span class="fc" id="L521">            ecefToNedMatrix(latitude, longitude, result);</span>
+<span class="nc" id="L522">        } catch (WrongSizeException ignore) {</span>
             // never happens
-<span class="nc" id="L443">            result = null;</span>
-<span class="fc" id="L444">        }</span>
-<span class="fc" id="L445">        return result;</span>
+<span class="nc" id="L524">            result = null;</span>
+<span class="fc" id="L525">        }</span>
+<span class="fc" id="L526">        return result;</span>
     }
 
     /**
@@ -455,13 +536,13 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
     public static void ecefToNedCoordinateTransformationMatrix(final double latitude, final double longitude,
                                                                final CoordinateTransformationMatrix result) {
         try {
-<span class="fc" id="L458">            result.setSourceType(FrameType.EARTH_CENTERED_EARTH_FIXED_FRAME);</span>
-<span class="fc" id="L459">            result.setDestinationType(FrameType.LOCAL_NAVIGATION_FRAME);</span>
-<span class="fc" id="L460">            result.setMatrix(ecefToNedMatrix(latitude, longitude));</span>
-<span class="nc" id="L461">        } catch (InvalidRotationMatrixException ignore) {</span>
+<span class="fc" id="L539">            result.setSourceType(FrameType.EARTH_CENTERED_EARTH_FIXED_FRAME);</span>
+<span class="fc" id="L540">            result.setDestinationType(FrameType.LOCAL_NAVIGATION_FRAME);</span>
+<span class="fc" id="L541">            result.setMatrix(ecefToNedMatrix(latitude, longitude));</span>
+<span class="nc" id="L542">        } catch (InvalidRotationMatrixException ignore) {</span>
             // never happens
-<span class="fc" id="L463">        }</span>
-<span class="fc" id="L464">    }</span>
+<span class="fc" id="L544">        }</span>
+<span class="fc" id="L545">    }</span>
 
     /**
      * Computes ECEF to NED coordinate transformation matrix.
@@ -472,10 +553,10 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      */
     public static CoordinateTransformationMatrix ecefToNedCoordinateTransformationMatrix(final double latitude,
                                                                                          final double longitude) {
-<span class="fc" id="L475">        final CoordinateTransformationMatrix result = new CoordinateTransformationMatrix(</span>
+<span class="fc" id="L556">        final CoordinateTransformationMatrix result = new CoordinateTransformationMatrix(</span>
                 FrameType.EARTH_CENTERED_EARTH_FIXED_FRAME, FrameType.LOCAL_NAVIGATION_FRAME);
-<span class="fc" id="L477">        ecefToNedCoordinateTransformationMatrix(latitude, longitude, result);</span>
-<span class="fc" id="L478">        return result;</span>
+<span class="fc" id="L558">        ecefToNedCoordinateTransformationMatrix(latitude, longitude, result);</span>
+<span class="fc" id="L559">        return result;</span>
     }
 
     /**
@@ -488,9 +569,9 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
     public static void nedToEcefMatrix(final double latitude, final double longitude, final Matrix result) {
         //NED to ECEF matrix is the inverse of ECEF to NED matrix.
         //Since ECEF to NED matrix is a rotation (3x3 and orthonormal), its inverse is the transpose.
-<span class="fc" id="L491">        ecefToNedMatrix(latitude, longitude, result);</span>
-<span class="fc" id="L492">        result.transpose();</span>
-<span class="fc" id="L493">    }</span>
+<span class="fc" id="L572">        ecefToNedMatrix(latitude, longitude, result);</span>
+<span class="fc" id="L573">        result.transpose();</span>
+<span class="fc" id="L574">    }</span>
 
     /**
      * Computes matrix to convert NED to ECEF coordinates.
@@ -502,14 +583,14 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
     public static Matrix nedToEcefMatrix(final double latitude, final double longitude) {
         Matrix result;
         try {
-<span class="fc" id="L505">            result = new Matrix(CoordinateTransformationMatrix.ROWS, CoordinateTransformationMatrix.COLS);</span>
-<span class="fc" id="L506">            nedToEcefMatrix(latitude, longitude, result);</span>
-<span class="nc" id="L507">        } catch (WrongSizeException ignore) {</span>
+<span class="fc" id="L586">            result = new Matrix(CoordinateTransformationMatrix.ROWS, CoordinateTransformationMatrix.COLS);</span>
+<span class="fc" id="L587">            nedToEcefMatrix(latitude, longitude, result);</span>
+<span class="nc" id="L588">        } catch (WrongSizeException ignore) {</span>
             // never happens
-<span class="nc" id="L509">            result = null;</span>
-<span class="fc" id="L510">        }</span>
+<span class="nc" id="L590">            result = null;</span>
+<span class="fc" id="L591">        }</span>
 
-<span class="fc" id="L512">        return result;</span>
+<span class="fc" id="L593">        return result;</span>
     }
 
     /**
@@ -522,13 +603,13 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
     public static void nedToEcefCoordinateTransformationMatrix(final double latitude, final double longitude,
                                                                final CoordinateTransformationMatrix result) {
         try {
-<span class="fc" id="L525">            result.setSourceType(FrameType.LOCAL_NAVIGATION_FRAME);</span>
-<span class="fc" id="L526">            result.setDestinationType(FrameType.EARTH_CENTERED_EARTH_FIXED_FRAME);</span>
-<span class="fc" id="L527">            result.setMatrix(nedToEcefMatrix(latitude, longitude));</span>
-<span class="nc" id="L528">        } catch (InvalidRotationMatrixException ignore) {</span>
+<span class="fc" id="L606">            result.setSourceType(FrameType.LOCAL_NAVIGATION_FRAME);</span>
+<span class="fc" id="L607">            result.setDestinationType(FrameType.EARTH_CENTERED_EARTH_FIXED_FRAME);</span>
+<span class="fc" id="L608">            result.setMatrix(nedToEcefMatrix(latitude, longitude));</span>
+<span class="nc" id="L609">        } catch (InvalidRotationMatrixException ignore) {</span>
             // never happens
-<span class="fc" id="L530">        }</span>
-<span class="fc" id="L531">    }</span>
+<span class="fc" id="L611">        }</span>
+<span class="fc" id="L612">    }</span>
 
     /**
      * Computes NED to ECEF coordinate transformation matrix.
@@ -539,10 +620,10 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
      */
     public static CoordinateTransformationMatrix nedToEcefCoordinateTransformationMatrix(final double latitude,
                                                                                          final double longitude) {
-<span class="fc" id="L542">        final CoordinateTransformationMatrix result = new CoordinateTransformationMatrix(</span>
+<span class="fc" id="L623">        final CoordinateTransformationMatrix result = new CoordinateTransformationMatrix(</span>
                 FrameType.LOCAL_NAVIGATION_FRAME, FrameType.EARTH_CENTERED_EARTH_FIXED_FRAME);
-<span class="fc" id="L544">        nedToEcefCoordinateTransformationMatrix(latitude, longitude, result);</span>
-<span class="fc" id="L545">        return result;</span>
+<span class="fc" id="L625">        nedToEcefCoordinateTransformationMatrix(latitude, longitude, result);</span>
+<span class="fc" id="L626">        return result;</span>
     }
 
     /**
@@ -553,7 +634,7 @@ public class CoordinateTransformationMatrix implements Serializable, Cloneable {
     @SuppressWarnings({&quot;MethodDoesntCallSuperMethod&quot;, &quot;CloneDoesntDeclareCloneNotSupportedException&quot;})
     @Override
     protected Object clone() {
-<span class="fc" id="L556">        return new CoordinateTransformationMatrix(this);</span>
+<span class="fc" id="L637">        return new CoordinateTransformationMatrix(this);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
