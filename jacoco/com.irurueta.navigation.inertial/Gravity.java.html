@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Gravity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial</a> &gt; <span class="el_source">Gravity.java</span></div><h1>Gravity.java</h1><pre class="source lang-java linenums">package com.irurueta.navigation.inertial;
 
+import com.irurueta.algebra.Matrix;
+import com.irurueta.algebra.WrongSizeException;
+import com.irurueta.units.Acceleration;
+import com.irurueta.units.AccelerationConverter;
+import com.irurueta.units.AccelerationUnit;
+
 import java.io.Serializable;
 import java.util.Objects;
 
@@ -8,6 +14,11 @@ import java.util.Objects;
  */
 @SuppressWarnings(&quot;WeakerAccess&quot;)
 public class Gravity implements Serializable, Cloneable {
+
+    /**
+     * Number of components.
+     */
+    public static final int COMPONENTS = 3;
 
     /**
      * Acceleration due to gravity through ECEF x-axis expressed in meters per squared second (m/s^2).
@@ -27,7 +38,7 @@ public class Gravity implements Serializable, Cloneable {
     /**
      * Constructor.
      */
-<span class="fc" id="L30">    public Gravity() { }</span>
+<span class="fc" id="L41">    public Gravity() { }</span>
 
     /**
      * Constructor.
@@ -36,18 +47,30 @@ public class Gravity implements Serializable, Cloneable {
      * @param gy acceleration due to gravity through ECEF y-axis expressed in meters per squared second (m/s^2).
      * @param gz acceleration due to gravity through ECEF z-axis expressed in meters per squared second (m/s^2).
      */
-<span class="fc" id="L39">    public Gravity(final double gx, final double gy, final double gz) {</span>
-<span class="fc" id="L40">        setCoordinates(gx, gy, gz);</span>
-<span class="fc" id="L41">    }</span>
+<span class="fc" id="L50">    public Gravity(final double gx, final double gy, final double gz) {</span>
+<span class="fc" id="L51">        setCoordinates(gx, gy, gz);</span>
+<span class="fc" id="L52">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param gx acceleration due to gravity through ECEF x-axis to be set.
+     * @param gy acceleration due to gravity through ECEF y-axis to be set.
+     * @param gz acceleration due to gravity through ECEF z-axis to be set.
+     */
+    public Gravity(final Acceleration gx, final Acceleration gy,
+<span class="fc" id="L62">                   final Acceleration gz) {</span>
+<span class="fc" id="L63">        setGravityCoordinates(gx, gy, gz);</span>
+<span class="fc" id="L64">    }</span>
 
     /**
      * Constructor.
      *
      * @param input instance to copy data from.
      */
-<span class="fc" id="L48">    public Gravity(final Gravity input) {</span>
-<span class="fc" id="L49">        copyFrom(input);</span>
-<span class="fc" id="L50">    }</span>
+<span class="fc" id="L71">    public Gravity(final Gravity input) {</span>
+<span class="fc" id="L72">        copyFrom(input);</span>
+<span class="fc" id="L73">    }</span>
 
     /**
      * Gets acceleration due to gravity through ECEF x-axis expressed in meters per squared second (m/s^2).
@@ -55,7 +78,7 @@ public class Gravity implements Serializable, Cloneable {
      * @return acceleration due to gravity through ECEF x-axis.
      */
     public double getGx() {
-<span class="fc" id="L58">        return mGx;</span>
+<span class="fc" id="L81">        return mGx;</span>
     }
 
     /**
@@ -64,8 +87,8 @@ public class Gravity implements Serializable, Cloneable {
      * @param gx acceleration due to gravity through ECEF x-axis.
      */
     public void setGx(final double gx) {
-<span class="fc" id="L67">        mGx = gx;</span>
-<span class="fc" id="L68">    }</span>
+<span class="fc" id="L90">        mGx = gx;</span>
+<span class="fc" id="L91">    }</span>
 
     /**
      * Gets acceleration due to gravity through ECEF y-axis expressed in meters per squared second (m/s^2).
@@ -73,7 +96,7 @@ public class Gravity implements Serializable, Cloneable {
      * @return acceleration due to gravity through ECEF y-axis.
      */
     public double getGy() {
-<span class="fc" id="L76">        return mGy;</span>
+<span class="fc" id="L99">        return mGy;</span>
     }
 
     /**
@@ -82,8 +105,8 @@ public class Gravity implements Serializable, Cloneable {
      * @param gy acceleration due to gravity through ECEF y-axis.
      */
     public void setGy(final double gy) {
-<span class="fc" id="L85">        mGy = gy;</span>
-<span class="fc" id="L86">    }</span>
+<span class="fc" id="L108">        mGy = gy;</span>
+<span class="fc" id="L109">    }</span>
 
     /**
      * Gets acceleration due to gravity through ECEF z-axis expressed in meters per squared second (m/s^2).
@@ -91,7 +114,7 @@ public class Gravity implements Serializable, Cloneable {
      * @return acceleration due to gravity through ECEF z-axis.
      */
     public double getGz() {
-<span class="fc" id="L94">        return mGz;</span>
+<span class="fc" id="L117">        return mGz;</span>
     }
 
     /**
@@ -100,8 +123,8 @@ public class Gravity implements Serializable, Cloneable {
      * @param gz acceleration due to gravity through ECEF z-axis.
      */
     public void setGz(final double gz) {
-<span class="fc" id="L103">        mGz = gz;</span>
-<span class="fc" id="L104">    }</span>
+<span class="fc" id="L126">        mGz = gz;</span>
+<span class="fc" id="L127">    }</span>
 
     /**
      * Sets gravity coordinates resolved about ECEF frame and expressed in meters per squared second (m/s^2).
@@ -111,10 +134,115 @@ public class Gravity implements Serializable, Cloneable {
      * @param gz acceleration due to gravity through ECEF z-axis expressed in meters per squared second (m/s^2).
      */
     public void setCoordinates(final double gx, final double gy, final double gz) {
-<span class="fc" id="L114">        mGx = gx;</span>
-<span class="fc" id="L115">        mGy = gy;</span>
-<span class="fc" id="L116">        mGz = gz;</span>
-<span class="fc" id="L117">    }</span>
+<span class="fc" id="L137">        mGx = gx;</span>
+<span class="fc" id="L138">        mGy = gy;</span>
+<span class="fc" id="L139">        mGz = gz;</span>
+<span class="fc" id="L140">    }</span>
+
+    /**
+     * Gets acceleration due to gravity through ECEF x-axis.
+     *
+     * @param result instance where acceleration due to gravity through ECEF x-axis will be stored.
+     */
+    public void getGravityX(final Acceleration result) {
+<span class="fc" id="L148">        result.setValue(mGx);</span>
+<span class="fc" id="L149">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L150">    }</span>
+
+    /**
+     * Gets acceleration due to gravity through ECEF x-axis.
+     *
+     * @return acceleration due to gravity through ECEF x-axis.
+     */
+    public Acceleration getGravityX() {
+<span class="fc" id="L158">        return new Acceleration(mGx, AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+    }
+
+    /**
+     * Sets acceleration due to gravity through ECEF x-axis.
+     *
+     * @param gravityX acceleration due to gravity through ECEF x-axis to be set.
+     */
+    public void setGravityX(final Acceleration gravityX) {
+<span class="fc" id="L167">        mGx = AccelerationConverter.convert(gravityX.getValue().doubleValue(),</span>
+<span class="fc" id="L168">                gravityX.getUnit(),</span>
+                AccelerationUnit.METERS_PER_SQUARED_SECOND);
+<span class="fc" id="L170">    }</span>
+
+    /**
+     * Gets acceleration due to gravity through ECEF y-axis.
+     *
+     * @param result instance where acceleration due to gravity through ECEF y-axis will be stored.
+     */
+    public void getGravityY(final Acceleration result) {
+<span class="fc" id="L178">        result.setValue(mGy);</span>
+<span class="fc" id="L179">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L180">    }</span>
+
+    /**
+     * Gets acceleration due to gravity through ECEF y-axis.
+     *
+     * @return acceleration due to gravity through ECEF y-axis.
+     */
+    public Acceleration getGravityY() {
+<span class="fc" id="L188">        return new Acceleration(mGy, AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+    }
+
+    /**
+     * Sets acceleration due to gravity through ECEF y-axis.
+     *
+     * @param gravityY acceleration due to gravity through ECEF y-axis to be set.
+     */
+    public void setGravityY(final Acceleration gravityY) {
+<span class="fc" id="L197">        mGy = AccelerationConverter.convert(gravityY.getValue().doubleValue(),</span>
+<span class="fc" id="L198">                gravityY.getUnit(),</span>
+                AccelerationUnit.METERS_PER_SQUARED_SECOND);
+<span class="fc" id="L200">    }</span>
+
+    /**
+     * Gets acceleration due to gravity through ECEF z-axis.
+     *
+     * @param result instance where acceleration due to gravity through ECEF z-axis will be stored.
+     */
+    public void getGravityZ(final Acceleration result) {
+<span class="fc" id="L208">        result.setValue(mGz);</span>
+<span class="fc" id="L209">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L210">    }</span>
+
+    /**
+     * Gets acceleration due to gravity through ECEF z-axis.
+     *
+     * @return acceleration due to gravity through ECEF z-axis.
+     */
+    public Acceleration getGravityZ() {
+<span class="fc" id="L218">        return new Acceleration(mGz, AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+    }
+
+    /**
+     * Sets acceleration due to gravity through ECEF z-axis.
+     *
+     * @param gravityZ acceleration due to gravity through ECEF z-axis to be set.
+     */
+    public void setGravityZ(final Acceleration gravityZ) {
+<span class="fc" id="L227">        mGz = AccelerationConverter.convert(gravityZ.getValue().doubleValue(),</span>
+<span class="fc" id="L228">                gravityZ.getUnit(),</span>
+                AccelerationUnit.METERS_PER_SQUARED_SECOND);
+<span class="fc" id="L230">    }</span>
+
+    /**
+     * Sets gravity coordinates.
+     *
+     * @param gravityX acceleration due to gravity through ECEF x-axis to be set.
+     * @param gravityY acceleration due to gravity through ECEF y-axis to be set.
+     * @param gravityZ acceleration due to gravity through ECEF z-axis to be set.
+     */
+    public void setGravityCoordinates(final Acceleration gravityX,
+                                      final Acceleration gravityY,
+                                      final Acceleration gravityZ) {
+<span class="fc" id="L242">        setGravityX(gravityX);</span>
+<span class="fc" id="L243">        setGravityY(gravityY);</span>
+<span class="fc" id="L244">        setGravityZ(gravityZ);</span>
+<span class="fc" id="L245">    }</span>
 
     /**
      * Copies this instance data into provided instance.
@@ -122,10 +250,10 @@ public class Gravity implements Serializable, Cloneable {
      * @param output destination instance where data will be copied to.
      */
     public void copyTo(final Gravity output) {
-<span class="fc" id="L125">        output.mGx = mGx;</span>
-<span class="fc" id="L126">        output.mGy = mGy;</span>
-<span class="fc" id="L127">        output.mGz = mGz;</span>
-<span class="fc" id="L128">    }</span>
+<span class="fc" id="L253">        output.mGx = mGx;</span>
+<span class="fc" id="L254">        output.mGy = mGy;</span>
+<span class="fc" id="L255">        output.mGz = mGz;</span>
+<span class="fc" id="L256">    }</span>
 
     /**
      * Copies data of provided instance into this instance.
@@ -133,10 +261,76 @@ public class Gravity implements Serializable, Cloneable {
      * @param input instance to copy data from.
      */
     public void copyFrom(final Gravity input) {
-<span class="fc" id="L136">        mGx = input.mGx;</span>
-<span class="fc" id="L137">        mGy = input.mGy;</span>
-<span class="fc" id="L138">        mGz = input.mGz;</span>
-<span class="fc" id="L139">    }</span>
+<span class="fc" id="L264">        mGx = input.mGx;</span>
+<span class="fc" id="L265">        mGy = input.mGy;</span>
+<span class="fc" id="L266">        mGz = input.mGz;</span>
+<span class="fc" id="L267">    }</span>
+
+    /**
+     * Gets gravity coordinates as an array.
+     *
+     * @param result array instance where gravity coordinates will be stored in
+     *               x,y,z order.
+     * @throws IllegalArgumentException if provided array does not have length 3.
+     */
+    public void asArray(final double[] result) {
+<span class="fc bfc" id="L277" title="All 2 branches covered.">        if (result.length != COMPONENTS) {</span>
+<span class="fc" id="L278">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L281">        result[0] = mGx;</span>
+<span class="fc" id="L282">        result[1] = mGy;</span>
+<span class="fc" id="L283">        result[2] = mGz;</span>
+<span class="fc" id="L284">    }</span>
+
+    /**
+     * Gets gravity coordinates as an array.
+     *
+     * @return array containing gravity coordinates in x,y,z order.
+     */
+    public double[] asArray() {
+<span class="fc" id="L292">        final double[] result = new double[COMPONENTS];</span>
+<span class="fc" id="L293">        asArray(result);</span>
+<span class="fc" id="L294">        return result;</span>
+    }
+
+    /**
+     * Gets gravity coordinates as a column matrix.
+     * If provided matrix does not have size 3x1, it will be resized.
+     *
+     * @param result matrix instance where gravity coordinates will be stored in
+     *               x,y,z order.
+     */
+    public void asMatrix(final Matrix result) {
+<span class="pc bpc" id="L305" title="3 of 4 branches missed.">        if (result.getColumns() != COMPONENTS || result.getRows() != 1) {</span>
+            try {
+<span class="fc" id="L307">                result.resize(COMPONENTS, 1);</span>
+<span class="nc" id="L308">            } catch (final WrongSizeException ignore) {</span>
+                // never happens
+<span class="fc" id="L310">            }</span>
+        }
+
+<span class="fc" id="L313">        result.setElementAtIndex(0, mGx);</span>
+<span class="fc" id="L314">        result.setElementAtIndex(1, mGy);</span>
+<span class="fc" id="L315">        result.setElementAtIndex(2, mGz);</span>
+<span class="fc" id="L316">    }</span>
+
+    /**
+     * Gets gravity coordinates as a column matrix.
+     *
+     * @return a matrix containing gravity coordinates stored in x,y,z order.
+     */
+    public Matrix asMatrix() {
+        Matrix result;
+        try {
+<span class="fc" id="L326">            result = new Matrix(COMPONENTS, 1);</span>
+<span class="fc" id="L327">            asMatrix(result);</span>
+<span class="nc" id="L328">        } catch (final WrongSizeException ignore) {</span>
+            // never happens
+<span class="nc" id="L330">            result = null;</span>
+<span class="fc" id="L331">        }</span>
+<span class="fc" id="L332">        return result;</span>
+    }
 
     /**
      * Computes and returns hash code for this instance. Hash codes are almost unique
@@ -146,7 +340,7 @@ public class Gravity implements Serializable, Cloneable {
      */
     @Override
     public int hashCode() {
-<span class="fc" id="L149">        return Objects.hash(mGx, mGy, mGz);</span>
+<span class="fc" id="L343">        return Objects.hash(mGx, mGy, mGz);</span>
     }
 
     /**
@@ -157,19 +351,19 @@ public class Gravity implements Serializable, Cloneable {
      * @return true if both objects are considered to be equal, false otherwise.
      */
     @Override
-    public boolean equals(Object obj) {
-<span class="fc bfc" id="L161" title="All 2 branches covered.">        if (obj == null) {</span>
-<span class="fc" id="L162">            return false;</span>
+    public boolean equals(final Object obj) {
+<span class="fc bfc" id="L355" title="All 2 branches covered.">        if (obj == null) {</span>
+<span class="fc" id="L356">            return false;</span>
         }
-<span class="pc bpc" id="L164" title="1 of 2 branches missed.">        if (obj == this) {</span>
-<span class="nc" id="L165">            return true;</span>
+<span class="fc bfc" id="L358" title="All 2 branches covered.">        if (obj == this) {</span>
+<span class="fc" id="L359">            return true;</span>
         }
-<span class="fc bfc" id="L167" title="All 2 branches covered.">        if (!(obj instanceof Gravity)) {</span>
-<span class="fc" id="L168">            return false;</span>
+<span class="fc bfc" id="L361" title="All 2 branches covered.">        if (!(obj instanceof Gravity)) {</span>
+<span class="fc" id="L362">            return false;</span>
         }
 
-<span class="fc" id="L171">        final Gravity other = (Gravity) obj;</span>
-<span class="fc" id="L172">        return equals(other);</span>
+<span class="fc" id="L365">        final Gravity other = (Gravity) obj;</span>
+<span class="fc" id="L366">        return equals(other);</span>
     }
 
     /**
@@ -179,7 +373,7 @@ public class Gravity implements Serializable, Cloneable {
      * @return true if both instances are considered to be equal, false otherwise.
      */
     public boolean equals(final Gravity other) {
-<span class="fc" id="L182">        return equals(other, 0.0);</span>
+<span class="fc" id="L376">        return equals(other, 0.0);</span>
     }
 
     /**
@@ -192,13 +386,13 @@ public class Gravity implements Serializable, Cloneable {
      * threshold), false otherwise.
      */
     public boolean equals(final Gravity other, final double threshold) {
-<span class="fc bfc" id="L195" title="All 2 branches covered.">        if (other == null) {</span>
-<span class="fc" id="L196">            return false;</span>
+<span class="fc bfc" id="L389" title="All 2 branches covered.">        if (other == null) {</span>
+<span class="fc" id="L390">            return false;</span>
         }
 
-<span class="fc bfc" id="L199" title="All 2 branches covered.">        return Math.abs(mGx - other.mGx) &lt;= threshold</span>
-<span class="pc bpc" id="L200" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mGy - other.mGy) &lt;= threshold</span>
-<span class="pc bpc" id="L201" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mGz - other.mGz) &lt;= threshold;</span>
+<span class="fc bfc" id="L393" title="All 2 branches covered.">        return Math.abs(mGx - other.mGx) &lt;= threshold</span>
+<span class="pc bpc" id="L394" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mGy - other.mGy) &lt;= threshold</span>
+<span class="pc bpc" id="L395" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mGz - other.mGz) &lt;= threshold;</span>
     }
 
     /**
@@ -209,7 +403,7 @@ public class Gravity implements Serializable, Cloneable {
     @SuppressWarnings({&quot;CloneDoesntDeclareCloneNotSupportedException&quot;, &quot;MethodDoesntCallSuperMethod&quot;})
     @Override
     protected Object clone() {
-<span class="fc" id="L212">        return new Gravity(this);</span>
+<span class="fc" id="L406">        return new Gravity(this);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

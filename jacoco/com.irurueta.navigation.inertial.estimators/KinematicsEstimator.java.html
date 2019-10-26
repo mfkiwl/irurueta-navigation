@@ -1,0 +1,1951 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KinematicsEstimator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.estimators</a> &gt; <span class="el_source">KinematicsEstimator.java</span></div><h1>KinematicsEstimator.java</h1><pre class="source lang-java linenums">package com.irurueta.navigation.inertial.estimators;
+
+import com.irurueta.algebra.AlgebraException;
+import com.irurueta.algebra.Matrix;
+import com.irurueta.algebra.Utils;
+import com.irurueta.geometry.Point3D;
+import com.irurueta.navigation.frames.CoordinateTransformationMatrix;
+import com.irurueta.navigation.frames.ECEFFrame;
+import com.irurueta.navigation.geodesic.Constants;
+import com.irurueta.navigation.inertial.Gravity;
+import com.irurueta.navigation.inertial.Kinematics;
+import com.irurueta.units.Speed;
+import com.irurueta.units.SpeedConverter;
+import com.irurueta.units.SpeedUnit;
+import com.irurueta.units.Time;
+import com.irurueta.units.TimeConverter;
+import com.irurueta.units.TimeUnit;
+
+/**
+ * Estimates body kinematics (specific force applied to a body and its angular rates).
+ * This implementation is based on the equations defined in &quot;Principles of GNSS, Inertial, and Multisensor
+ * Integrated Navigation Systems, Second Edition&quot; and on the companion software available at:
+ * https://github.com/ymjdz/InertialDemoECEF
+ */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
+<span class="fc" id="L26">public class KinematicsEstimator {</span>
+
+    /**
+     * Earth rotation rate expressed in radians per second (rad/s).
+     */
+    public static final double EARTH_ROTATION_RATE = Constants.EARTH_ROTATION_RATE;
+
+    /**
+     * Scaling threshold.
+     */
+    private static final double SCALING_THRESHOLD = 2e-5;
+
+    /**
+     * Alpha threshold.
+     */
+    private static final double ALPHA_THRESHOLD = 1e-8;
+
+    /**
+     * Number of rows.
+     */
+    private static final int ROWS = 3;
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final double timeInterval,
+                         final CoordinateTransformationMatrix c,
+                         final CoordinateTransformationMatrix oldC,
+                         final double vx, final double vy, final double vz,
+                         final double oldVx, final double oldVy, final double oldVz,
+                         final double x, final double y, final double z,
+                         final Kinematics result) {
+<span class="fc" id="L87">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                x, y, z, result);
+<span class="fc" id="L89">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            boy-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final Time timeInterval,
+                         final CoordinateTransformationMatrix c,
+                         final CoordinateTransformationMatrix oldC,
+                         final double vx, final double vy, final double vz,
+                         final double oldVx, final double oldVy, final double oldVz,
+                         final double x, final double y, final double z,
+                         final Kinematics result) {
+<span class="fc" id="L130">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                x, y, z, result);
+<span class="fc" id="L132">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final double timeInterval,
+                         final ECEFFrame frame,
+                         final CoordinateTransformationMatrix oldC,
+                         final double oldVx, final double oldVy, final double oldVz,
+                         final Kinematics result) {
+<span class="fc" id="L157">        estimateKinematics(timeInterval, frame, oldC, oldVx, oldVy, oldVz,</span>
+                result);
+<span class="fc" id="L159">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final Time timeInterval,
+                         final ECEFFrame frame,
+                         final CoordinateTransformationMatrix oldC,
+                         final double oldVx, final double oldVy, final double oldVz,
+                         final Kinematics result) {
+<span class="fc" id="L184">        estimateKinematics(timeInterval, frame, oldC, oldVx, oldVy, oldVz,</span>
+                result);
+<span class="fc" id="L186">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldFrame     body ECEF frame containing previous position, velocity and
+     *                     body-to-ECEF frame coordinate transformation. Notice that
+     *                     previous position contained in this frame is ignored.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final double timeInterval,
+                         final ECEFFrame frame, final ECEFFrame oldFrame,
+                         final Kinematics result) {
+<span class="fc" id="L202">        estimateKinematics(timeInterval, frame, oldFrame, result);</span>
+<span class="fc" id="L203">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldFrame     body ECEF frame containing previous position, velocity and
+     *                     body-to-ECEF frame coordinate transformation. Notice that
+     *                     previous position contained in this frame is ignored.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final Time timeInterval,
+                         final ECEFFrame frame, final ECEFFrame oldFrame,
+                         final Kinematics result) {
+<span class="fc" id="L219">        estimateKinematics(timeInterval, frame, oldFrame, result);</span>
+<span class="fc" id="L220">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final double timeInterval,
+                         final CoordinateTransformationMatrix c,
+                         final CoordinateTransformationMatrix oldC,
+                         final Speed vx, final Speed vy, final Speed vz,
+                         final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                         final double x, final double y, final double z,
+                         final Kinematics result) {
+<span class="fc" id="L255">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                x, y, z, result);
+<span class="fc" id="L257">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final Time timeInterval,
+                         final CoordinateTransformationMatrix c,
+                         final CoordinateTransformationMatrix oldC,
+                         final Speed vx, final Speed vy, final Speed vz,
+                         final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                         final double x, final double y, final double z,
+                         final Kinematics result) {
+<span class="fc" id="L292">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz,</span>
+                oldVx, oldVy, oldVz, x, y, z, result);
+<span class="fc" id="L294">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final double timeInterval,
+                         final ECEFFrame frame,
+                         final CoordinateTransformationMatrix oldC,
+                         final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                         final Kinematics result) {
+<span class="fc" id="L316">        estimateKinematics(timeInterval, frame, oldC, oldVx, oldVy, oldVz, result);</span>
+<span class="fc" id="L317">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final Time timeInterval,
+                         final ECEFFrame frame,
+                         final CoordinateTransformationMatrix oldC,
+                         final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                         final Kinematics result) {
+<span class="fc" id="L339">        estimateKinematics(timeInterval, frame, oldC, oldVx, oldVy, oldVz, result);</span>
+<span class="fc" id="L340">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final double timeInterval,
+                         final CoordinateTransformationMatrix c,
+                         final CoordinateTransformationMatrix oldC,
+                         final double vx, final double vy, final double vz,
+                         final double oldVx, final double oldVy, final double oldVz,
+                         final Point3D position, final Kinematics result) {
+<span class="fc" id="L376">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                position, result);
+<span class="fc" id="L378">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final Time timeInterval,
+                         final CoordinateTransformationMatrix c,
+                         final CoordinateTransformationMatrix oldC,
+                         final double vx, final double vy, final double vz,
+                         final double oldVx, final double oldVy, final double oldVz,
+                         final Point3D position, final Kinematics result) {
+<span class="fc" id="L414">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                position, result);
+<span class="fc" id="L416">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            boy-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final double timeInterval,
+                         final CoordinateTransformationMatrix c,
+                         final CoordinateTransformationMatrix oldC,
+                         final Speed vx, final Speed vy, final Speed vz,
+                         final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                         final Point3D position, final Kinematics result) {
+<span class="fc" id="L446">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                position, result);
+<span class="fc" id="L448">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            boy-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public void estimate(final Time timeInterval,
+                         final CoordinateTransformationMatrix c,
+                         final CoordinateTransformationMatrix oldC,
+                         final Speed vx, final Speed vy, final Speed vz,
+                         final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                         final Point3D position, final Kinematics result) {
+<span class="fc" id="L478">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                position, result);
+<span class="fc" id="L480">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final double timeInterval,
+                                           final CoordinateTransformationMatrix c,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final double vx, final double vy, final double vz,
+                                           final double oldVx, final double oldVy, final double oldVz,
+                                           final double x, final double y, final double z) {
+<span class="fc" id="L520">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                x, y, z);
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between.
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final Time timeInterval,
+                                           final CoordinateTransformationMatrix c,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final double vx, final double vy, final double vz,
+                                           final double oldVx, final double oldVy, final double oldVz,
+                                           final double x, final double y, final double z) {
+<span class="fc" id="L562">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz,</span>
+                oldVx, oldVy, oldVz, x, y, z);
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final double timeInterval,
+                                           final ECEFFrame frame,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final double oldVx, final double oldVy,
+                                           final double oldVz) {
+<span class="fc" id="L589">        return estimateKinematicsAndReturnNew(timeInterval, frame, oldC, oldVx, oldVy,</span>
+                oldVz);
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final Time timeInterval,
+                                           final ECEFFrame frame,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final double oldVx, final double oldVy,
+                                           final double oldVz) {
+<span class="fc" id="L616">        return estimateKinematicsAndReturnNew(timeInterval, frame, oldC,</span>
+                oldVx, oldVy, oldVz);
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldFrame     body ECEF frame containing previous position, velocity and
+     *                     body-to-ECEF frame coordinate transformation. Notice that
+     *                     previous position contained in this frame is ignored.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final double timeInterval,
+                                           final ECEFFrame frame,
+                                           final ECEFFrame oldFrame) {
+<span class="fc" id="L634">        return estimateKinematicsAndReturnNew(timeInterval, frame, oldFrame);</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldFrame     body ECEF frame containing previous position, velocity and
+     *                     body-to-ECEF frame coordinate transformation. Notice that
+     *                     previous position contained in this frame is ignored.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final Time timeInterval,
+                                           final ECEFFrame frame,
+                                           final ECEFFrame oldFrame) {
+<span class="fc" id="L651">        return estimateKinematicsAndReturnNew(timeInterval, frame, oldFrame);</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final double timeInterval,
+                                           final CoordinateTransformationMatrix c,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final Speed vx, final Speed vy, final Speed vz,
+                                           final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                           final double x, final double y, final double z) {
+<span class="fc" id="L686">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz,</span>
+                oldVx, oldVy, oldVz, x, y, z);
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final Time timeInterval,
+                                           final CoordinateTransformationMatrix c,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final Speed vx, final Speed vy, final Speed vz,
+                                           final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                           final double x, final double y, final double z) {
+<span class="fc" id="L722">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz,</span>
+                oldVx, oldVy, oldVz, x, y, z);
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final double timeInterval,
+                                           final ECEFFrame frame,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final Speed oldVx, final Speed oldVy, final Speed oldVz) {
+<span class="fc" id="L745">        return estimateKinematicsAndReturnNew(timeInterval, frame, oldC, oldVx, oldVy, oldVz);</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final Time timeInterval,
+                                           final ECEFFrame frame,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final Speed oldVx, final Speed oldVy, final Speed oldVz) {
+<span class="fc" id="L767">        return estimateKinematicsAndReturnNew(timeInterval, frame, oldC, oldVx, oldVy, oldVz);</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final double timeInterval,
+                                           final CoordinateTransformationMatrix c,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final double vx, final double vy, final double vz,
+                                           final double oldVx, final double oldVy, final double oldVz,
+                                           final Point3D position) {
+<span class="fc" id="L804">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz,</span>
+                oldVx, oldVy, oldVz, position);
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final Time timeInterval,
+                                           final CoordinateTransformationMatrix c,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final double vx, final double vy, final double vz,
+                                           final double oldVx, final double oldVy, final double oldVz,
+                                           final Point3D position) {
+<span class="fc" id="L842">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                position);
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            boy-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final double timeInterval,
+                                           final CoordinateTransformationMatrix c,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final Speed vx, final Speed vy, final Speed vz,
+                                           final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                           final Point3D position) {
+<span class="fc" id="L874">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz,</span>
+                oldVx, oldVy, oldVz, position);
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            boy-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public Kinematics estimateAndReturnNew(final Time timeInterval,
+                                           final CoordinateTransformationMatrix c,
+                                           final CoordinateTransformationMatrix oldC,
+                                           final Speed vx, final Speed vy, final Speed vz,
+                                           final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                           final Point3D position) {
+<span class="fc" id="L906">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz,</span>
+                oldVx, oldVy, oldVz, position);
+    }
+
+    /**
+     * Estimates body kinematics.
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF-frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           x coordinate of velocity of body frame expressed in meters per second (m/s) and resolved
+     *                     along ECEF-frame axes.
+     * @param vy           y coordinate of velocity of body frame expressed in meters per second (m/s) and resolved
+     *                     along ECEF-frame axes.
+     * @param vz           z coordinate of velocity of body frame expressed in meters per second (m/s) and resolved
+     *                     along ECEF-frame axes.
+     * @param oldVx        x coordinate of previous velocity of body frame expressed in meters per second (m/s) and
+     *                     resolved along ECEF-frame axes.
+     * @param oldVy        y coordinate of previous velocity of body frame expressed in meters per second (m/s) and
+     *                     resolved along ECEF-frame axes.
+     * @param oldVz        z coordinate of previous velocity of body frame expressed in meters per second (m/s) and
+     *                     resolved along ECEF-frame axes.
+     * @param x            cartesian x coordinate of body position expressed in meters (m) and resolved along
+     *                     ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m) and resolved along
+     *                     ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m) and resolved along
+     *                     ECEF-frame axes.
+     * @param result       instance where estimated body kinematics will be stored.
+     * @throws IllegalArgumentException if provided time interval is negative or coordinated transformation matrices
+     * are not ECEF frame valid.
+     */
+    public static void estimateKinematics(final double timeInterval,
+                                          final CoordinateTransformationMatrix c,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final double vx, final double vy, final double vz,
+                                          final double oldVx, final double oldVy, final double oldVz,
+                                          final double x, final double y, final double z,
+                                          final Kinematics result) {
+<span class="fc bfc" id="L945" title="All 2 branches covered.">        if (timeInterval &lt; 0.0</span>
+<span class="fc bfc" id="L946" title="All 2 branches covered.">                || !ECEFFrame.isValidCoordinateTransformationMatrix(c)</span>
+<span class="fc bfc" id="L947" title="All 2 branches covered.">                || !ECEFFrame.isValidCoordinateTransformationMatrix(oldC)) {</span>
+<span class="fc" id="L948">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc bfc" id="L951" title="All 2 branches covered.">        if (timeInterval &gt; 0.0) {</span>
+            try {
+                // From (2.145) determine the Earth rotation over the update interval
+<span class="fc" id="L954">                final double alpha = EARTH_ROTATION_RATE * timeInterval;</span>
+<span class="fc" id="L955">                final double sinAlpha = Math.sin(alpha);</span>
+<span class="fc" id="L956">                final double cosAlpha = Math.cos(alpha);</span>
+
+<span class="fc" id="L958">                final Matrix cEarth = new Matrix(ROWS, ROWS);</span>
+<span class="fc" id="L959">                cEarth.setElementAt(0, 0, cosAlpha);</span>
+<span class="fc" id="L960">                cEarth.setElementAt(1, 0, -sinAlpha);</span>
+<span class="fc" id="L961">                cEarth.setElementAt(2, 0, 0.0);</span>
+
+<span class="fc" id="L963">                cEarth.setElementAt(0, 1, sinAlpha);</span>
+<span class="fc" id="L964">                cEarth.setElementAt(1, 1, cosAlpha);</span>
+<span class="fc" id="L965">                cEarth.setElementAt(2, 1, 0.0);</span>
+
+<span class="fc" id="L967">                cEarth.setElementAt(0, 2, 0.0);</span>
+<span class="fc" id="L968">                cEarth.setElementAt(1, 2, 0.0);</span>
+<span class="fc" id="L969">                cEarth.setElementAt(2, 2, 1.0);</span>
+
+<span class="fc" id="L971">                final Matrix cBe = c.getMatrix();</span>
+<span class="fc" id="L972">                final Matrix oldCbe = oldC.getMatrix();</span>
+
+                // cOldNew = cBe * cEarth * oldCbe
+<span class="fc" id="L975">                cEarth.multiply(oldCbe);</span>
+<span class="fc" id="L976">                cBe.multiply(cEarth); // here cBe is cOldNew</span>
+
+                // Calculate the approximate angular rate with respect an intertial frame
+<span class="fc" id="L979">                double alphaX = 0.5 * cBe.getElementAt(1, 2)</span>
+<span class="fc" id="L980">                        - cBe.getElementAt(2, 1);</span>
+<span class="fc" id="L981">                double alphaY = 0.5 * cBe.getElementAt(2, 0)</span>
+<span class="fc" id="L982">                        - cBe.getElementAt(0, 2);</span>
+<span class="fc" id="L983">                double alphaZ = 0.5 * cBe.getElementAt(0, 1)</span>
+<span class="fc" id="L984">                        - cBe.getElementAt(1, 0);</span>
+
+                // Calculate and apply the scaling factor
+<span class="fc" id="L987">                final double temp = Math.acos(0.5 * (cBe.getElementAt(0, 0)</span>
+<span class="fc" id="L988">                        + cBe.getElementAt(1, 1)</span>
+<span class="fc" id="L989">                        + cBe.getElementAt(2, 2) - 1.0));</span>
+<span class="pc bpc" id="L990" title="1 of 2 branches missed.">                if (temp &gt; SCALING_THRESHOLD) {</span>
+                    // scaling is 1 if temp is less than this
+<span class="fc" id="L992">                    final double scale = temp / Math.sin(temp);</span>
+<span class="fc" id="L993">                    alphaX *= scale;</span>
+<span class="fc" id="L994">                    alphaY *= scale;</span>
+<span class="fc" id="L995">                    alphaZ *= scale;</span>
+                }
+
+                // Calculate the angular rate
+<span class="fc" id="L999">                final double angularRateX = alphaX / timeInterval;</span>
+<span class="fc" id="L1000">                final double angularRateY = alphaY / timeInterval;</span>
+<span class="fc" id="L1001">                final double angularRateZ = alphaZ / timeInterval;</span>
+
+                // Calculate the specific force resolved about ECEF-frame axes
+                // Frame (5.36)
+<span class="fc" id="L1005">                final Matrix vEbe = new Matrix(ROWS, 1);</span>
+<span class="fc" id="L1006">                vEbe.setElementAtIndex(0, vx);</span>
+<span class="fc" id="L1007">                vEbe.setElementAtIndex(1, vy);</span>
+<span class="fc" id="L1008">                vEbe.setElementAtIndex(2, vz);</span>
+
+<span class="fc" id="L1010">                final Matrix oldVebe = new Matrix(ROWS, 1);</span>
+<span class="fc" id="L1011">                oldVebe.setElementAtIndex(0, oldVx);</span>
+<span class="fc" id="L1012">                oldVebe.setElementAtIndex(1, oldVy);</span>
+<span class="fc" id="L1013">                oldVebe.setElementAtIndex(2, oldVz);</span>
+
+<span class="fc" id="L1015">                final Gravity gravity = GravityEstimator</span>
+<span class="fc" id="L1016">                        .estimateGravityAndReturnNew(x, y, z);</span>
+<span class="fc" id="L1017">                final Matrix g = gravity.asMatrix();</span>
+
+<span class="fc" id="L1019">                final Matrix earthRotationSkew = Utils.skewMatrix(</span>
+                        new double[]{0.0, 0.0, EARTH_ROTATION_RATE});
+<span class="fc" id="L1021">                earthRotationSkew.multiplyByScalar(2.0);</span>
+<span class="fc" id="L1022">                earthRotationSkew.multiply(oldVebe); // 2.0 * earthRotationSkew * oldVebe</span>
+
+<span class="fc" id="L1024">                vEbe.subtract(oldVebe); // vEbe - oldVebe</span>
+<span class="fc" id="L1025">                vEbe.multiplyByScalar(1.0 / timeInterval); // (vEbe - oldVebe) / timeInterval</span>
+<span class="fc" id="L1026">                vEbe.subtract(g); // (vEbe - oldVebe) / timeInterval - g</span>
+                // fibe = (vEbe - oldVebe) / timeInterval - g + 2.0 * earthRotationSkew * oldVebe
+<span class="fc" id="L1028">                vEbe.add(earthRotationSkew); // vEbe contains specific force resolved about ECEF-frame axes</span>
+
+                // Calculate the average body-to-ECEF-frame coordinate transformation
+                // matrix over the update interval using (5,84) and (5.85)
+<span class="fc" id="L1032">                final double alphaNorm = Math.sqrt(alphaX * alphaX</span>
+                        + alphaY * alphaY + alphaZ * alphaZ);
+<span class="fc" id="L1034">                final Matrix alphaSkew1 = Utils.skewMatrix(</span>
+                        new double[]{alphaX, alphaY, alphaZ});
+
+<span class="pc bpc" id="L1037" title="1 of 2 branches missed.">                if (alphaNorm &gt; ALPHA_THRESHOLD) {</span>
+<span class="fc" id="L1038">                    final double alphaNorm2 = alphaNorm * alphaNorm;</span>
+<span class="fc" id="L1039">                    final double value1 = (1.0 - Math.cos(alphaNorm)) / alphaNorm2;</span>
+<span class="fc" id="L1040">                    final double value2 = (1.0 - Math.sin(alphaNorm) / alphaNorm)</span>
+                            / alphaNorm2;
+<span class="fc" id="L1042">                    final Matrix tmp1 = alphaSkew1.multiplyByScalarAndReturnNew(value1);</span>
+<span class="fc" id="L1043">                    final Matrix tmp2 = alphaSkew1.multiplyByScalarAndReturnNew(value2);</span>
+<span class="fc" id="L1044">                    tmp2.multiply(alphaSkew1);</span>
+
+<span class="fc" id="L1046">                    final Matrix tmp3 = Matrix.identity(ROWS, ROWS);</span>
+<span class="fc" id="L1047">                    tmp3.add(tmp1);</span>
+<span class="fc" id="L1048">                    tmp3.add(tmp2);</span>
+
+<span class="fc" id="L1050">                    oldCbe.multiply(tmp3);</span>
+                }
+
+<span class="fc" id="L1053">                final Matrix alphaSkew2 = Utils.skewMatrix(</span>
+                        new double[]{0.0, 0.0, alpha});
+<span class="fc" id="L1055">                alphaSkew2.multiplyByScalar(0.5);</span>
+<span class="fc" id="L1056">                alphaSkew2.multiply(oldCbe); // 0.5 * alphaSkew2 * oldCbe</span>
+
+<span class="fc" id="L1058">                oldCbe.subtract(alphaSkew2); // oldCbe - 0.5 * alphaSkew2 * oldCbe</span>
+                // oldCbe now contains the average body-to-ECEF-frame coordinate transformation
+
+                // Transform specific force to body-frame resolving axes using (5.81)
+<span class="fc" id="L1062">                Matrix invAveCbe = Utils.inverse(oldCbe);</span>
+<span class="fc" id="L1063">                invAveCbe.multiply(vEbe);</span>
+
+<span class="fc" id="L1065">                final double specificForceX = invAveCbe.getElementAtIndex(0);</span>
+<span class="fc" id="L1066">                final double specificForceY = invAveCbe.getElementAtIndex(1);</span>
+<span class="fc" id="L1067">                final double specificForceZ = invAveCbe.getElementAtIndex(2);</span>
+
+                // save result data
+<span class="fc" id="L1070">                result.setSpecificForceCoordinates(specificForceX, specificForceY,</span>
+                        specificForceZ);
+<span class="fc" id="L1072">                result.setAngularRateCoordinates(angularRateX, angularRateY,</span>
+                        angularRateZ);
+
+<span class="nc" id="L1075">            } catch (final AlgebraException ignore) {</span>
+                // never happens
+<span class="pc" id="L1077">            }</span>
+        } else {
+            // If time interval is zero, set angular rate and specific force to zero
+<span class="fc" id="L1080">            result.setSpecificForceCoordinates(0.0, 0.0, 0.0);</span>
+<span class="fc" id="L1081">            result.setAngularRateCoordinates(0.0, 0.0,</span>
+                    0.0);
+        }
+<span class="fc" id="L1084">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            boy-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final Time timeInterval,
+                                          final CoordinateTransformationMatrix c,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final double vx, final double vy, final double vz,
+                                          final double oldVx, final double oldVy, final double oldVz,
+                                          final double x, final double y, final double z,
+                                          final Kinematics result) {
+<span class="fc" id="L1125">        estimateKinematics(TimeConverter.convert(timeInterval.getValue().doubleValue(),</span>
+<span class="fc" id="L1126">                timeInterval.getUnit(), TimeUnit.SECOND),</span>
+                c, oldC, vx, vy, vz, oldVx, oldVy, oldVz, x, y, z, result);
+<span class="fc" id="L1128">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final double timeInterval,
+                                          final ECEFFrame frame,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final double oldVx, final double oldVy, final double oldVz,
+                                          final Kinematics result) {
+<span class="fc" id="L1153">        estimateKinematics(timeInterval, frame.getCoordinateTransformationMatrix(),</span>
+<span class="fc" id="L1154">                oldC, frame.getVx(), frame.getVy(), frame.getVz(),</span>
+<span class="fc" id="L1155">                oldVx, oldVy, oldVz, frame.getX(), frame.getY(), frame.getZ(), result);</span>
+<span class="fc" id="L1156">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final Time timeInterval,
+                                          final ECEFFrame frame,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final double oldVx, final double oldVy, final double oldVz,
+                                          final Kinematics result) {
+<span class="fc" id="L1181">        estimateKinematics(TimeConverter.convert(timeInterval.getValue().doubleValue(),</span>
+<span class="fc" id="L1182">                timeInterval.getUnit(), TimeUnit.SECOND),</span>
+<span class="fc" id="L1183">                frame.getCoordinateTransformationMatrix(),</span>
+<span class="fc" id="L1184">                oldC, frame.getVx(), frame.getVy(), frame.getVz(),</span>
+<span class="fc" id="L1185">                oldVx, oldVy, oldVz, frame.getX(), frame.getY(), frame.getZ(), result);</span>
+<span class="fc" id="L1186">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldFrame     body ECEF frame containing previous position, velocity and
+     *                     body-to-ECEF frame coordinate transformation. Notice that
+     *                     previous position contained in this frame is ignored.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final double timeInterval,
+                                          final ECEFFrame frame, final ECEFFrame oldFrame,
+                                          final Kinematics result) {
+<span class="fc" id="L1202">        estimateKinematics(timeInterval, frame,</span>
+<span class="fc" id="L1203">                oldFrame.getCoordinateTransformationMatrix(),</span>
+<span class="fc" id="L1204">                oldFrame.getVx(), oldFrame.getVy(), oldFrame.getVz(), result);</span>
+<span class="fc" id="L1205">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldFrame     body ECEF frame containing previous position, velocity and
+     *                     body-to-ECEF frame coordinate transformation. Notice that
+     *                     previous position contained in this frame is ignored.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final Time timeInterval,
+                                          final ECEFFrame frame, final ECEFFrame oldFrame,
+                                          final Kinematics result) {
+<span class="fc" id="L1221">        estimateKinematics(timeInterval, frame,</span>
+<span class="fc" id="L1222">                oldFrame.getCoordinateTransformationMatrix(),</span>
+<span class="fc" id="L1223">                oldFrame.getVx(), oldFrame.getVy(), oldFrame.getVz(), result);</span>
+<span class="fc" id="L1224">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final double timeInterval,
+                                          final CoordinateTransformationMatrix c,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final Speed vx, final Speed vy, final Speed vz,
+                                          final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                          final double x, final double y, final double z,
+                                          final Kinematics result) {
+<span class="fc" id="L1259">        estimateKinematics(timeInterval, c, oldC,</span>
+<span class="fc" id="L1260">                SpeedConverter.convert(vx.getValue().doubleValue(), vx.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1261">                SpeedConverter.convert(vy.getValue().doubleValue(), vy.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1262">                SpeedConverter.convert(vz.getValue().doubleValue(), vz.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1263">                SpeedConverter.convert(oldVx.getValue().doubleValue(), oldVx.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1264">                SpeedConverter.convert(oldVy.getValue().doubleValue(), oldVy.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1265">                SpeedConverter.convert(oldVz.getValue().doubleValue(), oldVz.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+                x, y, z, result);
+<span class="fc" id="L1267">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final Time timeInterval,
+                                          final CoordinateTransformationMatrix c,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final Speed vx, final Speed vy, final Speed vz,
+                                          final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                          final double x, final double y, final double z,
+                                          final Kinematics result) {
+<span class="fc" id="L1302">        estimateKinematics(timeInterval, c, oldC,</span>
+<span class="fc" id="L1303">                SpeedConverter.convert(vx.getValue().doubleValue(), vx.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1304">                SpeedConverter.convert(vy.getValue().doubleValue(), vy.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1305">                SpeedConverter.convert(vz.getValue().doubleValue(), vz.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1306">                SpeedConverter.convert(oldVx.getValue().doubleValue(), oldVx.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1307">                SpeedConverter.convert(oldVy.getValue().doubleValue(), oldVy.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1308">                SpeedConverter.convert(oldVz.getValue().doubleValue(), oldVz.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+                x, y, z, result);
+<span class="fc" id="L1310">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final double timeInterval,
+                                          final ECEFFrame frame,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                          final Kinematics result) {
+<span class="fc" id="L1332">        estimateKinematics(timeInterval, frame, oldC,</span>
+<span class="fc" id="L1333">                SpeedConverter.convert(oldVx.getValue().doubleValue(), oldVx.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1334">                SpeedConverter.convert(oldVy.getValue().doubleValue(), oldVy.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1335">                SpeedConverter.convert(oldVz.getValue().doubleValue(), oldVz.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+                result);
+<span class="fc" id="L1337">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final Time timeInterval,
+                                          final ECEFFrame frame,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                          final Kinematics result) {
+<span class="fc" id="L1359">        estimateKinematics(timeInterval, frame, oldC,</span>
+<span class="fc" id="L1360">                SpeedConverter.convert(oldVx.getValue().doubleValue(), oldVx.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1361">                SpeedConverter.convert(oldVy.getValue().doubleValue(), oldVy.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+<span class="fc" id="L1362">                SpeedConverter.convert(oldVz.getValue().doubleValue(), oldVz.getUnit(), SpeedUnit.METERS_PER_SECOND),</span>
+                result);
+<span class="fc" id="L1364">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final double timeInterval,
+                                          final CoordinateTransformationMatrix c,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final double vx, final double vy, final double vz,
+                                          final double oldVx, final double oldVy, final double oldVz,
+                                          final Point3D position, final Kinematics result) {
+<span class="fc" id="L1400">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+<span class="fc" id="L1401">                position.getInhomX(), position.getInhomY(), position.getInhomZ(), result);</span>
+<span class="fc" id="L1402">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final Time timeInterval,
+                                          final CoordinateTransformationMatrix c,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final double vx, final double vy, final double vz,
+                                          final double oldVx, final double oldVy, final double oldVz,
+                                          final Point3D position, final Kinematics result) {
+<span class="fc" id="L1438">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+<span class="fc" id="L1439">                position.getInhomX(), position.getInhomY(), position.getInhomZ(), result);</span>
+<span class="fc" id="L1440">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            boy-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final double timeInterval,
+                                          final CoordinateTransformationMatrix c,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final Speed vx, final Speed vy, final Speed vz,
+                                          final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                          final Point3D position, final Kinematics result) {
+<span class="fc" id="L1470">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+<span class="fc" id="L1471">                position.getInhomX(), position.getInhomY(), position.getInhomZ(), result);</span>
+<span class="fc" id="L1472">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            boy-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param result       instance where body kinematics estimation will be stored.
+     */
+    public static void estimateKinematics(final Time timeInterval,
+                                          final CoordinateTransformationMatrix c,
+                                          final CoordinateTransformationMatrix oldC,
+                                          final Speed vx, final Speed vy, final Speed vz,
+                                          final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                          final Point3D position, final Kinematics result) {
+<span class="fc" id="L1502">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+<span class="fc" id="L1503">                position.getInhomX(), position.getInhomY(), position.getInhomZ(), result);</span>
+<span class="fc" id="L1504">    }</span>
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final double timeInterval,
+                                                            final CoordinateTransformationMatrix c,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final double vx, final double vy, final double vz,
+                                                            final double oldVx, final double oldVy, final double oldVz,
+                                                            final double x, final double y, final double z) {
+<span class="fc" id="L1544">        final Kinematics result = new Kinematics();</span>
+<span class="fc" id="L1545">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                x, y, z, result);
+<span class="fc" id="L1547">        return result;</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between.
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final Time timeInterval,
+                                                            final CoordinateTransformationMatrix c,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final double vx, final double vy, final double vz,
+                                                            final double oldVx, final double oldVy, final double oldVz,
+                                                            final double x, final double y, final double z) {
+<span class="fc" id="L1588">        final Kinematics result = new Kinematics();</span>
+<span class="fc" id="L1589">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                x, y, z, result);
+<span class="fc" id="L1591">        return result;</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final double timeInterval,
+                                                            final ECEFFrame frame,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final double oldVx, final double oldVy,
+                                                            final double oldVz) {
+<span class="fc" id="L1617">        final Kinematics result = new Kinematics();</span>
+<span class="fc" id="L1618">        estimateKinematics(timeInterval, frame, oldC, oldVx, oldVy, oldVz, result);</span>
+<span class="fc" id="L1619">        return result;</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final Time timeInterval,
+                                                            final ECEFFrame frame,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final double oldVx, final double oldVy,
+                                                            final double oldVz) {
+<span class="fc" id="L1645">        final Kinematics result = new Kinematics();</span>
+<span class="fc" id="L1646">        estimateKinematics(timeInterval, frame, oldC, oldVx, oldVy, oldVz, result);</span>
+<span class="fc" id="L1647">        return result;</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldFrame     body ECEF frame containing previous position, velocity and
+     *                     body-to-ECEF frame coordinate transformation. Notice that
+     *                     previous position contained in this frame is ignored.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final double timeInterval,
+                                                            final ECEFFrame frame, final ECEFFrame oldFrame) {
+<span class="fc" id="L1663">        final Kinematics result = new Kinematics();</span>
+<span class="fc" id="L1664">        estimateKinematics(timeInterval, frame, oldFrame, result);</span>
+<span class="fc" id="L1665">        return result;</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldFrame     body ECEF frame containing previous position, velocity and
+     *                     body-to-ECEF frame coordinate transformation. Notice that
+     *                     previous position contained in this frame is ignored.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final Time timeInterval,
+                                                            final ECEFFrame frame, final ECEFFrame oldFrame) {
+<span class="fc" id="L1681">        final Kinematics result = new Kinematics();</span>
+<span class="fc" id="L1682">        estimateKinematics(timeInterval, frame, oldFrame, result);</span>
+<span class="fc" id="L1683">        return result;</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final double timeInterval,
+                                                            final CoordinateTransformationMatrix c,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final Speed vx, final Speed vy, final Speed vz,
+                                                            final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                                            final double x, final double y, final double z) {
+<span class="fc" id="L1718">        final Kinematics result = new Kinematics();</span>
+<span class="fc" id="L1719">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                x, y, z, result);
+<span class="fc" id="L1721">        return result;</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param x            cartesian x coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y            cartesian y coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z            cartesian z coordinate of body position expressed in meters (m)
+     *                     with respect ECEF frame, resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final Time timeInterval,
+                                                            final CoordinateTransformationMatrix c,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final Speed vx, final Speed vy, final Speed vz,
+                                                            final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                                            final double x, final double y, final double z) {
+<span class="fc" id="L1756">        final Kinematics result = new Kinematics();</span>
+<span class="fc" id="L1757">        estimateKinematics(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+                x, y, z, result);
+<span class="fc" id="L1759">        return result;</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final double timeInterval,
+                                                            final ECEFFrame frame,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final Speed oldVx, final Speed oldVy, final Speed oldVz) {
+<span class="fc" id="L1781">        final Kinematics result = new Kinematics();</span>
+<span class="fc" id="L1782">        estimateKinematics(timeInterval, frame, oldC, oldVx, oldVy, oldVz, result);</span>
+<span class="fc" id="L1783">        return result;</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param frame        body ECEF frame containing current position, velocity and
+     *                     body-to-ECEF frame coordinate transformation.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final Time timeInterval,
+                                                            final ECEFFrame frame,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final Speed oldVx, final Speed oldVy, final Speed oldVz) {
+<span class="fc" id="L1805">        final Kinematics result = new Kinematics();</span>
+<span class="fc" id="L1806">        estimateKinematics(timeInterval, frame, oldC, oldVx, oldVy, oldVz, result);</span>
+<span class="fc" id="L1807">        return result;</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final double timeInterval,
+                                                            final CoordinateTransformationMatrix c,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final double vx, final double vy, final double vz,
+                                                            final double oldVx, final double oldVy, final double oldVz,
+                                                            final Point3D position) {
+<span class="fc" id="L1844">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz,</span>
+                oldVx, oldVy, oldVz,
+<span class="fc" id="L1846">                position.getInhomX(), position.getInhomY(), position.getInhomZ());</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            body-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes and expressed in meters per
+     *                     second (m/s).
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes and expressed in meters
+     *                     per second (m/s).
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final Time timeInterval,
+                                                            final CoordinateTransformationMatrix c,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final double vx, final double vy, final double vz,
+                                                            final double oldVx, final double oldVy, final double oldVz,
+                                                            final Point3D position) {
+<span class="fc" id="L1883">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+<span class="fc" id="L1884">                position.getInhomX(), position.getInhomY(), position.getInhomZ());</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs expressed in seconds (s).
+     * @param c            boy-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final double timeInterval,
+                                                            final CoordinateTransformationMatrix c,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final Speed vx, final Speed vy, final Speed vz,
+                                                            final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                                            final Point3D position) {
+<span class="fc" id="L1915">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+<span class="fc" id="L1916">                position.getInhomX(), position.getInhomY(), position.getInhomZ());</span>
+    }
+
+    /**
+     * Estimates body kinematics (specific force applied to a body and its angular rates).
+     *
+     * @param timeInterval time interval between epochs.
+     * @param c            boy-to-ECEF frame coordinate transformation matrix.
+     * @param oldC         previous body-to-ECEF-frame coordinate transformation matrix.
+     * @param vx           velocity of body frame x coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vy           velocity of body frame y coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param vz           velocity of body frame z coordinate with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @param oldVx        previous velocity of body frame x coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVy        previous velocity of body frame y coordinate with respect ECEF
+     *                     frame, resolved along ECEF-frame axes.
+     * @param oldVz        previous velocity of body frame z coordinate with respect ECEF
+     *                     frame, resolved along EVEF-frame axes.
+     * @param position     body position expressed in meters (m) with respect ECEF frame,
+     *                     resolved along ECEF-frame axes.
+     * @return a new body kinematics instance.
+     */
+    public static Kinematics estimateKinematicsAndReturnNew(final Time timeInterval,
+                                                            final CoordinateTransformationMatrix c,
+                                                            final CoordinateTransformationMatrix oldC,
+                                                            final Speed vx, final Speed vy, final Speed vz,
+                                                            final Speed oldVx, final Speed oldVy, final Speed oldVz,
+                                                            final Point3D position) {
+<span class="fc" id="L1947">        return estimateKinematicsAndReturnNew(timeInterval, c, oldC, vx, vy, vz, oldVx, oldVy, oldVz,</span>
+<span class="fc" id="L1948">                position.getInhomX(), position.getInhomY(), position.getInhomZ());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
