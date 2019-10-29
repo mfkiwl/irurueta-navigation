@@ -2,6 +2,9 @@
 
 import com.irurueta.navigation.geodesic.Constants;
 import com.irurueta.navigation.inertial.RadiiOfCurvature;
+import com.irurueta.units.Angle;
+import com.irurueta.units.AngleConverter;
+import com.irurueta.units.AngleUnit;
 
 /**
  * Calculates radii of curvature at a given latitude.
@@ -10,7 +13,7 @@ import com.irurueta.navigation.inertial.RadiiOfCurvature;
  * https://github.com/ymjdz/InertialDemoECEF
  */
 @SuppressWarnings(&quot;WeakerAccess&quot;)
-<span class="fc" id="L13">public class RadiiOfCurvatureEstimator {</span>
+<span class="fc" id="L16">public class RadiiOfCurvatureEstimator {</span>
     /**
      * The equatorial radius of WGS84 ellipsoid (6378137 m) defining Earth's shape.
      */
@@ -29,8 +32,8 @@ import com.irurueta.navigation.inertial.RadiiOfCurvature;
      * @param result instance where estimated radii of curvature will be stored.
      */
     public void estimate(final double latitude, final RadiiOfCurvature result) {
-<span class="fc" id="L32">        estimateRadiiOfCurvature(latitude, result);</span>
-<span class="fc" id="L33">    }</span>
+<span class="fc" id="L35">        estimateRadiiOfCurvature(latitude, result);</span>
+<span class="fc" id="L36">    }</span>
 
     /**
      * Estimates radii of curvature (meridian and transverse radii of curvature) at
@@ -41,7 +44,30 @@ import com.irurueta.navigation.inertial.RadiiOfCurvature;
      * radii of curvature.
      */
     public RadiiOfCurvature estimateAndReturnNew(final double latitude) {
-<span class="fc" id="L44">        return estimateRadiiOfCurvatureAndReturnNew(latitude);</span>
+<span class="fc" id="L47">        return estimateRadiiOfCurvatureAndReturnNew(latitude);</span>
+    }
+
+    /**
+     * Estimates radii of curvature (meridian and transverse radii of curvature) at
+     * provided geodetic latitude.
+     *
+     * @param latitude geodetic latitude.
+     * @param result instance where estimated radii of curvature will be stored.
+     */
+    public void estimate(final Angle latitude, final RadiiOfCurvature result) {
+<span class="fc" id="L58">        estimateRadiiOfCurvature(latitude, result);</span>
+<span class="fc" id="L59">    }</span>
+
+    /**
+     * Estimates radii of curvature (meridian and transverse radii of curvature) at
+     * provided geodetic latitude.
+     *
+     * @param latitude geodetic latitude.
+     * @return a new radii of curvature instance containing meridian and transverse
+     * radii of curvature.
+     */
+    public RadiiOfCurvature estimateAndReturnNew(final Angle latitude) {
+<span class="fc" id="L70">        return estimateRadiiOfCurvatureAndReturnNew(latitude);</span>
     }
 
     /**
@@ -53,17 +79,17 @@ import com.irurueta.navigation.inertial.RadiiOfCurvature;
      */
     public static void estimateRadiiOfCurvature(final double latitude,
                                                 final RadiiOfCurvature result) {
-<span class="fc" id="L56">        final double tmp = 1.0 - Math.pow(EARTH_ECCENTRICITY * Math.sin(latitude), 2.0);</span>
+<span class="fc" id="L82">        final double tmp = 1.0 - Math.pow(EARTH_ECCENTRICITY * Math.sin(latitude), 2.0);</span>
 
         // Calculate meridian radius of curvature using (2.105)
-<span class="fc" id="L59">        final double rn = EARTH_EQUATORIAL_RADIUS_WGS84</span>
-<span class="fc" id="L60">                * (1.0 - Math.pow(EARTH_ECCENTRICITY, 2.0)) / Math.pow(tmp, 1.5);</span>
+<span class="fc" id="L85">        final double rn = EARTH_EQUATORIAL_RADIUS_WGS84</span>
+<span class="fc" id="L86">                * (1.0 - Math.pow(EARTH_ECCENTRICITY, 2.0)) / Math.pow(tmp, 1.5);</span>
 
         // Calculate transverse radius of curvature using (2.106)
-<span class="fc" id="L63">        final double re = EARTH_EQUATORIAL_RADIUS_WGS84 / Math.sqrt(tmp);</span>
+<span class="fc" id="L89">        final double re = EARTH_EQUATORIAL_RADIUS_WGS84 / Math.sqrt(tmp);</span>
 
-<span class="fc" id="L65">        result.setValues(rn, re);</span>
-<span class="fc" id="L66">    }</span>
+<span class="fc" id="L91">        result.setValues(rn, re);</span>
+<span class="fc" id="L92">    }</span>
 
     /**
      * Estimates radii of curvature (meridian and transverse radii of curvature) at
@@ -74,9 +100,37 @@ import com.irurueta.navigation.inertial.RadiiOfCurvature;
      * radii of curvature.
      */
     public static RadiiOfCurvature estimateRadiiOfCurvatureAndReturnNew(final double latitude) {
-<span class="fc" id="L77">        final RadiiOfCurvature result = new RadiiOfCurvature();</span>
-<span class="fc" id="L78">        estimateRadiiOfCurvature(latitude, result);</span>
-<span class="fc" id="L79">        return result;</span>
+<span class="fc" id="L103">        final RadiiOfCurvature result = new RadiiOfCurvature();</span>
+<span class="fc" id="L104">        estimateRadiiOfCurvature(latitude, result);</span>
+<span class="fc" id="L105">        return result;</span>
+    }
+
+    /**
+     * Estimates radii of curvature (meridian and transverse radii of curvature) at
+     * provided geodetic latitude.
+     *
+     * @param latitude geodetic latitude.
+     * @param result instance where estimated radii of curvature will be stored.
+     */
+    public static void estimateRadiiOfCurvature(final Angle latitude,
+                                                final RadiiOfCurvature result) {
+<span class="fc" id="L117">        estimateRadiiOfCurvature(AngleConverter.convert(</span>
+<span class="fc" id="L118">                latitude.getValue().doubleValue(), latitude.getUnit(), AngleUnit.RADIANS),</span>
+                result);
+<span class="fc" id="L120">    }</span>
+
+    /**
+     * Estimates radii of curvature (meridian and transverse radii of curvature) at
+     * provided geodetic latitude.
+     *
+     * @param latitude geodetic latitude.
+     * @return a new radii of curvature instance containing meridian and transverse
+     * radii of curvature.
+     */
+    public static RadiiOfCurvature estimateRadiiOfCurvatureAndReturnNew(final Angle latitude) {
+<span class="fc" id="L131">        final RadiiOfCurvature result = new RadiiOfCurvature();</span>
+<span class="fc" id="L132">        estimateRadiiOfCurvature(latitude, result);</span>
+<span class="fc" id="L133">        return result;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

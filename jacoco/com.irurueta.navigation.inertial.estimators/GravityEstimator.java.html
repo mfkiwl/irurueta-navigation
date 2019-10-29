@@ -4,6 +4,9 @@ import com.irurueta.geometry.Point3D;
 import com.irurueta.navigation.frames.ECEFFrame;
 import com.irurueta.navigation.geodesic.Constants;
 import com.irurueta.navigation.inertial.Gravity;
+import com.irurueta.units.Distance;
+import com.irurueta.units.DistanceConverter;
+import com.irurueta.units.DistanceUnit;
 
 /**
  * Calculates acceleration due to gravity resolved about ECEF frame.
@@ -12,7 +15,7 @@ import com.irurueta.navigation.inertial.Gravity;
  * https://github.com/ymjdz/InertialDemoECEF
  */
 @SuppressWarnings(&quot;WeakerAccess&quot;)
-<span class="fc" id="L15">public class GravityEstimator {</span>
+<span class="fc" id="L18">public class GravityEstimator {</span>
 
     /**
      * The equatorial radius of WGS84 ellipsoid (6378137 m) defining Earth's shape.
@@ -46,8 +49,8 @@ import com.irurueta.navigation.inertial.Gravity;
      * @param result instance where estimated acceleration due to gravity will be stored.
      */
     public void estimate(final double x, final double y, final double z, final Gravity result) {
-<span class="fc" id="L49">        estimateGravity(x, y, z, result);</span>
-<span class="fc" id="L50">    }</span>
+<span class="fc" id="L52">        estimateGravity(x, y, z, result);</span>
+<span class="fc" id="L53">    }</span>
 
     /**
      * Estimates acceleration due to gravity resolved about ECEF for a given position expressed in ECEF coordinates.
@@ -61,7 +64,7 @@ import com.irurueta.navigation.inertial.Gravity;
      * @return a new gravity instance containing estimated acceleration due to gravity.
      */
     public Gravity estimateAndReturnNew(final double x, final double y, final double z) {
-<span class="fc" id="L64">        return estimateGravityAndReturnNew(x, y, z);</span>
+<span class="fc" id="L67">        return estimateGravityAndReturnNew(x, y, z);</span>
     }
 
     /**
@@ -71,8 +74,8 @@ import com.irurueta.navigation.inertial.Gravity;
      * @param result instance where estimated acceleration due to gravity will be stored.
      */
     public void estimate(final ECEFFrame frame, final Gravity result) {
-<span class="fc" id="L74">        estimateGravity(frame, result);</span>
-<span class="fc" id="L75">    }</span>
+<span class="fc" id="L77">        estimateGravity(frame, result);</span>
+<span class="fc" id="L78">    }</span>
 
     /**
      * Estimates acceleration due to gravity resolved about ECEF for a position on a given ECEF frame.
@@ -81,7 +84,7 @@ import com.irurueta.navigation.inertial.Gravity;
      * @return a new gravity instance containing estimated acceleration due to gravity.
      */
     public Gravity estimateAndReturnNew(final ECEFFrame frame) {
-<span class="fc" id="L84">        return estimateGravityAndReturnNew(frame);</span>
+<span class="fc" id="L87">        return estimateGravityAndReturnNew(frame);</span>
     }
 
     /**
@@ -92,8 +95,8 @@ import com.irurueta.navigation.inertial.Gravity;
      * @param result instance where estimated acceleration due to gravity will be stored.
      */
     public void estimate(final Point3D position, final Gravity result) {
-<span class="fc" id="L95">        estimateGravity(position, result);</span>
-<span class="fc" id="L96">    }</span>
+<span class="fc" id="L98">        estimateGravity(position, result);</span>
+<span class="fc" id="L99">    }</span>
 
     /**
      * Estimates acceleration due to gravity resolved about ECEF for a given position expressed in ECEF coordinates.
@@ -103,7 +106,31 @@ import com.irurueta.navigation.inertial.Gravity;
      * @return a new gravity instance containing estimated acceleration due to gravity.
      */
     public Gravity estimateAndReturnNew(final Point3D position) {
-<span class="fc" id="L106">        return estimateGravityAndReturnNew(position);</span>
+<span class="fc" id="L109">        return estimateGravityAndReturnNew(position);</span>
+    }
+
+    /**
+     * Estimates acceleration due to gravity resolved about ECEF for a given position expressed in ECEF coordinates.
+     *
+     * @param x cartesian x coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y cartesian y coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z cartesian z coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param result instance where estimated acceleration due to gravity will be stored.
+     */
+    public void estimate(final Distance x, final Distance y, final Distance z, final Gravity result) {
+<span class="fc" id="L121">        estimateGravity(x, y, z, result);</span>
+<span class="fc" id="L122">    }</span>
+
+    /**
+     * Estimates acceleration due to gravity resolved about ECEF for a given position expressed in ECEF coordinates.
+     *
+     * @param x cartesian x coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y cartesian y coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z cartesian z coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @return a new gravity instance containing estimated acceleration due to gravity.
+     */
+    public Gravity estimateAndReturnNew(final Distance x, final Distance y, final Distance z) {
+<span class="fc" id="L133">        return estimateGravityAndReturnNew(x, y, z);</span>
     }
 
     /**
@@ -119,31 +146,31 @@ import com.irurueta.navigation.inertial.Gravity;
      */
     public static void estimateGravity(final double x, final double y, final double z, final Gravity result) {
         // Calculate distance from center of the Earth
-<span class="fc" id="L122">        final double magR = Math.sqrt(x * x + y * y + z * z);</span>
+<span class="fc" id="L149">        final double magR = Math.sqrt(x * x + y * y + z * z);</span>
 
-<span class="fc bfc" id="L124" title="All 2 branches covered.">        if (magR == 0.0) {</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">        if (magR == 0.0) {</span>
             // If the input position is 0,0,0, produce a dummy output
-<span class="fc" id="L126">            result.setCoordinates(0.0, 0.0, 0.0);</span>
+<span class="fc" id="L153">            result.setCoordinates(0.0, 0.0, 0.0);</span>
         } else {
             // Calculate gravitational acceleration using (2.142)
-<span class="fc" id="L129">            final double zScale = 5.0 * Math.pow(z / magR, 2.0);</span>
-<span class="fc" id="L130">            final double tmp1 = -EARTH_GRAVITATIONAL_CONSTANT / Math.pow(magR, 3.0);</span>
-<span class="fc" id="L131">            final double tmp2 = 1.5 * EARTH_SECOND_GRAVITATIONAL_CONSTANT</span>
-<span class="fc" id="L132">                    * Math.pow(EARTH_EQUATORIAL_RADIUS_WGS84 / magR, 2.0);</span>
-<span class="fc" id="L133">            final double tmp3 = tmp1 * (1.0 + tmp2 * (1.0 - zScale));</span>
+<span class="fc" id="L156">            final double zScale = 5.0 * Math.pow(z / magR, 2.0);</span>
+<span class="fc" id="L157">            final double tmp1 = -EARTH_GRAVITATIONAL_CONSTANT / Math.pow(magR, 3.0);</span>
+<span class="fc" id="L158">            final double tmp2 = 1.5 * EARTH_SECOND_GRAVITATIONAL_CONSTANT</span>
+<span class="fc" id="L159">                    * Math.pow(EARTH_EQUATORIAL_RADIUS_WGS84 / magR, 2.0);</span>
+<span class="fc" id="L160">            final double tmp3 = tmp1 * (1.0 + tmp2 * (1.0 - zScale));</span>
 
-<span class="fc" id="L135">            final double gammaX = tmp3 * x;</span>
-<span class="fc" id="L136">            final double gammaY = tmp3 * y;</span>
-<span class="fc" id="L137">            final double gammaz = tmp1 * (1.0 + tmp2 * (3.0 - zScale)) * z;</span>
+<span class="fc" id="L162">            final double gammaX = tmp3 * x;</span>
+<span class="fc" id="L163">            final double gammaY = tmp3 * y;</span>
+<span class="fc" id="L164">            final double gammaz = tmp1 * (1.0 + tmp2 * (3.0 - zScale)) * z;</span>
 
             // Add centripetal acceleration using (2.133)
-<span class="fc" id="L140">            final double omega2 = EARTH_ROTATION_RATE * EARTH_ROTATION_RATE;</span>
-<span class="fc" id="L141">            final double gx = gammaX + omega2 * x;</span>
-<span class="fc" id="L142">            final double gy = gammaY + omega2 * y;</span>
+<span class="fc" id="L167">            final double omega2 = EARTH_ROTATION_RATE * EARTH_ROTATION_RATE;</span>
+<span class="fc" id="L168">            final double gx = gammaX + omega2 * x;</span>
+<span class="fc" id="L169">            final double gy = gammaY + omega2 * y;</span>
 
-<span class="fc" id="L144">            result.setCoordinates(gx, gy, gammaz);</span>
+<span class="fc" id="L171">            result.setCoordinates(gx, gy, gammaz);</span>
         }
-<span class="fc" id="L146">    }</span>
+<span class="fc" id="L173">    }</span>
 
     /**
      * Estimates acceleration due to gravity resolved about ECEF for a given position expressed in ECEF coordinates.
@@ -157,9 +184,9 @@ import com.irurueta.navigation.inertial.Gravity;
      * @return a new gravity instance containing estimated acceleration due to gravity.
      */
     public static Gravity estimateGravityAndReturnNew(final double x, final double y, final double z) {
-<span class="fc" id="L160">        final Gravity result = new Gravity();</span>
-<span class="fc" id="L161">        estimateGravity(x, y, z, result);</span>
-<span class="fc" id="L162">        return result;</span>
+<span class="fc" id="L187">        final Gravity result = new Gravity();</span>
+<span class="fc" id="L188">        estimateGravity(x, y, z, result);</span>
+<span class="fc" id="L189">        return result;</span>
     }
 
     /**
@@ -169,8 +196,8 @@ import com.irurueta.navigation.inertial.Gravity;
      * @param result instance where estimated acceleration due to gravity will be stored.
      */
     public static void estimateGravity(final ECEFFrame frame, final Gravity result) {
-<span class="fc" id="L172">        estimateGravity(frame.getX(), frame.getY(), frame.getZ(), result);</span>
-<span class="fc" id="L173">    }</span>
+<span class="fc" id="L199">        estimateGravity(frame.getX(), frame.getY(), frame.getZ(), result);</span>
+<span class="fc" id="L200">    }</span>
 
     /**
      * Estimates acceleration due to gravity resolved about ECEF for a position on a given ECEF frame.
@@ -179,7 +206,7 @@ import com.irurueta.navigation.inertial.Gravity;
      * @return a new gravity instance containing estimated acceleration due to gravity.
      */
     public static Gravity estimateGravityAndReturnNew(final ECEFFrame frame) {
-<span class="fc" id="L182">        return estimateGravityAndReturnNew(frame.getX(), frame.getY(), frame.getZ());</span>
+<span class="fc" id="L209">        return estimateGravityAndReturnNew(frame.getX(), frame.getY(), frame.getZ());</span>
     }
 
     /**
@@ -190,8 +217,8 @@ import com.irurueta.navigation.inertial.Gravity;
      * @param result instance where estimated acceleration due to gravity will be stored.
      */
     public static void estimateGravity(final Point3D position, final Gravity result) {
-<span class="fc" id="L193">        estimateGravity(position.getInhomX(), position.getInhomY(), position.getInhomZ(), result);</span>
-<span class="fc" id="L194">    }</span>
+<span class="fc" id="L220">        estimateGravity(position.getInhomX(), position.getInhomY(), position.getInhomZ(), result);</span>
+<span class="fc" id="L221">    }</span>
 
     /**
      * Estimates acceleration due to gravity resolved about ECEF for a given position expressed in ECEF coordinates.
@@ -201,7 +228,40 @@ import com.irurueta.navigation.inertial.Gravity;
      * @return a new gravity instance containing estimated acceleration due to gravity.
      */
     public static Gravity estimateGravityAndReturnNew(final Point3D position) {
-<span class="fc" id="L204">        return estimateGravityAndReturnNew(position.getInhomX(), position.getInhomY(), position.getInhomZ());</span>
+<span class="fc" id="L231">        return estimateGravityAndReturnNew(position.getInhomX(), position.getInhomY(), position.getInhomZ());</span>
+    }
+
+    /**
+     * Estimates acceleration due to gravity resolved about ECEF for a given position expressed in ECEF coordinates.
+     *
+     * @param x cartesian x coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y cartesian y coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z cartesian z coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param result instance where estimated acceleration due to gravity will be stored.
+     */
+    public static void estimateGravity(final Distance x, final Distance y,
+                                       final Distance z, final Gravity result) {
+<span class="fc" id="L244">        estimateGravity(</span>
+<span class="fc" id="L245">                DistanceConverter.convert(x.getValue().doubleValue(), x.getUnit(), DistanceUnit.METER),</span>
+<span class="fc" id="L246">                DistanceConverter.convert(y.getValue().doubleValue(), y.getUnit(), DistanceUnit.METER),</span>
+<span class="fc" id="L247">                DistanceConverter.convert(z.getValue().doubleValue(), z.getUnit(), DistanceUnit.METER),</span>
+                result);
+<span class="fc" id="L249">    }</span>
+
+    /**
+     * Estimates acceleration due to gravity resolved about ECEF for a given position expressed in ECEF coordinates.
+     *
+     * @param x cartesian x coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param y cartesian y coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @param z cartesian z coordinate of body position with respect ECEF frame, resolved along ECEF-frame axes.
+     * @return a new gravity instance containing estimated acceleration due to gravity.
+     */
+    public static Gravity estimateGravityAndReturnNew(final Distance x,
+                                                      final Distance y,
+                                                      final Distance z) {
+<span class="fc" id="L262">        final Gravity result = new Gravity();</span>
+<span class="fc" id="L263">        estimateGravity(x, y, z, result);</span>
+<span class="fc" id="L264">        return result;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
