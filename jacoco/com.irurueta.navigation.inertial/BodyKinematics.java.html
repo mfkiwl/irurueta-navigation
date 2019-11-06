@@ -15,6 +15,8 @@
  */
 package com.irurueta.navigation.inertial;
 
+import com.irurueta.algebra.Matrix;
+import com.irurueta.algebra.WrongSizeException;
 import com.irurueta.units.Acceleration;
 import com.irurueta.units.AccelerationConverter;
 import com.irurueta.units.AccelerationUnit;
@@ -31,8 +33,13 @@ import java.util.Objects;
  * of travel, z is the down axis, pointing in the usual direction of gravity, and y is the right axis,
  * completing the orthogonal set.
  */
-@SuppressWarnings(&quot;WeakerAccess&quot;)
+@SuppressWarnings({&quot;WeakerAccess&quot;, &quot;DuplicatedCode&quot;})
 public class BodyKinematics {
+    /**
+     * Number of components of specific force or angular rate.
+     */
+    public static final int COMPONENTS = 3;
+
     /**
      * Specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame x-axis, averaged
      * over time interval and expressed in meters per squared second (m/s^2).
@@ -72,8 +79,8 @@ public class BodyKinematics {
     /**
      * Constructor.
      */
-<span class="fc" id="L75">    public BodyKinematics() {</span>
-<span class="fc" id="L76">    }</span>
+<span class="fc" id="L82">    public BodyKinematics() {</span>
+<span class="fc" id="L83">    }</span>
 
     /**
      * Constructor.
@@ -85,9 +92,9 @@ public class BodyKinematics {
      * @param fz Specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame z-axis,
      *           averaged over time interval and expressed in meters per squared second (m/s^2).
      */
-<span class="fc" id="L88">    public BodyKinematics(final double fx, final double fy, final double fz) {</span>
-<span class="fc" id="L89">        setSpecificForceCoordinates(fx, fy, fz);</span>
-<span class="fc" id="L90">    }</span>
+<span class="fc" id="L95">    public BodyKinematics(final double fx, final double fy, final double fz) {</span>
+<span class="fc" id="L96">        setSpecificForceCoordinates(fx, fy, fz);</span>
+<span class="fc" id="L97">    }</span>
 
     /**
      * Constructor.
@@ -113,10 +120,10 @@ public class BodyKinematics {
      */
     public BodyKinematics(final double fx, final double fy, final double fz,
                           final double angularRateX, final double angularRateY,
-<span class="fc" id="L116">                          final double angularRateZ) {</span>
-<span class="fc" id="L117">        setSpecificForceCoordinates(fx, fy, fz);</span>
-<span class="fc" id="L118">        setAngularRateCoordinates(angularRateX, angularRateY, angularRateZ);</span>
-<span class="fc" id="L119">    }</span>
+<span class="fc" id="L123">                          final double angularRateZ) {</span>
+<span class="fc" id="L124">        setSpecificForceCoordinates(fx, fy, fz);</span>
+<span class="fc" id="L125">        setAngularRateCoordinates(angularRateX, angularRateY, angularRateZ);</span>
+<span class="fc" id="L126">    }</span>
 
     /**
      * Constructor.
@@ -130,9 +137,9 @@ public class BodyKinematics {
      */
     public BodyKinematics(final Acceleration specificForceX,
                           final Acceleration specificForceY,
-<span class="fc" id="L133">                          final Acceleration specificForceZ) {</span>
-<span class="fc" id="L134">        setSpecificForceCoordinates(specificForceX, specificForceY, specificForceZ);</span>
-<span class="fc" id="L135">    }</span>
+<span class="fc" id="L140">                          final Acceleration specificForceZ) {</span>
+<span class="fc" id="L141">        setSpecificForceCoordinates(specificForceX, specificForceY, specificForceZ);</span>
+<span class="fc" id="L142">    }</span>
 
     /**
      * Constructor.
@@ -146,9 +153,9 @@ public class BodyKinematics {
      */
     public BodyKinematics(final AngularSpeed angularSpeedX,
                           final AngularSpeed angularSpeedY,
-<span class="fc" id="L149">                          final AngularSpeed angularSpeedZ) {</span>
-<span class="fc" id="L150">        setAngularSpeedCoordinates(angularSpeedX, angularSpeedY, angularSpeedZ);</span>
-<span class="fc" id="L151">    }</span>
+<span class="fc" id="L156">                          final AngularSpeed angularSpeedZ) {</span>
+<span class="fc" id="L157">        setAngularSpeedCoordinates(angularSpeedX, angularSpeedY, angularSpeedZ);</span>
+<span class="fc" id="L158">    }</span>
 
     /**
      * Constructor.
@@ -171,19 +178,19 @@ public class BodyKinematics {
                           final Acceleration specificForceZ,
                           final AngularSpeed angularSpeedX,
                           final AngularSpeed angularSpeedY,
-<span class="fc" id="L174">                          final AngularSpeed angularSpeedZ) {</span>
-<span class="fc" id="L175">        setSpecificForceCoordinates(specificForceX, specificForceY, specificForceZ);</span>
-<span class="fc" id="L176">        setAngularSpeedCoordinates(angularSpeedX, angularSpeedY, angularSpeedZ);</span>
-<span class="fc" id="L177">    }</span>
+<span class="fc" id="L181">                          final AngularSpeed angularSpeedZ) {</span>
+<span class="fc" id="L182">        setSpecificForceCoordinates(specificForceX, specificForceY, specificForceZ);</span>
+<span class="fc" id="L183">        setAngularSpeedCoordinates(angularSpeedX, angularSpeedY, angularSpeedZ);</span>
+<span class="fc" id="L184">    }</span>
 
     /**
      * Constructor.
      *
      * @param input instance to copy data from.
      */
-<span class="fc" id="L184">    public BodyKinematics(final BodyKinematics input) {</span>
-<span class="fc" id="L185">        copyFrom(input);</span>
-<span class="fc" id="L186">    }</span>
+<span class="fc" id="L191">    public BodyKinematics(final BodyKinematics input) {</span>
+<span class="fc" id="L192">        copyFrom(input);</span>
+<span class="fc" id="L193">    }</span>
 
     /**
      * Gets specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame x-axis, averaged
@@ -192,7 +199,7 @@ public class BodyKinematics {
      * @return specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame x-axis.
      */
     public double getFx() {
-<span class="fc" id="L195">        return mFx;</span>
+<span class="fc" id="L202">        return mFx;</span>
     }
 
     /**
@@ -202,8 +209,8 @@ public class BodyKinematics {
      * @param fx specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame x-axis.
      */
     public void setFx(final double fx) {
-<span class="fc" id="L205">        mFx = fx;</span>
-<span class="fc" id="L206">    }</span>
+<span class="fc" id="L212">        mFx = fx;</span>
+<span class="fc" id="L213">    }</span>
 
     /**
      * Gets specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame y-axis, averaged
@@ -212,7 +219,7 @@ public class BodyKinematics {
      * @return specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame y-axis.
      */
     public double getFy() {
-<span class="fc" id="L215">        return mFy;</span>
+<span class="fc" id="L222">        return mFy;</span>
     }
 
     /**
@@ -222,8 +229,8 @@ public class BodyKinematics {
      * @param fy specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame y-axis.
      */
     public void setFy(final double fy) {
-<span class="fc" id="L225">        mFy = fy;</span>
-<span class="fc" id="L226">    }</span>
+<span class="fc" id="L232">        mFy = fy;</span>
+<span class="fc" id="L233">    }</span>
 
     /**
      * Gets specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame z-axis, averaged
@@ -232,7 +239,7 @@ public class BodyKinematics {
      * @return specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame z-axis.
      */
     public double getFz() {
-<span class="fc" id="L235">        return mFz;</span>
+<span class="fc" id="L242">        return mFz;</span>
     }
 
     /**
@@ -242,8 +249,8 @@ public class BodyKinematics {
      * @param fz specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame z-axis.
      */
     public void setFz(final double fz) {
-<span class="fc" id="L245">        mFz = fz;</span>
-<span class="fc" id="L246">    }</span>
+<span class="fc" id="L252">        mFz = fz;</span>
+<span class="fc" id="L253">    }</span>
 
     /**
      * Sets specific force coordinates of body frame with respect ECI, ECEF or NED frame resolved along body-frame
@@ -257,10 +264,10 @@ public class BodyKinematics {
      *           averaged over time interval and expressed in meters per squared second (m/s^2).
      */
     public void setSpecificForceCoordinates(final double fx, final double fy, final double fz) {
-<span class="fc" id="L260">        mFx = fx;</span>
-<span class="fc" id="L261">        mFy = fy;</span>
-<span class="fc" id="L262">        mFz = fz;</span>
-<span class="fc" id="L263">    }</span>
+<span class="fc" id="L267">        mFx = fx;</span>
+<span class="fc" id="L268">        mFy = fy;</span>
+<span class="fc" id="L269">        mFz = fz;</span>
+<span class="fc" id="L270">    }</span>
 
     /**
      * Gets specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame x-axis, averaged
@@ -270,9 +277,9 @@ public class BodyKinematics {
      *               body-frame x-axis will be stored.
      */
     public void getSpecificForceX(final Acceleration result) {
-<span class="fc" id="L273">        result.setValue(mFx);</span>
-<span class="fc" id="L274">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
-<span class="fc" id="L275">    }</span>
+<span class="fc" id="L280">        result.setValue(mFx);</span>
+<span class="fc" id="L281">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L282">    }</span>
 
     /**
      * Gets specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame x-axis, averaged
@@ -282,7 +289,7 @@ public class BodyKinematics {
      * body-frame x-axis.
      */
     public Acceleration getSpecificForceX() {
-<span class="fc" id="L285">        return new Acceleration(mFx, AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L292">        return new Acceleration(mFx, AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
     }
 
     /**
@@ -293,10 +300,10 @@ public class BodyKinematics {
      *                       body-frame x-axis that will be set.
      */
     public void setSpecificForceX(final Acceleration specificForceX) {
-<span class="fc" id="L296">        mFx = AccelerationConverter.convert(specificForceX.getValue().doubleValue(),</span>
-<span class="fc" id="L297">                specificForceX.getUnit(),</span>
+<span class="fc" id="L303">        mFx = AccelerationConverter.convert(specificForceX.getValue().doubleValue(),</span>
+<span class="fc" id="L304">                specificForceX.getUnit(),</span>
                 AccelerationUnit.METERS_PER_SQUARED_SECOND);
-<span class="fc" id="L299">    }</span>
+<span class="fc" id="L306">    }</span>
 
     /**
      * Gets specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame y-axis, averaged
@@ -306,9 +313,9 @@ public class BodyKinematics {
      *               body-frame y-axis will be stored.
      */
     public void getSpecificForceY(final Acceleration result) {
-<span class="fc" id="L309">        result.setValue(mFy);</span>
-<span class="fc" id="L310">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
-<span class="fc" id="L311">    }</span>
+<span class="fc" id="L316">        result.setValue(mFy);</span>
+<span class="fc" id="L317">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L318">    }</span>
 
     /**
      * Gets specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame y-axis, averaged
@@ -318,7 +325,7 @@ public class BodyKinematics {
      * body-frame y-axis.
      */
     public Acceleration getSpecificForceY() {
-<span class="fc" id="L321">        return new Acceleration(mFy, AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L328">        return new Acceleration(mFy, AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
     }
 
     /**
@@ -329,10 +336,10 @@ public class BodyKinematics {
      *                       body-frame y-axis that will be set.
      */
     public void setSpecificForceY(final Acceleration specificForceY) {
-<span class="fc" id="L332">        mFy = AccelerationConverter.convert(specificForceY.getValue().doubleValue(),</span>
-<span class="fc" id="L333">                specificForceY.getUnit(),</span>
+<span class="fc" id="L339">        mFy = AccelerationConverter.convert(specificForceY.getValue().doubleValue(),</span>
+<span class="fc" id="L340">                specificForceY.getUnit(),</span>
                 AccelerationUnit.METERS_PER_SQUARED_SECOND);
-<span class="fc" id="L335">    }</span>
+<span class="fc" id="L342">    }</span>
 
     /**
      * Gets specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame z-axis, averaged
@@ -342,9 +349,9 @@ public class BodyKinematics {
      *               body-frame z-axis will be stored.
      */
     public void getSpecificForceZ(final Acceleration result) {
-<span class="fc" id="L345">        result.setValue(mFz);</span>
-<span class="fc" id="L346">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
-<span class="fc" id="L347">    }</span>
+<span class="fc" id="L352">        result.setValue(mFz);</span>
+<span class="fc" id="L353">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L354">    }</span>
 
     /**
      * Gets specific force of body frame with respect ECI, ECEF or NED frame resolved along body-frame z-axis, averaged
@@ -354,7 +361,7 @@ public class BodyKinematics {
      * body-frame z-axis.
      */
     public Acceleration getSpecificForceZ() {
-<span class="fc" id="L357">        return new Acceleration(mFz, AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L364">        return new Acceleration(mFz, AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
     }
 
     /**
@@ -365,10 +372,10 @@ public class BodyKinematics {
      *                       body-frame z-axis that will be set.
      */
     public void setSpecificForceZ(final Acceleration specificForceZ) {
-<span class="fc" id="L368">        mFz = AccelerationConverter.convert(specificForceZ.getValue().doubleValue(),</span>
-<span class="fc" id="L369">                specificForceZ.getUnit(),</span>
+<span class="fc" id="L375">        mFz = AccelerationConverter.convert(specificForceZ.getValue().doubleValue(),</span>
+<span class="fc" id="L376">                specificForceZ.getUnit(),</span>
                 AccelerationUnit.METERS_PER_SQUARED_SECOND);
-<span class="fc" id="L371">    }</span>
+<span class="fc" id="L378">    }</span>
 
     /**
      * Sets specific force coordinates of body frame with respect ECI, ECEF or NED frame resolved along body-frame axes,
@@ -384,10 +391,10 @@ public class BodyKinematics {
     public void setSpecificForceCoordinates(final Acceleration specificForceX,
                                             final Acceleration specificForceY,
                                             final Acceleration specificForceZ) {
-<span class="fc" id="L387">        setSpecificForceX(specificForceX);</span>
-<span class="fc" id="L388">        setSpecificForceY(specificForceY);</span>
-<span class="fc" id="L389">        setSpecificForceZ(specificForceZ);</span>
-<span class="fc" id="L390">    }</span>
+<span class="fc" id="L394">        setSpecificForceX(specificForceX);</span>
+<span class="fc" id="L395">        setSpecificForceY(specificForceY);</span>
+<span class="fc" id="L396">        setSpecificForceZ(specificForceZ);</span>
+<span class="fc" id="L397">    }</span>
 
     /**
      * Gets angular rate of body frame with respect ECI, ECEF or NED frame, resolved about body-frame x-axis, averaged
@@ -396,7 +403,7 @@ public class BodyKinematics {
      * @return angular rate of body frame with respect ECI, ECEF or NED frame resolved about body-frame x-axis.
      */
     public double getAngularRateX() {
-<span class="fc" id="L399">        return mAngularRateX;</span>
+<span class="fc" id="L406">        return mAngularRateX;</span>
     }
 
     /**
@@ -407,8 +414,8 @@ public class BodyKinematics {
      *                     about body-frame x-axis.
      */
     public void setAngularRateX(final double angularRateX) {
-<span class="fc" id="L410">        mAngularRateX = angularRateX;</span>
-<span class="fc" id="L411">    }</span>
+<span class="fc" id="L417">        mAngularRateX = angularRateX;</span>
+<span class="fc" id="L418">    }</span>
 
     /**
      * Gets angular rate of body frame with respect ECI, ECEF or NED frame, resolved about body-frame y-axis, averaged
@@ -417,7 +424,7 @@ public class BodyKinematics {
      * @return angular rate of body frame with respect ECI, ECEF or NED frame resolved about body-frame y-axis.
      */
     public double getAngularRateY() {
-<span class="fc" id="L420">        return mAngularRateY;</span>
+<span class="fc" id="L427">        return mAngularRateY;</span>
     }
 
     /**
@@ -428,8 +435,8 @@ public class BodyKinematics {
      *                     about body-frame y-axis.
      */
     public void setAngularRateY(final double angularRateY) {
-<span class="fc" id="L431">        mAngularRateY = angularRateY;</span>
-<span class="fc" id="L432">    }</span>
+<span class="fc" id="L438">        mAngularRateY = angularRateY;</span>
+<span class="fc" id="L439">    }</span>
 
     /**
      * Gets angular rate of body frame with respect ECI, ECEF or NED frame, resolved about body-frame z-axis, averaged
@@ -438,7 +445,7 @@ public class BodyKinematics {
      * @return angular rate of body frame with respect ECI, ECEF or NED frame resolved about body-frame z-axis.
      */
     public double getAngularRateZ() {
-<span class="fc" id="L441">        return mAngularRateZ;</span>
+<span class="fc" id="L448">        return mAngularRateZ;</span>
     }
 
     /**
@@ -449,8 +456,8 @@ public class BodyKinematics {
      *                     about body-frame z-axis.
      */
     public void setAngularRateZ(final double angularRateZ) {
-<span class="fc" id="L452">        mAngularRateZ = angularRateZ;</span>
-<span class="fc" id="L453">    }</span>
+<span class="fc" id="L459">        mAngularRateZ = angularRateZ;</span>
+<span class="fc" id="L460">    }</span>
 
     /**
      * Sets angular rate coordinates of body frame with respect ECI, ECEF or NED frame, resolved about body-frame axes,
@@ -465,10 +472,10 @@ public class BodyKinematics {
      */
     public void setAngularRateCoordinates(final double angularRateX,
                                           final double angularRateY, final double angularRateZ) {
-<span class="fc" id="L468">        mAngularRateX = angularRateX;</span>
-<span class="fc" id="L469">        mAngularRateY = angularRateY;</span>
-<span class="fc" id="L470">        mAngularRateZ = angularRateZ;</span>
-<span class="fc" id="L471">    }</span>
+<span class="fc" id="L475">        mAngularRateX = angularRateX;</span>
+<span class="fc" id="L476">        mAngularRateY = angularRateY;</span>
+<span class="fc" id="L477">        mAngularRateZ = angularRateZ;</span>
+<span class="fc" id="L478">    }</span>
 
     /**
      * Gets angular speed of body frame with respect ECI, ECEF or NED frame, resolved about body-frame x-axis, averaged
@@ -478,9 +485,9 @@ public class BodyKinematics {
      *               body-frame x-axis will be stored.
      */
     public void getAngularSpeedX(final AngularSpeed result) {
-<span class="fc" id="L481">        result.setValue(mAngularRateX);</span>
-<span class="fc" id="L482">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
-<span class="fc" id="L483">    }</span>
+<span class="fc" id="L488">        result.setValue(mAngularRateX);</span>
+<span class="fc" id="L489">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L490">    }</span>
 
     /**
      * Gets angular speed of body frame with respect ECI, ECEF or NED frame, resolved about body-frame x-axis, averaged
@@ -490,7 +497,7 @@ public class BodyKinematics {
      * body-frame X-axis.
      */
     public AngularSpeed getAngularSpeedX() {
-<span class="fc" id="L493">        return new AngularSpeed(mAngularRateX, AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L500">        return new AngularSpeed(mAngularRateX, AngularSpeedUnit.RADIANS_PER_SECOND);</span>
     }
 
     /**
@@ -501,10 +508,10 @@ public class BodyKinematics {
      *                      x-axis that will be set.
      */
     public void setAngularSpeedX(final AngularSpeed angularSpeedX) {
-<span class="fc" id="L504">        mAngularRateX = AngularSpeedConverter.convert(angularSpeedX.getValue().doubleValue(),</span>
-<span class="fc" id="L505">                angularSpeedX.getUnit(),</span>
+<span class="fc" id="L511">        mAngularRateX = AngularSpeedConverter.convert(angularSpeedX.getValue().doubleValue(),</span>
+<span class="fc" id="L512">                angularSpeedX.getUnit(),</span>
                 AngularSpeedUnit.RADIANS_PER_SECOND);
-<span class="fc" id="L507">    }</span>
+<span class="fc" id="L514">    }</span>
 
     /**
      * Gets angular speed of body frame with respect ECI, ECEF or NED frame, resolved about body-frame y-axis, averaged
@@ -514,9 +521,9 @@ public class BodyKinematics {
      *               body-frame y-axis will be stored.
      */
     public void getAngularSpeedY(final AngularSpeed result) {
-<span class="fc" id="L517">        result.setValue(mAngularRateY);</span>
-<span class="fc" id="L518">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
-<span class="fc" id="L519">    }</span>
+<span class="fc" id="L524">        result.setValue(mAngularRateY);</span>
+<span class="fc" id="L525">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L526">    }</span>
 
     /**
      * Gets angular speed of body frame with respect ECI, ECEF or NED frame, resolved about body-frame y-axis, averaged
@@ -526,7 +533,7 @@ public class BodyKinematics {
      * body-frame y-axis.
      */
     public AngularSpeed getAngularSpeedY() {
-<span class="fc" id="L529">        return new AngularSpeed(mAngularRateY, AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L536">        return new AngularSpeed(mAngularRateY, AngularSpeedUnit.RADIANS_PER_SECOND);</span>
     }
 
     /**
@@ -537,10 +544,10 @@ public class BodyKinematics {
      *                      y-axis that will be set.
      */
     public void setAngularSpeedY(final AngularSpeed angularSpeedY) {
-<span class="fc" id="L540">        mAngularRateY = AngularSpeedConverter.convert(angularSpeedY.getValue().doubleValue(),</span>
-<span class="fc" id="L541">                angularSpeedY.getUnit(),</span>
+<span class="fc" id="L547">        mAngularRateY = AngularSpeedConverter.convert(angularSpeedY.getValue().doubleValue(),</span>
+<span class="fc" id="L548">                angularSpeedY.getUnit(),</span>
                 AngularSpeedUnit.RADIANS_PER_SECOND);
-<span class="fc" id="L543">    }</span>
+<span class="fc" id="L550">    }</span>
 
     /**
      * Gets angular speed of body frame with respect ECI, ECEF or NED frame, resolved about body-frame z-axis, averaged
@@ -550,9 +557,9 @@ public class BodyKinematics {
      *               body-frame z-axis will be stored.
      */
     public void getAngularSpeedZ(final AngularSpeed result) {
-<span class="fc" id="L553">        result.setValue(mAngularRateZ);</span>
-<span class="fc" id="L554">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
-<span class="fc" id="L555">    }</span>
+<span class="fc" id="L560">        result.setValue(mAngularRateZ);</span>
+<span class="fc" id="L561">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L562">    }</span>
 
     /**
      * Gets angular speed of body frame with respect ECI, ECEF or NED frame, resolved about body-frame z-axis, averaged
@@ -562,7 +569,7 @@ public class BodyKinematics {
      * body-frame z-axis.
      */
     public AngularSpeed getAngularSpeedZ() {
-<span class="fc" id="L565">        return new AngularSpeed(mAngularRateZ, AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L572">        return new AngularSpeed(mAngularRateZ, AngularSpeedUnit.RADIANS_PER_SECOND);</span>
     }
 
     /**
@@ -573,10 +580,10 @@ public class BodyKinematics {
      *                      z-axis, that will be set.
      */
     public void setAngularSpeedZ(final AngularSpeed angularSpeedZ) {
-<span class="fc" id="L576">        mAngularRateZ = AngularSpeedConverter.convert(angularSpeedZ.getValue().doubleValue(),</span>
-<span class="fc" id="L577">                angularSpeedZ.getUnit(),</span>
+<span class="fc" id="L583">        mAngularRateZ = AngularSpeedConverter.convert(angularSpeedZ.getValue().doubleValue(),</span>
+<span class="fc" id="L584">                angularSpeedZ.getUnit(),</span>
                 AngularSpeedUnit.RADIANS_PER_SECOND);
-<span class="fc" id="L579">    }</span>
+<span class="fc" id="L586">    }</span>
 
     /**
      * Sets angular speed coordinates of body frame with respect ECI, ECEF or NED frame, resolved about body-frame axes,
@@ -592,10 +599,10 @@ public class BodyKinematics {
     public void setAngularSpeedCoordinates(final AngularSpeed angularSpeedX,
                                            final AngularSpeed angularSpeedY,
                                            final AngularSpeed angularSpeedZ) {
-<span class="fc" id="L595">        setAngularSpeedX(angularSpeedX);</span>
-<span class="fc" id="L596">        setAngularSpeedY(angularSpeedY);</span>
-<span class="fc" id="L597">        setAngularSpeedZ(angularSpeedZ);</span>
-<span class="fc" id="L598">    }</span>
+<span class="fc" id="L602">        setAngularSpeedX(angularSpeedX);</span>
+<span class="fc" id="L603">        setAngularSpeedY(angularSpeedY);</span>
+<span class="fc" id="L604">        setAngularSpeedZ(angularSpeedZ);</span>
+<span class="fc" id="L605">    }</span>
 
     /**
      * Gets norm of specific force expressed in meters per squared second (m/s^2).
@@ -603,7 +610,7 @@ public class BodyKinematics {
      * @return norm of specific force.
      */
     public double getSpecificForceNorm() {
-<span class="fc" id="L606">        return Math.sqrt(mFx * mFx + mFy * mFy + mFz * mFz);</span>
+<span class="fc" id="L613">        return Math.sqrt(mFx * mFx + mFy * mFy + mFz * mFz);</span>
     }
 
     /**
@@ -612,9 +619,9 @@ public class BodyKinematics {
      * @param result instance where result will be stored.
      */
     public void getSpecificForceNormAsAcceleration(final Acceleration result) {
-<span class="fc" id="L615">        result.setValue(getSpecificForceNorm());</span>
-<span class="fc" id="L616">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
-<span class="fc" id="L617">    }</span>
+<span class="fc" id="L622">        result.setValue(getSpecificForceNorm());</span>
+<span class="fc" id="L623">        result.setUnit(AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L624">    }</span>
 
     /**
      * Gets norm of specific force.
@@ -622,7 +629,7 @@ public class BodyKinematics {
      * @return a new acceleration instance containing norm of specific force.
      */
     public Acceleration getSpecificForceNormAsAcceleration() {
-<span class="fc" id="L625">        return new Acceleration(getSpecificForceNorm(),</span>
+<span class="fc" id="L632">        return new Acceleration(getSpecificForceNorm(),</span>
                 AccelerationUnit.METERS_PER_SQUARED_SECOND);
     }
 
@@ -632,7 +639,7 @@ public class BodyKinematics {
      * @return norm of angular rate.
      */
     public double getAngularRateNorm() {
-<span class="fc" id="L635">        return Math.sqrt(mAngularRateX * mAngularRateX</span>
+<span class="fc" id="L642">        return Math.sqrt(mAngularRateX * mAngularRateX</span>
                 + mAngularRateY * mAngularRateY + mAngularRateZ * mAngularRateZ);
     }
 
@@ -642,9 +649,9 @@ public class BodyKinematics {
      * @param result instance where norm of angular rate will be stored.
      */
     public void getAngularSpeedNorm(final AngularSpeed result) {
-<span class="fc" id="L645">        result.setValue(getAngularRateNorm());</span>
-<span class="fc" id="L646">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
-<span class="fc" id="L647">    }</span>
+<span class="fc" id="L652">        result.setValue(getAngularRateNorm());</span>
+<span class="fc" id="L653">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L654">    }</span>
 
     /**
      * Gets norm of angular rate.
@@ -652,7 +659,7 @@ public class BodyKinematics {
      * @return norm of angular rate.
      */
     public AngularSpeed getAngularSpeedNorm() {
-<span class="fc" id="L655">        return new AngularSpeed(getAngularRateNorm(),</span>
+<span class="fc" id="L662">        return new AngularSpeed(getAngularRateNorm(),</span>
                 AngularSpeedUnit.RADIANS_PER_SECOND);
     }
 
@@ -662,13 +669,13 @@ public class BodyKinematics {
      * @param output destination instance where data will be copied to.
      */
     public void copyTo(final BodyKinematics output) {
-<span class="fc" id="L665">        output.mFx = mFx;</span>
-<span class="fc" id="L666">        output.mFy = mFy;</span>
-<span class="fc" id="L667">        output.mFz = mFz;</span>
-<span class="fc" id="L668">        output.mAngularRateX = mAngularRateX;</span>
-<span class="fc" id="L669">        output.mAngularRateY = mAngularRateY;</span>
-<span class="fc" id="L670">        output.mAngularRateZ = mAngularRateZ;</span>
-<span class="fc" id="L671">    }</span>
+<span class="fc" id="L672">        output.mFx = mFx;</span>
+<span class="fc" id="L673">        output.mFy = mFy;</span>
+<span class="fc" id="L674">        output.mFz = mFz;</span>
+<span class="fc" id="L675">        output.mAngularRateX = mAngularRateX;</span>
+<span class="fc" id="L676">        output.mAngularRateY = mAngularRateY;</span>
+<span class="fc" id="L677">        output.mAngularRateZ = mAngularRateZ;</span>
+<span class="fc" id="L678">    }</span>
 
     /**
      * Copies data of provided instance into this instance.
@@ -676,13 +683,145 @@ public class BodyKinematics {
      * @param input instance to copy data from.
      */
     public void copyFrom(final BodyKinematics input) {
-<span class="fc" id="L679">        mFx = input.mFx;</span>
-<span class="fc" id="L680">        mFy = input.mFy;</span>
-<span class="fc" id="L681">        mFz = input.mFz;</span>
-<span class="fc" id="L682">        mAngularRateX = input.mAngularRateX;</span>
-<span class="fc" id="L683">        mAngularRateY = input.mAngularRateY;</span>
-<span class="fc" id="L684">        mAngularRateZ = input.mAngularRateZ;</span>
-<span class="fc" id="L685">    }</span>
+<span class="fc" id="L686">        mFx = input.mFx;</span>
+<span class="fc" id="L687">        mFy = input.mFy;</span>
+<span class="fc" id="L688">        mFz = input.mFz;</span>
+<span class="fc" id="L689">        mAngularRateX = input.mAngularRateX;</span>
+<span class="fc" id="L690">        mAngularRateY = input.mAngularRateY;</span>
+<span class="fc" id="L691">        mAngularRateZ = input.mAngularRateZ;</span>
+<span class="fc" id="L692">    }</span>
+
+    /**
+     * Gets specific force coordinates expressed in meters per squared second (m/s^2) as an array.
+     *
+     * @param result array instance where specific force coordinates will be stored in
+     *               x, y, z order.
+     * @throws IllegalArgumentException if provided array does not have length 3.
+     */
+    public void asSpecificForceArray(final double[] result) {
+<span class="fc bfc" id="L702" title="All 2 branches covered.">        if (result.length != COMPONENTS) {</span>
+<span class="fc" id="L703">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L706">        result[0] = mFx;</span>
+<span class="fc" id="L707">        result[1] = mFy;</span>
+<span class="fc" id="L708">        result[2] = mFz;</span>
+<span class="fc" id="L709">    }</span>
+
+    /**
+     * Gets specific force coordinates expressed in meters per squared second (m/s^2) as an array.
+     *
+     * @return array containing specific force coordinates in x,y,z order.
+     */
+    public double[] asSpecificForceArray() {
+<span class="fc" id="L717">        final double[] result = new double[COMPONENTS];</span>
+<span class="fc" id="L718">        asSpecificForceArray(result);</span>
+<span class="fc" id="L719">        return result;</span>
+    }
+
+    /**
+     * Gets specific force coordinates expressed in meters per squared second (m/s^2) as a column matrix.
+     * If provided matrix does not have size 3x1, it will be resized.
+     *
+     * @param result matrix instance where gravity coordinates will be stored in
+     *               x,y,z order.
+     */
+    public void asSpecificForceMatrix(final Matrix result) {
+<span class="pc bpc" id="L730" title="1 of 4 branches missed.">        if (result.getRows() != COMPONENTS || result.getColumns() != 1) {</span>
+            try {
+<span class="fc" id="L732">                result.resize(COMPONENTS, 1);</span>
+<span class="nc" id="L733">            } catch (final WrongSizeException ignore) {</span>
+                // never happens
+<span class="fc" id="L735">            }</span>
+        }
+
+<span class="fc" id="L738">        result.setElementAtIndex(0, mFx);</span>
+<span class="fc" id="L739">        result.setElementAtIndex(1, mFy);</span>
+<span class="fc" id="L740">        result.setElementAtIndex(2, mFz);</span>
+<span class="fc" id="L741">    }</span>
+
+    /**
+     * Gets specific force coordinates expressed in meters per squared second (m/s^2) as a column matrix.
+     *
+     * @return a matrix containing specific force coordinates stored in x,y,z order.
+     */
+    public Matrix asSpecificForceMatrix() {
+        Matrix result;
+        try {
+<span class="fc" id="L751">            result = new Matrix(COMPONENTS, 1);</span>
+<span class="fc" id="L752">            asSpecificForceMatrix(result);</span>
+<span class="nc" id="L753">        } catch (final WrongSizeException ignore) {</span>
+            // never happens
+<span class="nc" id="L755">            result = null;</span>
+<span class="fc" id="L756">        }</span>
+<span class="fc" id="L757">        return result;</span>
+    }
+
+    /**
+     * Gets angular rate coordinates expressed in radians per second (rad/s) as an array.
+     *
+     * @param result array instance where angular rate coordinates will be stored in
+     *               x,y,z order.
+     * @throws IllegalArgumentException if provided array does not have length 3.
+     */
+    public void asAngularRateArray(final double[] result) {
+<span class="fc bfc" id="L768" title="All 2 branches covered.">        if (result.length != COMPONENTS) {</span>
+<span class="fc" id="L769">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L772">        result[0] = mAngularRateX;</span>
+<span class="fc" id="L773">        result[1] = mAngularRateY;</span>
+<span class="fc" id="L774">        result[2] = mAngularRateZ;</span>
+<span class="fc" id="L775">    }</span>
+
+    /**
+     * Gets angular rate coordinates expressed in radians per second (rad/s) as an array.
+     *
+     * @return array containing angular rate coordinates in x,y,z order.
+     */
+    public double[] asAngularRateArray() {
+<span class="fc" id="L783">        final double[] result = new double[COMPONENTS];</span>
+<span class="fc" id="L784">        asAngularRateArray(result);</span>
+<span class="fc" id="L785">        return result;</span>
+    }
+
+    /**
+     * Gets angular rate coordinates expressed in radians per second (rad/s) as a column matrix.
+     * If provided matrix does not have size 3x1, it will be resized.
+     *
+     * @param result matrix instance where angular rate coordinates will be stored in
+     *               x,y,z order.
+     */
+    public void asAngularRateMatrix(final Matrix result) {
+<span class="pc bpc" id="L796" title="1 of 4 branches missed.">        if (result.getRows() != COMPONENTS || result.getColumns() != 1) {</span>
+            try {
+<span class="fc" id="L798">                result.resize(COMPONENTS, 1);</span>
+<span class="nc" id="L799">            } catch (final WrongSizeException ignore) {</span>
+                // never happens
+<span class="fc" id="L801">            }</span>
+        }
+
+<span class="fc" id="L804">        result.setElementAtIndex(0, mAngularRateX);</span>
+<span class="fc" id="L805">        result.setElementAtIndex(1, mAngularRateY);</span>
+<span class="fc" id="L806">        result.setElementAtIndex(2, mAngularRateZ);</span>
+<span class="fc" id="L807">    }</span>
+
+    /**
+     * Gets angular rate coordinates expressed in radians per second (rad/s) as a column matrix.
+     *
+     * @return a matrix containing angular rate coordinates stored in x,y,z order.
+     */
+    public Matrix asAngularRateMatrix() {
+        Matrix result;
+        try {
+<span class="fc" id="L817">            result = new Matrix(COMPONENTS, 1);</span>
+<span class="fc" id="L818">            asAngularRateMatrix(result);</span>
+<span class="nc" id="L819">        } catch (final WrongSizeException ignore) {</span>
+            // never happens
+<span class="nc" id="L821">            result = null;</span>
+<span class="fc" id="L822">        }</span>
+<span class="fc" id="L823">        return result;</span>
+    }
 
     /**
      * Computes and returns hash code for this instance. Hash codes are almost unique
@@ -692,7 +831,7 @@ public class BodyKinematics {
      */
     @Override
     public int hashCode() {
-<span class="fc" id="L695">        return Objects.hash(mFx, mFy, mFz, mAngularRateX, mAngularRateY, mAngularRateZ);</span>
+<span class="fc" id="L834">        return Objects.hash(mFx, mFy, mFz, mAngularRateX, mAngularRateY, mAngularRateZ);</span>
     }
 
     /**
@@ -702,7 +841,7 @@ public class BodyKinematics {
      * @return true if both instances are considered to be equal, false otherwise.
      */
     public boolean equals(final BodyKinematics other) {
-<span class="fc" id="L705">        return equals(other, 0.0);</span>
+<span class="fc" id="L844">        return equals(other, 0.0);</span>
     }
 
     /**
@@ -716,16 +855,16 @@ public class BodyKinematics {
      * threshold), false otherwise.
      */
     public boolean equals(final BodyKinematics other, final double threshold) {
-<span class="fc bfc" id="L719" title="All 2 branches covered.">        if (other == null) {</span>
-<span class="fc" id="L720">            return false;</span>
+<span class="fc bfc" id="L858" title="All 2 branches covered.">        if (other == null) {</span>
+<span class="fc" id="L859">            return false;</span>
         }
 
-<span class="fc bfc" id="L723" title="All 2 branches covered.">        return Math.abs(mFx - other.mFx) &lt;= threshold</span>
-<span class="pc bpc" id="L724" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mFy - other.mFy) &lt;= threshold</span>
-<span class="pc bpc" id="L725" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mFz - other.mFz) &lt;= threshold</span>
-<span class="pc bpc" id="L726" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mAngularRateX - other.mAngularRateX) &lt;= threshold</span>
-<span class="pc bpc" id="L727" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mAngularRateY - other.mAngularRateY) &lt;= threshold</span>
-<span class="pc bpc" id="L728" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mAngularRateZ - other.mAngularRateZ) &lt;= threshold;</span>
+<span class="fc bfc" id="L862" title="All 2 branches covered.">        return Math.abs(mFx - other.mFx) &lt;= threshold</span>
+<span class="pc bpc" id="L863" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mFy - other.mFy) &lt;= threshold</span>
+<span class="pc bpc" id="L864" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mFz - other.mFz) &lt;= threshold</span>
+<span class="pc bpc" id="L865" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mAngularRateX - other.mAngularRateX) &lt;= threshold</span>
+<span class="pc bpc" id="L866" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mAngularRateY - other.mAngularRateY) &lt;= threshold</span>
+<span class="pc bpc" id="L867" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mAngularRateZ - other.mAngularRateZ) &lt;= threshold;</span>
     }
 
     /**
@@ -737,18 +876,18 @@ public class BodyKinematics {
      */
     @Override
     public boolean equals(Object obj) {
-<span class="fc bfc" id="L740" title="All 2 branches covered.">        if (obj == null) {</span>
-<span class="fc" id="L741">            return false;</span>
+<span class="fc bfc" id="L879" title="All 2 branches covered.">        if (obj == null) {</span>
+<span class="fc" id="L880">            return false;</span>
         }
-<span class="fc bfc" id="L743" title="All 2 branches covered.">        if (obj == this) {</span>
-<span class="fc" id="L744">            return true;</span>
+<span class="fc bfc" id="L882" title="All 2 branches covered.">        if (obj == this) {</span>
+<span class="fc" id="L883">            return true;</span>
         }
-<span class="fc bfc" id="L746" title="All 2 branches covered.">        if (!(obj instanceof BodyKinematics)) {</span>
-<span class="fc" id="L747">            return false;</span>
+<span class="fc bfc" id="L885" title="All 2 branches covered.">        if (!(obj instanceof BodyKinematics)) {</span>
+<span class="fc" id="L886">            return false;</span>
         }
 
-<span class="fc" id="L750">        final BodyKinematics other = (BodyKinematics) obj;</span>
-<span class="fc" id="L751">        return equals(other);</span>
+<span class="fc" id="L889">        final BodyKinematics other = (BodyKinematics) obj;</span>
+<span class="fc" id="L890">        return equals(other);</span>
     }
 
     /**
@@ -759,7 +898,7 @@ public class BodyKinematics {
     @SuppressWarnings({&quot;CloneDoesntDeclareCloneNotSupportedException&quot;, &quot;MethodDoesntCallSuperMethod&quot;})
     @Override
     protected Object clone() {
-<span class="fc" id="L762">        return new BodyKinematics(this);</span>
+<span class="fc" id="L901">        return new BodyKinematics(this);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
