@@ -1,0 +1,732 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GNSSKalmanState.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.gnss</a> &gt; <span class="el_source">GNSSKalmanState.java</span></div><h1>GNSSKalmanState.java</h1><pre class="source lang-java linenums">package com.irurueta.navigation.gnss;
+
+import com.irurueta.geometry.InhomogeneousPoint3D;
+import com.irurueta.geometry.Point3D;
+import com.irurueta.units.Distance;
+import com.irurueta.units.DistanceConverter;
+import com.irurueta.units.DistanceUnit;
+import com.irurueta.units.Speed;
+import com.irurueta.units.SpeedConverter;
+import com.irurueta.units.SpeedUnit;
+
+import java.io.Serializable;
+import java.util.Objects;
+
+/**
+ * Contains state estimation for GNSS extended Kalman filter.
+ */
+@SuppressWarnings(&quot;WeakerAccess&quot;)
+public class GNSSKalmanState implements Serializable, Cloneable {
+
+    /**
+     * X coordinate of estimated ECEF user position expressed in meters (m).
+     */
+    private double mX;
+
+    /**
+     * Y coordinate of estimated ECEF user position expressed in meters (m).
+     */
+    private double mY;
+
+    /**
+     * Z coordinate of estimated ECEF user position expressed in meters (m).
+     */
+    private double mZ;
+
+    /**
+     * X coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     */
+    private double mVx;
+
+    /**
+     * Y coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     */
+    private double mVy;
+
+    /**
+     * Z coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     */
+    private double mVz;
+
+    /**
+     * Estimated receiver clock offset expressed in meters (m).
+     */
+    private double mClockOffset;
+
+    /**
+     * Estimated receiver clock drift expressed in meters per second (m/s).
+     */
+    private double mClockDrift;
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L64">    public GNSSKalmanState() {</span>
+<span class="fc" id="L65">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param x           x coordinate of estimated ECEF user position expressed in meters (m).
+     * @param y           y coordinate of estimated ECEF user position expressed in meters (m).
+     * @param z           z coordinate of estimated ECEF user position expressed in meters (m).
+     * @param vx          x coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     * @param vy          y coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     * @param vz          z coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     * @param clockOffset estimated receiver clock offset expressed in meters (m).
+     * @param clockDrift  estimated receiver clock drift expressed in meters per second (m/s).
+     */
+    public GNSSKalmanState(final double x, final double y, final double z,
+                           final double vx, final double vy, final double vz,
+<span class="fc" id="L81">                           final double clockOffset, final double clockDrift) {</span>
+<span class="fc" id="L82">        setPositionCoordinates(x, y, z);</span>
+<span class="fc" id="L83">        setVelocityCoordinates(vx, vy, vz);</span>
+<span class="fc" id="L84">        setClockOffset(clockOffset);</span>
+<span class="fc" id="L85">        setClockDrift(clockDrift);</span>
+<span class="fc" id="L86">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param x           x coordinate of estimated ECEF user position.
+     * @param y           y coordinate of estimated ECEF user position.
+     * @param z           z coordinate of estimated ECEF user position.
+     * @param vx          x coordinate of estimated ECEF user velocity.
+     * @param vy          y coordinate of estimated ECEF user velocity.
+     * @param vz          z coordinate of estimated ECEF user velocity.
+     * @param clockOffset estimated receiver clock offset.
+     * @param clockDrift  estimated receiver clock drift.
+     */
+    public GNSSKalmanState(final Distance x, final Distance y, final Distance z,
+                           final Speed vx, final Speed vy, final Speed vz,
+<span class="fc" id="L102">                           final Distance clockOffset, final Speed clockDrift) {</span>
+<span class="fc" id="L103">        setPositionCoordinates(x, y, z);</span>
+<span class="fc" id="L104">        setVelocityCoordinates(vx, vy, vz);</span>
+<span class="fc" id="L105">        setClockOffset(clockOffset);</span>
+<span class="fc" id="L106">        setClockDrift(clockDrift);</span>
+<span class="fc" id="L107">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position    estimated ECEF user position.
+     * @param vx          x coordinate of estimated ECEF user velocity.
+     * @param vy          y coordinate of estimated ECEF user velocity.
+     * @param vz          z coordinate of estimated ECEF user velocity.
+     * @param clockOffset estimated receiver clock offset.
+     * @param clockDrift  estimated receiver clock drift.
+8     */
+    public GNSSKalmanState(final Point3D position,
+                           final Speed vx, final Speed vy, final Speed vz,
+<span class="fc" id="L121">                           final Distance clockOffset, final Speed clockDrift) {</span>
+<span class="fc" id="L122">        setPosition(position);</span>
+<span class="fc" id="L123">        setVelocityCoordinates(vx, vy, vz);</span>
+<span class="fc" id="L124">        setClockOffset(clockOffset);</span>
+<span class="fc" id="L125">        setClockDrift(clockDrift);</span>
+<span class="fc" id="L126">    }</span>
+
+    /**
+     * Copy constructor.
+     *
+     * @param input input instance to copy data from.
+     */
+<span class="fc" id="L133">    public GNSSKalmanState(final GNSSKalmanState input) {</span>
+<span class="fc" id="L134">        copyFrom(input);</span>
+<span class="fc" id="L135">    }</span>
+
+    /**
+     * Gets x coordinate of estimated ECEF user position expressed in meters (m).
+     *
+     * @return x coordinate of estimated ECEF user position.
+     */
+    public double getX() {
+<span class="fc" id="L143">        return mX;</span>
+    }
+
+    /**
+     * Sets x coordinate of estimated ECEF user position expressed in meters (m).
+     *
+     * @param x x coordinate of estimated ECEF user position.
+     */
+    public void setX(final double x) {
+<span class="fc" id="L152">        mX = x;</span>
+<span class="fc" id="L153">    }</span>
+
+    /**
+     * Gets x coordinate of estimated ECEF user position.
+     *
+     * @param result instance where x coordinate of estimated ECEF user position will be stored.
+     */
+    public void getDistanceX(final Distance result) {
+<span class="fc" id="L161">        result.setValue(mX);</span>
+<span class="fc" id="L162">        result.setUnit(DistanceUnit.METER);</span>
+<span class="fc" id="L163">    }</span>
+
+    /**
+     * Gets x coordinate of estimated ECEF user position.
+     *
+     * @return x coordinate of estimated ECEF user position.
+     */
+    public Distance getDistanceX() {
+<span class="fc" id="L171">        return new Distance(mX, DistanceUnit.METER);</span>
+    }
+
+    /**
+     * Sets x coordinate of estimated ECEF user position.
+     *
+     * @param x x coordinate of estimated ECEF user position.
+     */
+    public void setDistanceX(final Distance x) {
+<span class="fc" id="L180">        mX = DistanceConverter.convert(x.getValue().doubleValue(), x.getUnit(),</span>
+                DistanceUnit.METER);
+<span class="fc" id="L182">    }</span>
+
+    /**
+     * Gets y coordinate of estimated ECEF user position expressed in meters (m).
+     *
+     * @return y coordinate of estimated ECEF user position.
+     */
+    public double getY() {
+<span class="fc" id="L190">        return mY;</span>
+    }
+
+    /**
+     * Sets y coordinate of estimated ECEF user position expressed in meters (m).
+     *
+     * @param y y coordinate of estimated ECEF user position.
+     */
+    public void setY(final double y) {
+<span class="fc" id="L199">        mY = y;</span>
+<span class="fc" id="L200">    }</span>
+
+    /**
+     * Gets y coordinate of estimated ECEF user position.
+     *
+     * @param result instance where y coordinate of estimated ECEF user position will be stored.
+     */
+    public void getDistanceY(final Distance result) {
+<span class="fc" id="L208">        result.setValue(mY);</span>
+<span class="fc" id="L209">        result.setUnit(DistanceUnit.METER);</span>
+<span class="fc" id="L210">    }</span>
+
+    /**
+     * Gets y coordinate of estimated ECEF user position.
+     *
+     * @return y coordinate of estimated ECEF user position.
+     */
+    public Distance getDistanceY() {
+<span class="fc" id="L218">        return new Distance(mY, DistanceUnit.METER);</span>
+    }
+
+    /**
+     * Sets y coordinate of estimated ECEF user position.
+     *
+     * @param y y coordinate of estimated ECEF user position.
+     */
+    public void setDistanceY(final Distance y) {
+<span class="fc" id="L227">        mY = DistanceConverter.convert(y.getValue().doubleValue(), y.getUnit(),</span>
+                DistanceUnit.METER);
+<span class="fc" id="L229">    }</span>
+
+    /**
+     * Gets z coordinate of estimated ECEF user position expressed in meters (m).
+     *
+     * @return z coordinate of estimated ECEF user position.
+     */
+    public double getZ() {
+<span class="fc" id="L237">        return mZ;</span>
+    }
+
+    /**
+     * Sets z coordinate of estimated ECEF user position expressed in meters (m).
+     *
+     * @param z z coordinate of estimated ECEF user position.
+     */
+    public void setZ(final double z) {
+<span class="fc" id="L246">        mZ = z;</span>
+<span class="fc" id="L247">    }</span>
+
+    /**
+     * Gets z coordinate of estimated ECEF user position.
+     *
+     * @param result instance where z coordinate of estimated ECEF user position will be stored.
+     */
+    public void getDistanceZ(final Distance result) {
+<span class="fc" id="L255">        result.setValue(mZ);</span>
+<span class="fc" id="L256">        result.setUnit(DistanceUnit.METER);</span>
+<span class="fc" id="L257">    }</span>
+
+    /**
+     * Gets z coordinate of estimated ECEF user position.
+     *
+     * @return z coordinate of estimated ECEF user position.
+     */
+    public Distance getDistanceZ() {
+<span class="fc" id="L265">        return new Distance(mZ, DistanceUnit.METER);</span>
+    }
+
+    /**
+     * Sets z coordinate of estimated ECEF user position.
+     *
+     * @param z z coordinate of estimated ECEF user position.
+     */
+    public void setDistanceZ(final Distance z) {
+<span class="fc" id="L274">        mZ = DistanceConverter.convert(z.getValue().doubleValue(), z.getUnit(),</span>
+                DistanceUnit.METER);
+<span class="fc" id="L276">    }</span>
+
+    /**
+     * Sets coordinates of estimated ECEF user position expressed in meters (m).
+     *
+     * @param x x coordinate.
+     * @param y y coordinate.
+     * @param z z coordinate.
+     */
+    public void setPositionCoordinates(final double x, final double y, final double z) {
+<span class="fc" id="L286">        mX = x;</span>
+<span class="fc" id="L287">        mY = y;</span>
+<span class="fc" id="L288">        mZ = z;</span>
+<span class="fc" id="L289">    }</span>
+
+    /**
+     * Sets coordinates of estimated ECEF user position.
+     *
+     * @param x x coordinate.
+     * @param y y coordinate.
+     * @param z z coordinate.
+     */
+    public void setPositionCoordinates(final Distance x, final Distance y, final Distance z) {
+<span class="fc" id="L299">        setDistanceX(x);</span>
+<span class="fc" id="L300">        setDistanceY(y);</span>
+<span class="fc" id="L301">        setDistanceZ(z);</span>
+<span class="fc" id="L302">    }</span>
+
+    /**
+     * Gets estimated ECEF user position expressed in meters (m).
+     *
+     * @param result instance where estimated ECEF user position will be stored.
+     */
+    public void getPosition(final Point3D result) {
+<span class="fc" id="L310">        result.setInhomogeneousCoordinates(mX, mY, mZ);</span>
+<span class="fc" id="L311">    }</span>
+
+    /**
+     * Gets estimated ECEF user position expressed in meters (m).
+     *
+     * @return estimated ECEF user position.
+     */
+    public Point3D getPosition() {
+<span class="fc" id="L319">        return new InhomogeneousPoint3D(mX, mY, mZ);</span>
+    }
+
+    /**
+     * Sets estimated ECEF user position expressed in meters (m).
+     *
+     * @param position estimated ECEF user position.
+     */
+    public void setPosition(final Point3D position) {
+<span class="fc" id="L328">        mX = position.getInhomX();</span>
+<span class="fc" id="L329">        mY = position.getInhomY();</span>
+<span class="fc" id="L330">        mZ = position.getInhomZ();</span>
+<span class="fc" id="L331">    }</span>
+
+    /**
+     * Gets x coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     *
+     * @return x coordinate of estimated ECEF user velocity.
+     */
+    public double getVx() {
+<span class="fc" id="L339">        return mVx;</span>
+    }
+
+    /**
+     * Sets x coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     *
+     * @param vx x coordinate of estimated ECEF user velocity.
+     */
+    public void setVx(final double vx) {
+<span class="fc" id="L348">        mVx = vx;</span>
+<span class="fc" id="L349">    }</span>
+
+    /**
+     * Gets x coordinate of estimated ECEF user velocity.
+     *
+     * @param result instance where x coordinate of estimated ECEF user velocity will
+     *               be stored.
+     */
+    public void getSpeedX(final Speed result) {
+<span class="fc" id="L358">        result.setValue(mVx);</span>
+<span class="fc" id="L359">        result.setUnit(SpeedUnit.METERS_PER_SECOND);</span>
+<span class="fc" id="L360">    }</span>
+
+    /**
+     * Gets x coordinate of estimated ECEF user velocity.
+     *
+     * @return x coordinate of estimated ECEF user velocity.
+     */
+    public Speed getSpeedX() {
+<span class="fc" id="L368">        return new Speed(mVx, SpeedUnit.METERS_PER_SECOND);</span>
+    }
+
+    /**
+     * Sets x coordinate of estimated ECEF user velocity.
+     *
+     * @param speedX x coordinate of estimated ECEF user velocity.
+     */
+    public void setSpeedX(final Speed speedX) {
+<span class="fc" id="L377">        mVx = SpeedConverter.convert(speedX.getValue().doubleValue(), speedX.getUnit(),</span>
+                SpeedUnit.METERS_PER_SECOND);
+<span class="fc" id="L379">    }</span>
+
+    /**
+     * Gets y coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     *
+     * @return y coordinate of estimated ECEF user velocity.
+     */
+    public double getVy() {
+<span class="fc" id="L387">        return mVy;</span>
+    }
+
+    /**
+     * Sets y coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     *
+     * @param vy y coordinate of estimated ECEF user velocity.
+     */
+    public void setVy(final double vy) {
+<span class="fc" id="L396">        mVy = vy;</span>
+<span class="fc" id="L397">    }</span>
+
+    /**
+     * Gets y coordinate of estimated ECEF user velocity.
+     *
+     * @param result instance where y coordinate of estimated ECEF user velocity will
+     *               be stored.
+     */
+    public void getSpeedY(final Speed result) {
+<span class="fc" id="L406">        result.setValue(mVy);</span>
+<span class="fc" id="L407">        result.setUnit(SpeedUnit.METERS_PER_SECOND);</span>
+<span class="fc" id="L408">    }</span>
+
+    /**
+     * Gets y coordinate of estimated ECEF user velocity.
+     *
+     * @return y coordinate of estimated ECEF user velocity.
+     */
+    public Speed getSpeedY() {
+<span class="fc" id="L416">        return new Speed(mVy, SpeedUnit.METERS_PER_SECOND);</span>
+    }
+
+    /**
+     * Sets y coordinate of estimated ECEF user velocity.
+     *
+     * @param speedY y coordinate of estimated ECEF user velocity.
+     */
+    public void setSpeedY(final Speed speedY) {
+<span class="fc" id="L425">        mVy = SpeedConverter.convert(speedY.getValue().doubleValue(), speedY.getUnit(),</span>
+                SpeedUnit.METERS_PER_SECOND);
+<span class="fc" id="L427">    }</span>
+
+    /**
+     * Gets z coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     *
+     * @return z coordinate of estimated ECEF user velocity.
+     */
+    public double getVz() {
+<span class="fc" id="L435">        return mVz;</span>
+    }
+
+    /**
+     * Sets z coordinate of estimated ECEF user velocity expressed in meters per second (m/s).
+     *
+     * @param vz z coordinate of estimated ECEF user velocity.
+     */
+    public void setVz(final double vz) {
+<span class="fc" id="L444">        mVz = vz;</span>
+<span class="fc" id="L445">    }</span>
+
+    /**
+     * Gets z coordinate of estimated ECEF user velocity.
+     *
+     * @param result instance where z coordinate of estimated ECEF user velocity will
+     *               be stored.
+     */
+    public void getSpeedZ(final Speed result) {
+<span class="fc" id="L454">        result.setValue(mVz);</span>
+<span class="fc" id="L455">        result.setUnit(SpeedUnit.METERS_PER_SECOND);</span>
+<span class="fc" id="L456">    }</span>
+
+    /**
+     * Gets z coordinate of estimated ECEF user velocity.
+     *
+     * @return z coordinate of estimated ECEF user velocity.
+     */
+    public Speed getSpeedZ() {
+<span class="fc" id="L464">        return new Speed(mVz, SpeedUnit.METERS_PER_SECOND);</span>
+    }
+
+    /**
+     * Sets z coordinate of estimated ECEF user velocity.
+     *
+     * @param speedZ z coordinate of estimated ECEF user velocity.
+     */
+    public void setSpeedZ(final Speed speedZ) {
+<span class="fc" id="L473">        mVz = SpeedConverter.convert(speedZ.getValue().doubleValue(), speedZ.getUnit(),</span>
+                SpeedUnit.METERS_PER_SECOND);
+<span class="fc" id="L475">    }</span>
+
+    /**
+     * Sets coordinates of estimated ECEF user velocity expressed in meters per second (m/s).
+     *
+     * @param vx x coordinate.
+     * @param vy y coordinate.
+     * @param vz z coordinate.
+     */
+    public void setVelocityCoordinates(final double vx, final double vy, final double vz) {
+<span class="fc" id="L485">        mVx = vx;</span>
+<span class="fc" id="L486">        mVy = vy;</span>
+<span class="fc" id="L487">        mVz = vz;</span>
+<span class="fc" id="L488">    }</span>
+
+    /**
+     * Sets coordinates of estimated ECEF user velocity.
+     *
+     * @param speedX x coordinate.
+     * @param speedY y coordinate.
+     * @param speedZ z coordinate.
+     */
+    public void setVelocityCoordinates(final Speed speedX, final Speed speedY, final Speed speedZ) {
+<span class="fc" id="L498">        setSpeedX(speedX);</span>
+<span class="fc" id="L499">        setSpeedY(speedY);</span>
+<span class="fc" id="L500">        setSpeedZ(speedZ);</span>
+<span class="fc" id="L501">    }</span>
+
+    /**
+     * Gets estimated receiver clock offset expressed in meters (m).
+     * Notice that clock offset is estimated in terms of distance, since timing errors
+     * will ultimately propagated as distance errors.
+     *
+     * @return estimated receiver clock offset.
+     */
+    public double getClockOffset() {
+<span class="fc" id="L511">        return mClockOffset;</span>
+    }
+
+    /**
+     * Sets estimated receiver clock offset expressed in meters (m).
+     * Notice that clock offset is estimated in terms of distance, since timing errors
+     * are ultimately propagated as distance errors.
+     *
+     * @param clockOffset estimated receiver clock offset.
+     */
+    public void setClockOffset(final double clockOffset) {
+<span class="fc" id="L522">        mClockOffset = clockOffset;</span>
+<span class="fc" id="L523">    }</span>
+
+    /**
+     * Gets estimated receiver clock offset.
+     * Notice that clock offset is estimated in terms of distance, since timing errors
+     * will ultimately propagated as distance errors.
+     *
+     * @param result instance where estimated receiver clock offset will be stored.
+     */
+    public void getClockOffsetDistance(Distance result) {
+<span class="fc" id="L533">        result.setValue(mClockOffset);</span>
+<span class="fc" id="L534">        result.setUnit(DistanceUnit.METER);</span>
+<span class="fc" id="L535">    }</span>
+
+    /**
+     * Gets estimated receiver clock offset.
+     * Notice that clock offset is estimated in terms of distance, since timing errors
+     * will ultimately propagated as distance errors.
+     *
+     * @return estimated receiver clock offset.
+     */
+    public Distance getClockOffsetDistance() {
+<span class="fc" id="L545">        return new Distance(mClockOffset, DistanceUnit.METER);</span>
+    }
+
+    /**
+     * Sets estimated receiver clock offset.
+     * Notice that clock offset is estimated in terms of distance, since timing errors
+     * are ultimately propagated as distance errors.
+     *
+     * @param clockOffset estimated receiver clock offset.
+     */
+    public void setClockOffset(final Distance clockOffset) {
+<span class="fc" id="L556">        mClockOffset = DistanceConverter.convert(clockOffset.getValue().doubleValue(),</span>
+<span class="fc" id="L557">                clockOffset.getUnit(), DistanceUnit.METER);</span>
+<span class="fc" id="L558">    }</span>
+
+    /**
+     * Gets estimated receiver clock drift expressed in meters per second (m/s).
+     * Notice that the rate at which clock errors increase or decrease will ultimately
+     * propagate as speed (and hence position) errors.
+     *
+     * @return estimated receiver clock drift.
+     */
+    public double getClockDrift() {
+<span class="fc" id="L568">        return mClockDrift;</span>
+    }
+
+    /**
+     * Sets estimated receiver clock drift expressed in meters per second (m/s).
+     * Notice that the rate at which clock errors increase or decrease will ultimately
+     * propagate as speed (and hence position) errors.
+     *
+     * @param clockDrift estimated receiver clock drift.
+     */
+    public void setClockDrift(final double clockDrift) {
+<span class="fc" id="L579">        mClockDrift = clockDrift;</span>
+<span class="fc" id="L580">    }</span>
+
+    /**
+     * Gets estimated receiver clock drift.
+     * Notice that the rate at which clock errors increase or decrease will ultimately
+     * propagate as speed (and hence position) errors.
+     *
+     * @param result instance where estimated receiver clock drift will be stored.
+     */
+    public void getClockDriftSpeed(final Speed result) {
+<span class="fc" id="L590">        result.setValue(mClockDrift);</span>
+<span class="fc" id="L591">        result.setUnit(SpeedUnit.METERS_PER_SECOND);</span>
+<span class="fc" id="L592">    }</span>
+
+    /**
+     * Gets estimated receiver clock drift.
+     * Notice that the rate at which clock errors increase or decrease will ultimately
+     * propagate as speed (and hence position) errors.
+     *
+     * @return estimated receiver clock drift.
+     */
+    public Speed getClockDriftSpeed() {
+<span class="fc" id="L602">        return new Speed(mClockDrift, SpeedUnit.METERS_PER_SECOND);</span>
+    }
+
+    /**
+     * Sets estimated receiver clock drift.
+     * Notice that the rate at which clock errors increase or decrease will ultimately
+     * propagate as speed (and hence position) errors.
+     *
+     * @param clockDrift estimated receiver clock drift.
+     */
+    public void setClockDrift(final Speed clockDrift) {
+<span class="fc" id="L613">        mClockDrift = SpeedConverter.convert(clockDrift.getValue().doubleValue(),</span>
+<span class="fc" id="L614">                clockDrift.getUnit(), SpeedUnit.METERS_PER_SECOND);</span>
+<span class="fc" id="L615">    }</span>
+
+    /**
+     * Copies this instance data into provided instance.
+     *
+     * @param output destination instance where data will be copied to.
+     */
+    public void copyTo(GNSSKalmanState output) {
+<span class="fc" id="L623">        output.mX = mX;</span>
+<span class="fc" id="L624">        output.mY = mY;</span>
+<span class="fc" id="L625">        output.mZ = mZ;</span>
+
+<span class="fc" id="L627">        output.mVx = mVx;</span>
+<span class="fc" id="L628">        output.mVy = mVy;</span>
+<span class="fc" id="L629">        output.mVz = mVz;</span>
+
+<span class="fc" id="L631">        output.mClockOffset = mClockOffset;</span>
+<span class="fc" id="L632">        output.mClockDrift = mClockDrift;</span>
+<span class="fc" id="L633">    }</span>
+
+    /**
+     * Copies data of provided instance into this instance.
+     *
+     * @param input instance to copy data from.
+     */
+    public void copyFrom(GNSSKalmanState input) {
+<span class="fc" id="L641">        mX = input.mX;</span>
+<span class="fc" id="L642">        mY = input.mY;</span>
+<span class="fc" id="L643">        mZ = input.mZ;</span>
+
+<span class="fc" id="L645">        mVx = input.mVx;</span>
+<span class="fc" id="L646">        mVy = input.mVy;</span>
+<span class="fc" id="L647">        mVz = input.mVz;</span>
+
+<span class="fc" id="L649">        mClockOffset = input.mClockOffset;</span>
+<span class="fc" id="L650">        mClockDrift = input.mClockDrift;</span>
+<span class="fc" id="L651">    }</span>
+
+    /**
+     * Computes and returns hash code for this instance. Hash codes are almost unique
+     * values that are useful for fast classification and storage of objects in collections.
+     *
+     * @return Hash code.
+     */
+    @Override
+    public int hashCode() {
+<span class="fc" id="L661">        return Objects.hash(mX, mY, mZ, mVx, mVy, mVz, mClockOffset, mClockDrift);</span>
+    }
+
+    /**
+     * Checks if provided object is a GNSSKalmanStateEstimates having exactly the same
+     * contents as this instance.
+     *
+     * @param obj Object to be compared.
+     * @return true if both objects are considered to be equal, false otherwise.
+     */
+    @Override
+    public boolean equals(Object obj) {
+<span class="fc bfc" id="L673" title="All 2 branches covered.">        if (obj == null) {</span>
+<span class="fc" id="L674">            return false;</span>
+        }
+<span class="fc bfc" id="L676" title="All 2 branches covered.">        if (obj == this) {</span>
+<span class="fc" id="L677">            return true;</span>
+        }
+<span class="fc bfc" id="L679" title="All 2 branches covered.">        if (!(obj instanceof GNSSKalmanState)) {</span>
+<span class="fc" id="L680">            return false;</span>
+        }
+
+<span class="fc" id="L683">        final GNSSKalmanState other = (GNSSKalmanState) obj;</span>
+<span class="fc" id="L684">        return equals(other);</span>
+    }
+
+    /**
+     * Checks if provided instance has exactly the same contents as this instance.
+     *
+     * @param other instance to be compared.
+     * @return true if both instances are considered to be equal, false otherwise.
+     */
+    public boolean equals(GNSSKalmanState other) {
+<span class="fc" id="L694">        return equals(other, 0.0);</span>
+    }
+
+    /**
+     * Checks if provided instance has contents similar to this instance up to provided
+     * threshold value.
+     *
+     * @param other     instance to be compared.
+     * @param threshold maximum difference allowed for values.
+     * @return true if both instances are considered to be equal (up to provided threshold),
+     * false otherwise.
+     */
+    public boolean equals(GNSSKalmanState other, final double threshold) {
+<span class="fc bfc" id="L707" title="All 2 branches covered.">        if (other == null) {</span>
+<span class="fc" id="L708">            return false;</span>
+        }
+
+<span class="fc bfc" id="L711" title="All 2 branches covered.">        return Math.abs(mX - other.mX) &lt;= threshold</span>
+<span class="pc bpc" id="L712" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mY - other.mY) &lt;= threshold</span>
+<span class="pc bpc" id="L713" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mZ - other.mZ) &lt;= threshold</span>
+<span class="pc bpc" id="L714" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mVx - other.mVx) &lt;= threshold</span>
+<span class="pc bpc" id="L715" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mVy - other.mVy) &lt;= threshold</span>
+<span class="pc bpc" id="L716" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mVz - other.mVz) &lt;= threshold</span>
+<span class="pc bpc" id="L717" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mClockOffset - other.mClockOffset) &lt;= threshold</span>
+<span class="pc bpc" id="L718" title="1 of 2 branches missed.">                &amp;&amp; Math.abs(mClockDrift - other.mClockDrift) &lt;= threshold;</span>
+    }
+
+    /**
+     * Makes a copy of this instance.
+     *
+     * @return a copy of this instance.
+     */
+    @SuppressWarnings({&quot;CloneDoesntDeclareCloneNotSupportedException&quot;, &quot;MethodDoesntCallSuperMethod&quot;})
+    @Override
+    protected Object clone() {
+<span class="fc" id="L729">        return new GNSSKalmanState(this);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
