@@ -35,7 +35,7 @@ import java.util.List;
  * @param &lt;P&gt; a {@link Point} type.
  */
 @SuppressWarnings(&quot;WeakerAccess&quot;)
-public abstract class LinearFingerprintPositionEstimator&lt;P extends Point&gt; extends
+public abstract class LinearFingerprintPositionEstimator&lt;P extends Point&lt;P&gt;&gt; extends
         FingerprintPositionEstimator&lt;P&gt; {
 
     /**
@@ -427,23 +427,22 @@ public abstract class LinearFingerprintPositionEstimator&lt;P extends Point&gt; 
 
 <span class="fc" id="L428">                            P sourcePosition = locatedSource.getPosition();</span>
 <span class="fc" id="L429">                            double locatedRssi = locatedReading.getRssi();</span>
-                            //noinspection unchecked
-<span class="fc" id="L431">                            double sqrDistance = fingerprintPosition.sqrDistanceTo(sourcePosition);</span>
-<span class="fc bfc" id="L432" title="All 2 branches covered.">                            if (mRemoveMeansFromFingerprintReadings) {</span>
-<span class="fc" id="L433">                                meanRssi = mFingerprint.getMeanRssi();</span>
+<span class="fc" id="L430">                            double sqrDistance = fingerprintPosition.sqrDistanceTo(sourcePosition);</span>
+<span class="fc bfc" id="L431" title="All 2 branches covered.">                            if (mRemoveMeansFromFingerprintReadings) {</span>
+<span class="fc" id="L432">                                meanRssi = mFingerprint.getMeanRssi();</span>
                             }
 
-<span class="fc" id="L436">                            List&lt;? extends RssiReading&lt;? extends RadioSource&gt;&gt; readings =</span>
-<span class="fc" id="L437">                                    mFingerprint.getReadings();</span>
-<span class="fc bfc" id="L438" title="All 2 branches covered.">                            for (RssiReading&lt;? extends RadioSource&gt; reading : readings) {</span>
-<span class="pc bpc" id="L439" title="1 of 2 branches missed.">                                if (reading.getSource() == null ||</span>
-<span class="fc bfc" id="L440" title="All 2 branches covered.">                                        !reading.getSource().equals(locatedSource)) {</span>
-<span class="fc" id="L441">                                    continue;</span>
+<span class="fc" id="L435">                            List&lt;? extends RssiReading&lt;? extends RadioSource&gt;&gt; readings =</span>
+<span class="fc" id="L436">                                    mFingerprint.getReadings();</span>
+<span class="fc bfc" id="L437" title="All 2 branches covered.">                            for (RssiReading&lt;? extends RadioSource&gt; reading : readings) {</span>
+<span class="pc bpc" id="L438" title="1 of 2 branches missed.">                                if (reading.getSource() == null ||</span>
+<span class="fc bfc" id="L439" title="All 2 branches covered.">                                        !reading.getSource().equals(locatedSource)) {</span>
+<span class="fc" id="L440">                                    continue;</span>
                                 }
 
                                 //only take into account reading for matching sources on located and
                                 //non-located readings
-<span class="fc" id="L446">                                double rssi = reading.getRssi();</span>
+<span class="fc" id="L445">                                double rssi = reading.getRssi();</span>
 
                                 //ideally if there was no bias betweeen devices RSSI measures, we should compute:
                                 //double diffRssi = locatedRssi - rssi;
@@ -452,50 +451,50 @@ public abstract class LinearFingerprintPositionEstimator&lt;P extends Point&gt; 
                                 // practice).
                                 //double diffRssi = (locatedRssi - locatedMeanRssi) - (rssi - meanRssi);
                                 double diffRssi;
-<span class="fc bfc" id="L455" title="All 2 branches covered.">                                if (mRemoveMeansFromFingerprintReadings) {</span>
-<span class="fc" id="L456">                                    diffRssi = (locatedRssi - locatedMeanRssi) - (rssi - meanRssi);</span>
+<span class="fc bfc" id="L454" title="All 2 branches covered.">                                if (mRemoveMeansFromFingerprintReadings) {</span>
+<span class="fc" id="L455">                                    diffRssi = (locatedRssi - locatedMeanRssi) - (rssi - meanRssi);</span>
                                 } else {
-<span class="fc" id="L458">                                    diffRssi = locatedRssi - rssi;</span>
+<span class="fc" id="L457">                                    diffRssi = locatedRssi - rssi;</span>
                                 }
 
-<span class="fc" id="L461">                                b[row] = diffRssi;</span>
-<span class="fc bfc" id="L462" title="All 2 branches covered.">                                for (int i = 0; i &lt; dims; i++) {</span>
-<span class="fc" id="L463">                                    double fingerprintCoord = fingerprintPosition.getInhomogeneousCoordinate(i);</span>
-<span class="fc" id="L464">                                    double sourceCoord = sourcePosition.getInhomogeneousCoordinate(i);</span>
-<span class="fc" id="L465">                                    double diffCoord = fingerprintCoord - sourceCoord;</span>
+<span class="fc" id="L460">                                b[row] = diffRssi;</span>
+<span class="fc bfc" id="L461" title="All 2 branches covered.">                                for (int i = 0; i &lt; dims; i++) {</span>
+<span class="fc" id="L462">                                    double fingerprintCoord = fingerprintPosition.getInhomogeneousCoordinate(i);</span>
+<span class="fc" id="L463">                                    double sourceCoord = sourcePosition.getInhomogeneousCoordinate(i);</span>
+<span class="fc" id="L464">                                    double diffCoord = fingerprintCoord - sourceCoord;</span>
 
-<span class="fc" id="L467">                                    a.setElementAt(row, i, tmp * diffCoord / sqrDistance);</span>
+<span class="fc" id="L466">                                    a.setElementAt(row, i, tmp * diffCoord / sqrDistance);</span>
 
-<span class="fc" id="L469">                                    b[row] += tmp * diffCoord / sqrDistance * fingerprintCoord;</span>
+<span class="fc" id="L468">                                    b[row] += tmp * diffCoord / sqrDistance * fingerprintCoord;</span>
                                 }
-<span class="fc" id="L471">                                row++;</span>
-<span class="fc" id="L472">                            }</span>
-<span class="fc" id="L473">                        }</span>
-<span class="fc" id="L474">                    }</span>
+<span class="fc" id="L470">                                row++;</span>
+<span class="fc" id="L471">                            }</span>
+<span class="fc" id="L472">                        }</span>
+<span class="fc" id="L473">                    }</span>
 
-<span class="fc" id="L476">                    mEstimatedPositionCoordinates = com.irurueta.algebra.Utils.solve(a, b);</span>
+<span class="fc" id="L475">                    mEstimatedPositionCoordinates = com.irurueta.algebra.Utils.solve(a, b);</span>
 
                     //a solution was found so we exit loop
-<span class="fc" id="L479">                    break;</span>
-<span class="fc" id="L480">                } catch (AlgebraException e) {</span>
+<span class="fc" id="L478">                    break;</span>
+<span class="fc" id="L479">                } catch (AlgebraException e) {</span>
                     //solution could not be found with current data
                     //Iterate to use additional nearby fingerprints
-<span class="fc" id="L483">                    mEstimatedPositionCoordinates = null;</span>
-<span class="fc" id="L484">                    mNearestFingerprints = null;</span>
+<span class="fc" id="L482">                    mEstimatedPositionCoordinates = null;</span>
+<span class="fc" id="L483">                    mNearestFingerprints = null;</span>
                 }
             }
 
-<span class="pc bpc" id="L488" title="1 of 2 branches missed.">            if (mEstimatedPositionCoordinates == null) {</span>
+<span class="pc bpc" id="L487" title="1 of 2 branches missed.">            if (mEstimatedPositionCoordinates == null) {</span>
                 //no solution could be found
-<span class="nc" id="L490">                throw new FingerprintEstimationException();</span>
+<span class="nc" id="L489">                throw new FingerprintEstimationException();</span>
             }
 
-<span class="fc bfc" id="L493" title="All 2 branches covered.">            if (mListener != null) {</span>
-<span class="fc" id="L494">                mListener.onEstimateEnd(this);</span>
+<span class="fc bfc" id="L492" title="All 2 branches covered.">            if (mListener != null) {</span>
+<span class="fc" id="L493">                mListener.onEstimateEnd(this);</span>
             }
         } finally {
-<span class="fc" id="L497">            mLocked = false;</span>
+<span class="fc" id="L496">            mLocked = false;</span>
         }
-<span class="fc" id="L499">    }</span>
+<span class="fc" id="L498">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

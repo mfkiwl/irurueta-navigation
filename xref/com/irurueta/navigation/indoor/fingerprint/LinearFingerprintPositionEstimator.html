@@ -43,7 +43,7 @@
 <a class="jxr_linenumber" name="L35" href="#L35">35</a>  <em class="jxr_javadoccomment"> * @param &lt;P&gt; a {@link Point} type.</em>
 <a class="jxr_linenumber" name="L36" href="#L36">36</a>  <em class="jxr_javadoccomment"> */</em>
 <a class="jxr_linenumber" name="L37" href="#L37">37</a>  @SuppressWarnings(<span class="jxr_string">"WeakerAccess"</span>)
-<a class="jxr_linenumber" name="L38" href="#L38">38</a>  <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">abstract</strong> <strong class="jxr_keyword">class</strong> LinearFingerprintPositionEstimator&lt;P <strong class="jxr_keyword">extends</strong> Point&gt; <strong class="jxr_keyword">extends</strong>
+<a class="jxr_linenumber" name="L38" href="#L38">38</a>  <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">abstract</strong> <strong class="jxr_keyword">class</strong> LinearFingerprintPositionEstimator&lt;P <strong class="jxr_keyword">extends</strong> Point&lt;P&gt;&gt; <strong class="jxr_keyword">extends</strong>
 <a class="jxr_linenumber" name="L39" href="#L39">39</a>          FingerprintPositionEstimator&lt;P&gt; {
 <a class="jxr_linenumber" name="L40" href="#L40">40</a>  
 <a class="jxr_linenumber" name="L41" href="#L41">41</a>      <em class="jxr_javadoccomment">/**</em>
@@ -435,77 +435,76 @@
 <a class="jxr_linenumber" name="L427" href="#L427">427</a> 
 <a class="jxr_linenumber" name="L428" href="#L428">428</a>                             P sourcePosition = locatedSource.getPosition();
 <a class="jxr_linenumber" name="L429" href="#L429">429</a>                             <strong class="jxr_keyword">double</strong> locatedRssi = locatedReading.getRssi();
-<a class="jxr_linenumber" name="L430" href="#L430">430</a>                             <em class="jxr_comment">//noinspection unchecked</em>
-<a class="jxr_linenumber" name="L431" href="#L431">431</a>                             <strong class="jxr_keyword">double</strong> sqrDistance = fingerprintPosition.sqrDistanceTo(sourcePosition);
-<a class="jxr_linenumber" name="L432" href="#L432">432</a>                             <strong class="jxr_keyword">if</strong> (mRemoveMeansFromFingerprintReadings) {
-<a class="jxr_linenumber" name="L433" href="#L433">433</a>                                 meanRssi = mFingerprint.getMeanRssi();
-<a class="jxr_linenumber" name="L434" href="#L434">434</a>                             }
-<a class="jxr_linenumber" name="L435" href="#L435">435</a> 
-<a class="jxr_linenumber" name="L436" href="#L436">436</a>                             List&lt;? <strong class="jxr_keyword">extends</strong> RssiReading&lt;? <strong class="jxr_keyword">extends</strong> RadioSource&gt;&gt; readings =
-<a class="jxr_linenumber" name="L437" href="#L437">437</a>                                     mFingerprint.getReadings();
-<a class="jxr_linenumber" name="L438" href="#L438">438</a>                             <strong class="jxr_keyword">for</strong> (RssiReading&lt;? <strong class="jxr_keyword">extends</strong> RadioSource&gt; reading : readings) {
-<a class="jxr_linenumber" name="L439" href="#L439">439</a>                                 <strong class="jxr_keyword">if</strong> (reading.getSource() == <strong class="jxr_keyword">null</strong> ||
-<a class="jxr_linenumber" name="L440" href="#L440">440</a>                                         !reading.getSource().equals(locatedSource)) {
-<a class="jxr_linenumber" name="L441" href="#L441">441</a>                                     <strong class="jxr_keyword">continue</strong>;
-<a class="jxr_linenumber" name="L442" href="#L442">442</a>                                 }
-<a class="jxr_linenumber" name="L443" href="#L443">443</a> 
-<a class="jxr_linenumber" name="L444" href="#L444">444</a>                                 <em class="jxr_comment">//only take into account reading for matching sources on located and</em>
-<a class="jxr_linenumber" name="L445" href="#L445">445</a>                                 <em class="jxr_comment">//non-located readings</em>
-<a class="jxr_linenumber" name="L446" href="#L446">446</a>                                 <strong class="jxr_keyword">double</strong> rssi = reading.getRssi();
-<a class="jxr_linenumber" name="L447" href="#L447">447</a> 
-<a class="jxr_linenumber" name="L448" href="#L448">448</a>                                 <em class="jxr_comment">//ideally if there was no bias betweeen devices RSSI measures, we should compute:</em>
-<a class="jxr_linenumber" name="L449" href="#L449">449</a>                                 <em class="jxr_comment">//double diffRssi = locatedRssi - rssi;</em>
-<a class="jxr_linenumber" name="L450" href="#L450">450</a>                                 <em class="jxr_comment">//However, to account for possible biases, we remove mean of fingerprints from</em>
-<a class="jxr_linenumber" name="L451" href="#L451">451</a>                                 <em class="jxr_comment">//both readings (ideally both should be equal, but they will only be approximate in</em>
-<a class="jxr_linenumber" name="L452" href="#L452">452</a>                                 <em class="jxr_comment">// practice).</em>
-<a class="jxr_linenumber" name="L453" href="#L453">453</a>                                 <em class="jxr_comment">//double diffRssi = (locatedRssi - locatedMeanRssi) - (rssi - meanRssi);</em>
-<a class="jxr_linenumber" name="L454" href="#L454">454</a>                                 <strong class="jxr_keyword">double</strong> diffRssi;
-<a class="jxr_linenumber" name="L455" href="#L455">455</a>                                 <strong class="jxr_keyword">if</strong> (mRemoveMeansFromFingerprintReadings) {
-<a class="jxr_linenumber" name="L456" href="#L456">456</a>                                     diffRssi = (locatedRssi - locatedMeanRssi) - (rssi - meanRssi);
-<a class="jxr_linenumber" name="L457" href="#L457">457</a>                                 } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L458" href="#L458">458</a>                                     diffRssi = locatedRssi - rssi;
-<a class="jxr_linenumber" name="L459" href="#L459">459</a>                                 }
-<a class="jxr_linenumber" name="L460" href="#L460">460</a> 
-<a class="jxr_linenumber" name="L461" href="#L461">461</a>                                 b[row] = diffRssi;
-<a class="jxr_linenumber" name="L462" href="#L462">462</a>                                 <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; dims; i++) {
-<a class="jxr_linenumber" name="L463" href="#L463">463</a>                                     <strong class="jxr_keyword">double</strong> fingerprintCoord = fingerprintPosition.getInhomogeneousCoordinate(i);
-<a class="jxr_linenumber" name="L464" href="#L464">464</a>                                     <strong class="jxr_keyword">double</strong> sourceCoord = sourcePosition.getInhomogeneousCoordinate(i);
-<a class="jxr_linenumber" name="L465" href="#L465">465</a>                                     <strong class="jxr_keyword">double</strong> diffCoord = fingerprintCoord - sourceCoord;
-<a class="jxr_linenumber" name="L466" href="#L466">466</a> 
-<a class="jxr_linenumber" name="L467" href="#L467">467</a>                                     a.setElementAt(row, i, tmp * diffCoord / sqrDistance);
-<a class="jxr_linenumber" name="L468" href="#L468">468</a> 
-<a class="jxr_linenumber" name="L469" href="#L469">469</a>                                     b[row] += tmp * diffCoord / sqrDistance * fingerprintCoord;
-<a class="jxr_linenumber" name="L470" href="#L470">470</a>                                 }
-<a class="jxr_linenumber" name="L471" href="#L471">471</a>                                 row++;
-<a class="jxr_linenumber" name="L472" href="#L472">472</a>                             }
-<a class="jxr_linenumber" name="L473" href="#L473">473</a>                         }
-<a class="jxr_linenumber" name="L474" href="#L474">474</a>                     }
-<a class="jxr_linenumber" name="L475" href="#L475">475</a> 
-<a class="jxr_linenumber" name="L476" href="#L476">476</a>                     mEstimatedPositionCoordinates = com.irurueta.algebra.Utils.solve(a, b);
-<a class="jxr_linenumber" name="L477" href="#L477">477</a> 
-<a class="jxr_linenumber" name="L478" href="#L478">478</a>                     <em class="jxr_comment">//a solution was found so we exit loop</em>
-<a class="jxr_linenumber" name="L479" href="#L479">479</a>                     <strong class="jxr_keyword">break</strong>;
-<a class="jxr_linenumber" name="L480" href="#L480">480</a>                 } <strong class="jxr_keyword">catch</strong> (AlgebraException e) {
-<a class="jxr_linenumber" name="L481" href="#L481">481</a>                     <em class="jxr_comment">//solution could not be found with current data</em>
-<a class="jxr_linenumber" name="L482" href="#L482">482</a>                     <em class="jxr_comment">//Iterate to use additional nearby fingerprints</em>
-<a class="jxr_linenumber" name="L483" href="#L483">483</a>                     mEstimatedPositionCoordinates = <strong class="jxr_keyword">null</strong>;
-<a class="jxr_linenumber" name="L484" href="#L484">484</a>                     mNearestFingerprints = <strong class="jxr_keyword">null</strong>;
-<a class="jxr_linenumber" name="L485" href="#L485">485</a>                 }
-<a class="jxr_linenumber" name="L486" href="#L486">486</a>             }
-<a class="jxr_linenumber" name="L487" href="#L487">487</a> 
-<a class="jxr_linenumber" name="L488" href="#L488">488</a>             <strong class="jxr_keyword">if</strong> (mEstimatedPositionCoordinates == <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L489" href="#L489">489</a>                 <em class="jxr_comment">//no solution could be found</em>
-<a class="jxr_linenumber" name="L490" href="#L490">490</a>                 <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../com/irurueta/navigation/indoor/fingerprint/FingerprintEstimationException.html">FingerprintEstimationException</a>();
-<a class="jxr_linenumber" name="L491" href="#L491">491</a>             }
-<a class="jxr_linenumber" name="L492" href="#L492">492</a> 
-<a class="jxr_linenumber" name="L493" href="#L493">493</a>             <strong class="jxr_keyword">if</strong> (mListener != <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L494" href="#L494">494</a>                 mListener.onEstimateEnd(<strong class="jxr_keyword">this</strong>);
-<a class="jxr_linenumber" name="L495" href="#L495">495</a>             }
-<a class="jxr_linenumber" name="L496" href="#L496">496</a>         } <strong class="jxr_keyword">finally</strong> {
-<a class="jxr_linenumber" name="L497" href="#L497">497</a>             mLocked = false;
-<a class="jxr_linenumber" name="L498" href="#L498">498</a>         }
-<a class="jxr_linenumber" name="L499" href="#L499">499</a>     }
-<a class="jxr_linenumber" name="L500" href="#L500">500</a> }
+<a class="jxr_linenumber" name="L430" href="#L430">430</a>                             <strong class="jxr_keyword">double</strong> sqrDistance = fingerprintPosition.sqrDistanceTo(sourcePosition);
+<a class="jxr_linenumber" name="L431" href="#L431">431</a>                             <strong class="jxr_keyword">if</strong> (mRemoveMeansFromFingerprintReadings) {
+<a class="jxr_linenumber" name="L432" href="#L432">432</a>                                 meanRssi = mFingerprint.getMeanRssi();
+<a class="jxr_linenumber" name="L433" href="#L433">433</a>                             }
+<a class="jxr_linenumber" name="L434" href="#L434">434</a> 
+<a class="jxr_linenumber" name="L435" href="#L435">435</a>                             List&lt;? <strong class="jxr_keyword">extends</strong> RssiReading&lt;? <strong class="jxr_keyword">extends</strong> RadioSource&gt;&gt; readings =
+<a class="jxr_linenumber" name="L436" href="#L436">436</a>                                     mFingerprint.getReadings();
+<a class="jxr_linenumber" name="L437" href="#L437">437</a>                             <strong class="jxr_keyword">for</strong> (RssiReading&lt;? <strong class="jxr_keyword">extends</strong> RadioSource&gt; reading : readings) {
+<a class="jxr_linenumber" name="L438" href="#L438">438</a>                                 <strong class="jxr_keyword">if</strong> (reading.getSource() == <strong class="jxr_keyword">null</strong> ||
+<a class="jxr_linenumber" name="L439" href="#L439">439</a>                                         !reading.getSource().equals(locatedSource)) {
+<a class="jxr_linenumber" name="L440" href="#L440">440</a>                                     <strong class="jxr_keyword">continue</strong>;
+<a class="jxr_linenumber" name="L441" href="#L441">441</a>                                 }
+<a class="jxr_linenumber" name="L442" href="#L442">442</a> 
+<a class="jxr_linenumber" name="L443" href="#L443">443</a>                                 <em class="jxr_comment">//only take into account reading for matching sources on located and</em>
+<a class="jxr_linenumber" name="L444" href="#L444">444</a>                                 <em class="jxr_comment">//non-located readings</em>
+<a class="jxr_linenumber" name="L445" href="#L445">445</a>                                 <strong class="jxr_keyword">double</strong> rssi = reading.getRssi();
+<a class="jxr_linenumber" name="L446" href="#L446">446</a> 
+<a class="jxr_linenumber" name="L447" href="#L447">447</a>                                 <em class="jxr_comment">//ideally if there was no bias betweeen devices RSSI measures, we should compute:</em>
+<a class="jxr_linenumber" name="L448" href="#L448">448</a>                                 <em class="jxr_comment">//double diffRssi = locatedRssi - rssi;</em>
+<a class="jxr_linenumber" name="L449" href="#L449">449</a>                                 <em class="jxr_comment">//However, to account for possible biases, we remove mean of fingerprints from</em>
+<a class="jxr_linenumber" name="L450" href="#L450">450</a>                                 <em class="jxr_comment">//both readings (ideally both should be equal, but they will only be approximate in</em>
+<a class="jxr_linenumber" name="L451" href="#L451">451</a>                                 <em class="jxr_comment">// practice).</em>
+<a class="jxr_linenumber" name="L452" href="#L452">452</a>                                 <em class="jxr_comment">//double diffRssi = (locatedRssi - locatedMeanRssi) - (rssi - meanRssi);</em>
+<a class="jxr_linenumber" name="L453" href="#L453">453</a>                                 <strong class="jxr_keyword">double</strong> diffRssi;
+<a class="jxr_linenumber" name="L454" href="#L454">454</a>                                 <strong class="jxr_keyword">if</strong> (mRemoveMeansFromFingerprintReadings) {
+<a class="jxr_linenumber" name="L455" href="#L455">455</a>                                     diffRssi = (locatedRssi - locatedMeanRssi) - (rssi - meanRssi);
+<a class="jxr_linenumber" name="L456" href="#L456">456</a>                                 } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L457" href="#L457">457</a>                                     diffRssi = locatedRssi - rssi;
+<a class="jxr_linenumber" name="L458" href="#L458">458</a>                                 }
+<a class="jxr_linenumber" name="L459" href="#L459">459</a> 
+<a class="jxr_linenumber" name="L460" href="#L460">460</a>                                 b[row] = diffRssi;
+<a class="jxr_linenumber" name="L461" href="#L461">461</a>                                 <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; dims; i++) {
+<a class="jxr_linenumber" name="L462" href="#L462">462</a>                                     <strong class="jxr_keyword">double</strong> fingerprintCoord = fingerprintPosition.getInhomogeneousCoordinate(i);
+<a class="jxr_linenumber" name="L463" href="#L463">463</a>                                     <strong class="jxr_keyword">double</strong> sourceCoord = sourcePosition.getInhomogeneousCoordinate(i);
+<a class="jxr_linenumber" name="L464" href="#L464">464</a>                                     <strong class="jxr_keyword">double</strong> diffCoord = fingerprintCoord - sourceCoord;
+<a class="jxr_linenumber" name="L465" href="#L465">465</a> 
+<a class="jxr_linenumber" name="L466" href="#L466">466</a>                                     a.setElementAt(row, i, tmp * diffCoord / sqrDistance);
+<a class="jxr_linenumber" name="L467" href="#L467">467</a> 
+<a class="jxr_linenumber" name="L468" href="#L468">468</a>                                     b[row] += tmp * diffCoord / sqrDistance * fingerprintCoord;
+<a class="jxr_linenumber" name="L469" href="#L469">469</a>                                 }
+<a class="jxr_linenumber" name="L470" href="#L470">470</a>                                 row++;
+<a class="jxr_linenumber" name="L471" href="#L471">471</a>                             }
+<a class="jxr_linenumber" name="L472" href="#L472">472</a>                         }
+<a class="jxr_linenumber" name="L473" href="#L473">473</a>                     }
+<a class="jxr_linenumber" name="L474" href="#L474">474</a> 
+<a class="jxr_linenumber" name="L475" href="#L475">475</a>                     mEstimatedPositionCoordinates = com.irurueta.algebra.Utils.solve(a, b);
+<a class="jxr_linenumber" name="L476" href="#L476">476</a> 
+<a class="jxr_linenumber" name="L477" href="#L477">477</a>                     <em class="jxr_comment">//a solution was found so we exit loop</em>
+<a class="jxr_linenumber" name="L478" href="#L478">478</a>                     <strong class="jxr_keyword">break</strong>;
+<a class="jxr_linenumber" name="L479" href="#L479">479</a>                 } <strong class="jxr_keyword">catch</strong> (AlgebraException e) {
+<a class="jxr_linenumber" name="L480" href="#L480">480</a>                     <em class="jxr_comment">//solution could not be found with current data</em>
+<a class="jxr_linenumber" name="L481" href="#L481">481</a>                     <em class="jxr_comment">//Iterate to use additional nearby fingerprints</em>
+<a class="jxr_linenumber" name="L482" href="#L482">482</a>                     mEstimatedPositionCoordinates = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L483" href="#L483">483</a>                     mNearestFingerprints = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L484" href="#L484">484</a>                 }
+<a class="jxr_linenumber" name="L485" href="#L485">485</a>             }
+<a class="jxr_linenumber" name="L486" href="#L486">486</a> 
+<a class="jxr_linenumber" name="L487" href="#L487">487</a>             <strong class="jxr_keyword">if</strong> (mEstimatedPositionCoordinates == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L488" href="#L488">488</a>                 <em class="jxr_comment">//no solution could be found</em>
+<a class="jxr_linenumber" name="L489" href="#L489">489</a>                 <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../com/irurueta/navigation/indoor/fingerprint/FingerprintEstimationException.html">FingerprintEstimationException</a>();
+<a class="jxr_linenumber" name="L490" href="#L490">490</a>             }
+<a class="jxr_linenumber" name="L491" href="#L491">491</a> 
+<a class="jxr_linenumber" name="L492" href="#L492">492</a>             <strong class="jxr_keyword">if</strong> (mListener != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L493" href="#L493">493</a>                 mListener.onEstimateEnd(<strong class="jxr_keyword">this</strong>);
+<a class="jxr_linenumber" name="L494" href="#L494">494</a>             }
+<a class="jxr_linenumber" name="L495" href="#L495">495</a>         } <strong class="jxr_keyword">finally</strong> {
+<a class="jxr_linenumber" name="L496" href="#L496">496</a>             mLocked = false;
+<a class="jxr_linenumber" name="L497" href="#L497">497</a>         }
+<a class="jxr_linenumber" name="L498" href="#L498">498</a>     }
+<a class="jxr_linenumber" name="L499" href="#L499">499</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2018&#x2013;2019. All rights reserved.</div>

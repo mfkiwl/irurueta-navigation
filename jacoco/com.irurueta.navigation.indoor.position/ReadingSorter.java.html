@@ -27,7 +27,7 @@ import java.util.*;
  * @param &lt;P&gt; a {@link Point} type.
  * @param &lt;R&gt; a {@link Reading} type.
  */
-public class ReadingSorter&lt;P extends Point, R extends Reading&lt;? extends RadioSource&gt;&gt; {
+public class ReadingSorter&lt;P extends Point&lt;?&gt;, R extends Reading&lt;? extends RadioSource&gt;&gt; {
 
     /**
      * Sources to be taken into account within readings.
@@ -173,30 +173,29 @@ public class ReadingSorter&lt;P extends Point, R extends Reading&lt;? extends Ra
 <span class="fc" id="L173">        }</span>
 
         // sort all readings within sources
-<span class="fc bfc" id="L176" title="All 2 branches covered.">        for (RadioSourceSourceWithQualityScore sourceWithQualityScore : sourcesWithQualityScores) {</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">        for (RadioSourceSourceWithQualityScore&lt;P, R&gt; sourceWithQualityScore : sourcesWithQualityScores) {</span>
             // sort all readings for this source from highest to lowest quality
 
             // noinspection unchecked
 <span class="fc" id="L180">            ReadingWithQualityScore&lt;R&gt;[] readingsWithQualityScoresArray =</span>
 <span class="fc" id="L181">                    new ReadingWithQualityScore[sourceWithQualityScore.readingsWithQualityScores.size()];</span>
-            //noinspection SuspiciousToArrayCall
-<span class="fc" id="L183">            sourceWithQualityScore.readingsWithQualityScores.toArray(readingsWithQualityScoresArray);</span>
-<span class="fc" id="L184">            Arrays.sort(readingsWithQualityScoresArray, new ReadingComparator&lt;R&gt;());</span>
+<span class="fc" id="L182">            sourceWithQualityScore.readingsWithQualityScores.toArray(readingsWithQualityScoresArray);</span>
+<span class="fc" id="L183">            Arrays.sort(readingsWithQualityScoresArray, new ReadingComparator&lt;R&gt;());</span>
 
-<span class="fc" id="L186">            sourceWithQualityScore.readingsWithQualityScores = Arrays.asList(</span>
+<span class="fc" id="L185">            sourceWithQualityScore.readingsWithQualityScores = Arrays.asList(</span>
                     readingsWithQualityScoresArray);
-<span class="fc" id="L188">        }</span>
+<span class="fc" id="L187">        }</span>
 
         // sort all sources from highest to lowest quality
 
         // noinspection unchecked
-<span class="fc" id="L193">        RadioSourceSourceWithQualityScore&lt;P, R&gt;[] sourcesWithQualityScoresArray =</span>
-<span class="fc" id="L194">                new RadioSourceSourceWithQualityScore[sourcesWithQualityScores.size()];</span>
-<span class="fc" id="L195">        sourcesWithQualityScores.toArray(sourcesWithQualityScoresArray);</span>
-<span class="fc" id="L196">        Arrays.sort(sourcesWithQualityScoresArray, new RadioSourceComparator&lt;P, R&gt;());</span>
+<span class="fc" id="L192">        RadioSourceSourceWithQualityScore&lt;P, R&gt;[] sourcesWithQualityScoresArray =</span>
+<span class="fc" id="L193">                new RadioSourceSourceWithQualityScore[sourcesWithQualityScores.size()];</span>
+<span class="fc" id="L194">        sourcesWithQualityScores.toArray(sourcesWithQualityScoresArray);</span>
+<span class="fc" id="L195">        Arrays.sort(sourcesWithQualityScoresArray, new RadioSourceComparator&lt;P, R&gt;());</span>
 
-<span class="fc" id="L198">        mSortedSourcesAndReadings = Arrays.asList(sourcesWithQualityScoresArray);</span>
-<span class="fc" id="L199">    }</span>
+<span class="fc" id="L197">        mSortedSourcesAndReadings = Arrays.asList(sourcesWithQualityScoresArray);</span>
+<span class="fc" id="L198">    }</span>
 
     /**
      * Gets sorted sources and readings.
@@ -204,7 +203,7 @@ public class ReadingSorter&lt;P extends Point, R extends Reading&lt;? extends Ra
      * @return sorted sources and readings.
      */
     List&lt;RadioSourceSourceWithQualityScore&lt;P, R&gt;&gt; getSortedSourcesAndReadings() {
-<span class="fc" id="L207">        return mSortedSourcesAndReadings;</span>
+<span class="fc" id="L206">        return mSortedSourcesAndReadings;</span>
     }
 
     /**
@@ -212,7 +211,7 @@ public class ReadingSorter&lt;P extends Point, R extends Reading&lt;? extends Ra
      *
      * @param &lt;R&gt; a {@link Reading} type.
      */
-<span class="fc" id="L215">    static class ReadingWithQualityScore&lt;R extends Reading&lt;? extends RadioSource&gt;&gt; {</span>
+<span class="fc" id="L214">    static class ReadingWithQualityScore&lt;R extends Reading&lt;? extends RadioSource&gt;&gt; {</span>
         /**
          * A reading.
          */
@@ -235,7 +234,7 @@ public class ReadingSorter&lt;P extends Point, R extends Reading&lt;? extends Ra
      * @param &lt;P&gt; a {@link Point} type.
      * @param &lt;R&gt; a {@link Reading} type.
      */
-<span class="fc" id="L238">    static class RadioSourceSourceWithQualityScore&lt;P extends Point,</span>
+<span class="fc" id="L237">    static class RadioSourceSourceWithQualityScore&lt;P extends Point&lt;?&gt;,</span>
             R extends Reading&lt;? extends RadioSource&gt;&gt; {
         /**
          * Radio source.
@@ -276,25 +275,25 @@ public class ReadingSorter&lt;P extends Point, R extends Reading&lt;? extends Ra
 
             // Take reading type into account so that ranging readings go first,
             // then ranging+RSSI and finally RSSI readings.
-<span class="fc bfc" id="L279" title="All 2 branches covered.">            if (o1.reading.getType() != o2.reading.getType()) {</span>
-<span class="pc bpc" id="L280" title="1 of 4 branches missed.">                switch (o1.reading.getType()) {</span>
+<span class="fc bfc" id="L278" title="All 2 branches covered.">            if (o1.reading.getType() != o2.reading.getType()) {</span>
+<span class="pc bpc" id="L279" title="1 of 4 branches missed.">                switch (o1.reading.getType()) {</span>
                     case RANGING_READING:
                         // o1 goes first (o2 last)
-<span class="fc" id="L283">                        return  - 1;</span>
+<span class="fc" id="L282">                        return  - 1;</span>
 
                     case RANGING_AND_RSSI_READING:
-<span class="pc bpc" id="L286" title="1 of 3 branches missed.">                        switch (o2.reading.getType()) {</span>
+<span class="pc bpc" id="L285" title="1 of 3 branches missed.">                        switch (o2.reading.getType()) {</span>
                             case RANGING_READING:
                                 // o2 goes first (o1 last)
-<span class="fc" id="L289">                                return 1;</span>
+<span class="fc" id="L288">                                return 1;</span>
                             case RSSI_READING:
                                 // o1 goes first (o2 last)
-<span class="fc" id="L292">                                return -1;</span>
+<span class="fc" id="L291">                                return -1;</span>
                         }
-<span class="nc" id="L294">                        break;</span>
+<span class="nc" id="L293">                        break;</span>
                     case RSSI_READING:
                         // o2 goes first (o1 last)
-<span class="fc" id="L297">                        return 1;</span>
+<span class="fc" id="L296">                        return 1;</span>
                 }
             }
 
@@ -302,7 +301,7 @@ public class ReadingSorter&lt;P extends Point, R extends Reading&lt;? extends Ra
             // same reading type
 
             // order by reading quality score
-<span class="fc" id="L305">            return Double.compare(o2.qualityScore, o1.qualityScore);</span>
+<span class="fc" id="L304">            return Double.compare(o2.qualityScore, o1.qualityScore);</span>
         }
     }
 
@@ -312,7 +311,7 @@ public class ReadingSorter&lt;P extends Point, R extends Reading&lt;? extends Ra
      * @param &lt;P&gt; a {@link Point} type.
      * @param &lt;R&gt; a {@link Reading} type.
      */
-    private static class RadioSourceComparator&lt;P extends Point,
+    private static class RadioSourceComparator&lt;P extends Point&lt;?&gt;,
             R extends Reading&lt;? extends RadioSource&gt;&gt; implements
             Comparator&lt;RadioSourceSourceWithQualityScore&lt;P, R&gt;&gt; {
 
@@ -327,7 +326,7 @@ public class ReadingSorter&lt;P extends Point, R extends Reading&lt;? extends Ra
         @Override
         public int compare(RadioSourceSourceWithQualityScore&lt;P, R&gt; o1,
                            RadioSourceSourceWithQualityScore&lt;P, R&gt; o2) {
-<span class="fc" id="L330">            return Double.compare(o2.qualityScore, o1.qualityScore);</span>
+<span class="fc" id="L329">            return Double.compare(o2.qualityScore, o1.qualityScore);</span>
         }
     }
 }
