@@ -28,7 +28,7 @@ import java.util.Collection;
  * Implements one cycle of the GNSS extended Kalman filter.
  * This implementation is based on the equations defined in &quot;Principles of GNSS, Inertial, and Multisensor
  * Integrated Navigation Systems, Second Edition&quot; and on the companion software available at:
- * https://github.com/ymjdz/MATLAB-Codes
+ * https://github.com/ymjdz/MATLAB-Codes/blob/master/GNSS_KF_Epoch.m
  */
 <span class="nc" id="L33">public class GNSSKalmanEpochEstimator {</span>
 
@@ -52,20 +52,20 @@ import java.util.Collection;
      *
      * @param measurements        satellite measurements data.
      * @param propagationInterval propagation interval expressed in seconds (s).
-     * @param previousState       previous Kalman filter state estimates.
+     * @param previousEstimation  previous Kalman filter state estimates.
      * @param previousCovariance  previous Kalman filter error covariance matrix.
      * @param config              system configuration (usually obtained through calibration).
-     * @param updatedState        instance where updated Kalman filter state will be stored after executing this method.
+     * @param updatedEstimation   instance where updated Kalman filter state will be stored after executing this method.
      * @param updatedCovariance   instance where updated Kalman filter error covariance matrix will be stored.
      * @throws IllegalArgumentException if provided previous covariance matrix is not 8x8.
      */
     public static void estimate(final Collection&lt;GNSSMeasurement&gt; measurements, final double propagationInterval,
-                                final GNSSKalmanState previousState, final Matrix previousCovariance,
-                                final GNSSKalmanConfig config, GNSSKalmanState updatedState,
+                                final GNSSEstimation previousEstimation, final Matrix previousCovariance,
+                                final GNSSKalmanConfig config, GNSSEstimation updatedEstimation,
                                 final Matrix updatedCovariance) throws AlgebraException {
 
-<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        if (previousCovariance.getRows() != GNSSKalmanState.NUM_PARAMETERS ||</span>
-<span class="pc bpc" id="L68" title="1 of 2 branches missed.">                previousCovariance.getColumns() != GNSSKalmanState.NUM_PARAMETERS) {</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        if (previousCovariance.getRows() != GNSSEstimation.NUM_PARAMETERS ||</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">                previousCovariance.getColumns() != GNSSEstimation.NUM_PARAMETERS) {</span>
 <span class="nc" id="L69">            throw new IllegalArgumentException();</span>
         }
 
@@ -116,7 +116,7 @@ import java.util.Collection;
 
 
         // 3. Propagate state estimates using (3.14)
-<span class="fc" id="L119">        final Matrix xEstOld = previousState.asMatrix();</span>
+<span class="fc" id="L119">        final Matrix xEstOld = previousEstimation.asMatrix();</span>
 <span class="fc" id="L120">        final Matrix xEstPropagated = phiMatrix.multiplyAndReturnNew(xEstOld);</span>
 <span class="fc" id="L121">        final Matrix propagatedVelocity = xEstPropagated.getSubmatrix(</span>
                 3, 0, 5, 0);
@@ -210,7 +210,7 @@ import java.util.Collection;
 <span class="fc" id="L210">        }</span>
 
         // 5. Set-up measurement matrix using (9.163)
-<span class="fc" id="L213">        final Matrix hMatrix = new Matrix(2 * numberOfMeasurements, GNSSKalmanState.NUM_PARAMETERS);</span>
+<span class="fc" id="L213">        final Matrix hMatrix = new Matrix(2 * numberOfMeasurements, GNSSEstimation.NUM_PARAMETERS);</span>
 <span class="fc bfc" id="L214" title="All 2 branches covered.">        for (int j1 = 0, j2 = numberOfMeasurements; j1 &lt; numberOfMeasurements; j1++, j2++) {</span>
 <span class="fc bfc" id="L215" title="All 2 branches covered.">            for (int i1 = 0, i2 = 3; i1 &lt; CoordinateTransformation.ROWS; i1++, i2++) {</span>
 <span class="fc" id="L216">                final double value = -uAseT.getElementAt(j1, i1);</span>
@@ -260,13 +260,13 @@ import java.util.Collection;
 <span class="fc" id="L260">        xEstPropagated.add(kMatrix.multiplyAndReturnNew(deltaZ));</span>
 
         // xEstPropagated now contains updated state
-<span class="fc" id="L263">        updatedState.fromMatrix(xEstPropagated);</span>
+<span class="fc" id="L263">        updatedEstimation.fromMatrix(xEstPropagated);</span>
 
         // 10. Update state estimation error covariance matrix using (3.25)
-<span class="pc bpc" id="L266" title="1 of 2 branches missed.">        if (updatedCovariance.getRows() != GNSSKalmanState.NUM_PARAMETERS ||</span>
-<span class="pc bpc" id="L267" title="1 of 2 branches missed.">                updatedCovariance.getColumns() != GNSSKalmanState.NUM_PARAMETERS) {</span>
-<span class="nc" id="L268">            updatedCovariance.resize(GNSSKalmanState.NUM_PARAMETERS,</span>
-                    GNSSKalmanState.NUM_PARAMETERS);
+<span class="pc bpc" id="L266" title="1 of 2 branches missed.">        if (updatedCovariance.getRows() != GNSSEstimation.NUM_PARAMETERS ||</span>
+<span class="pc bpc" id="L267" title="1 of 2 branches missed.">                updatedCovariance.getColumns() != GNSSEstimation.NUM_PARAMETERS) {</span>
+<span class="nc" id="L268">            updatedCovariance.resize(GNSSEstimation.NUM_PARAMETERS,</span>
+                    GNSSEstimation.NUM_PARAMETERS);
         }
 <span class="fc" id="L271">        Matrix.identity(updatedCovariance);</span>
 <span class="fc" id="L272">        kMatrix.multiply(hMatrix);</span>
