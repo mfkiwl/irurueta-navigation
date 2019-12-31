@@ -295,124 +295,128 @@ import java.util.Collection;
 <span class="fc" id="L295">        int j = 0;</span>
 <span class="fc bfc" id="L296" title="All 2 branches covered.">        for (final GNSSMeasurement measurement : measurements) {</span>
             // Predict approx range
-<span class="fc" id="L298">            final double deltaX = measurement.getX() - xEstPropagated.getElementAtIndex(0);</span>
-<span class="fc" id="L299">            final double deltaY = measurement.getY() - xEstPropagated.getElementAtIndex(1);</span>
-<span class="fc" id="L300">            final double deltaZ = measurement.getZ() - xEstPropagated.getElementAtIndex(2);</span>
-<span class="fc" id="L301">            final double approxRange = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);</span>
+<span class="fc" id="L298">            final double measX = measurement.getX();</span>
+<span class="fc" id="L299">            final double measY = measurement.getY();</span>
+<span class="fc" id="L300">            final double measZ = measurement.getZ();</span>
+
+<span class="fc" id="L302">            final double deltaX = measX - xEstPropagated.getElementAtIndex(0);</span>
+<span class="fc" id="L303">            final double deltaY = measY - xEstPropagated.getElementAtIndex(1);</span>
+<span class="fc" id="L304">            final double deltaZ = measZ - xEstPropagated.getElementAtIndex(2);</span>
+<span class="fc" id="L305">            final double approxRange = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);</span>
 
             // Calculate frame rotation during signal transit time using (8.36)
-<span class="fc" id="L304">            final double ceiValue = EARTH_ROTATION_RATE * approxRange / SPEED_OF_LIGHT;</span>
-<span class="fc" id="L305">            cei.setElementAt(0, 1, ceiValue);</span>
-<span class="fc" id="L306">            cei.setElementAt(1, 0, -ceiValue);</span>
+<span class="fc" id="L308">            final double ceiValue = EARTH_ROTATION_RATE * approxRange / SPEED_OF_LIGHT;</span>
+<span class="fc" id="L309">            cei.setElementAt(0, 1, ceiValue);</span>
+<span class="fc" id="L310">            cei.setElementAt(1, 0, -ceiValue);</span>
 
             // Predict pseudo-range using (9.165)
-<span class="fc" id="L309">            satellitePosition.setElementAtIndex(0, measurement.getX());</span>
-<span class="fc" id="L310">            satellitePosition.setElementAtIndex(1, measurement.getY());</span>
-<span class="fc" id="L311">            satellitePosition.setElementAtIndex(2, measurement.getZ());</span>
+<span class="fc" id="L313">            satellitePosition.setElementAtIndex(0, measX);</span>
+<span class="fc" id="L314">            satellitePosition.setElementAtIndex(1, measY);</span>
+<span class="fc" id="L315">            satellitePosition.setElementAtIndex(2, measZ);</span>
 
-<span class="fc" id="L313">            cei.multiply(satellitePosition, deltaR);</span>
-<span class="fc bfc" id="L314" title="All 2 branches covered.">            for (int i = 0; i &lt; deltaR.getRows(); i++) {</span>
-<span class="fc" id="L315">                deltaR.setElementAtIndex(i, deltaR.getElementAtIndex(i)</span>
-<span class="fc" id="L316">                        - xEstPropagated.getElementAtIndex(i));</span>
+<span class="fc" id="L317">            cei.multiply(satellitePosition, deltaR);</span>
+<span class="fc bfc" id="L318" title="All 2 branches covered.">            for (int i = 0; i &lt; CoordinateTransformation.ROWS; i++) {</span>
+<span class="fc" id="L319">                deltaR.setElementAtIndex(i, deltaR.getElementAtIndex(i)</span>
+<span class="fc" id="L320">                        - xEstPropagated.getElementAtIndex(i));</span>
             }
-<span class="fc" id="L318">            final double range = Utils.normF(deltaR);</span>
+<span class="fc" id="L322">            final double range = Utils.normF(deltaR);</span>
 
-<span class="fc" id="L320">            predMeas.setElementAt(j, 0, range</span>
-<span class="fc" id="L321">                    + xEstPropagated.getElementAtIndex(6));</span>
+<span class="fc" id="L324">            predMeas.setElementAt(j, 0, range</span>
+<span class="fc" id="L325">                    + xEstPropagated.getElementAtIndex(6));</span>
 
             // Predict line of sight
-<span class="fc bfc" id="L324" title="All 2 branches covered.">            for (int i = 0; i &lt; deltaR.getRows(); i++) {</span>
-<span class="fc" id="L325">                uAseT.setElementAt(j, i, deltaR.getElementAtIndex(i) / range);</span>
+<span class="fc bfc" id="L328" title="All 2 branches covered.">            for (int i = 0; i &lt; CoordinateTransformation.ROWS; i++) {</span>
+<span class="fc" id="L329">                uAseT.setElementAt(j, i, deltaR.getElementAtIndex(i) / range);</span>
             }
 
             // Predict pseudo-range rate using (9.165)
-<span class="fc" id="L329">            satelliteVelocity.setElementAtIndex(0, measurement.getVx());</span>
-<span class="fc" id="L330">            satelliteVelocity.setElementAtIndex(1, measurement.getVy());</span>
-<span class="fc" id="L331">            satelliteVelocity.setElementAtIndex(2, measurement.getVz());</span>
+<span class="fc" id="L333">            satelliteVelocity.setElementAtIndex(0, measurement.getVx());</span>
+<span class="fc" id="L334">            satelliteVelocity.setElementAtIndex(1, measurement.getVy());</span>
+<span class="fc" id="L335">            satelliteVelocity.setElementAtIndex(2, measurement.getVz());</span>
 
-<span class="fc" id="L333">            omegaIe.multiply(satellitePosition, tmp1);</span>
-<span class="fc" id="L334">            satelliteVelocity.add(tmp1, tmp2);</span>
-<span class="fc" id="L335">            cei.multiply(tmp2, tmp3);</span>
+<span class="fc" id="L337">            omegaIe.multiply(satellitePosition, tmp1);</span>
+<span class="fc" id="L338">            satelliteVelocity.add(tmp1, tmp2);</span>
+<span class="fc" id="L339">            cei.multiply(tmp2, tmp3);</span>
 
-<span class="fc" id="L337">            omegaIe.multiply(propagatedPosition, tmp4);</span>
-<span class="fc" id="L338">            propagatedVelocity.add(tmp4, tmp6);</span>
+<span class="fc" id="L341">            omegaIe.multiply(propagatedPosition, tmp4);</span>
+<span class="fc" id="L342">            propagatedVelocity.add(tmp4, tmp6);</span>
 
-<span class="fc" id="L340">            tmp3.subtract(tmp6, tmp5);</span>
+<span class="fc" id="L344">            tmp3.subtract(tmp6, tmp5);</span>
 
-<span class="fc" id="L342">            uAseT.getSubmatrix(j, 0, j, 2, tmp7);</span>
+<span class="fc" id="L346">            uAseT.getSubmatrix(j, 0, j, 2, tmp7);</span>
 
-<span class="fc" id="L344">            double rangeRate = Utils.dotProduct(tmp7, tmp5);</span>
+<span class="fc" id="L348">            final double rangeRate = Utils.dotProduct(tmp7, tmp5);</span>
 
-<span class="fc" id="L346">            predMeas.setElementAt(j, 1,</span>
-<span class="fc" id="L347">                    rangeRate + xEstPropagated.getElementAtIndex(7));</span>
+<span class="fc" id="L350">            predMeas.setElementAt(j, 1,</span>
+<span class="fc" id="L351">                    rangeRate + xEstPropagated.getElementAtIndex(7));</span>
 
-<span class="fc" id="L349">            j++;</span>
-<span class="fc" id="L350">        }</span>
+<span class="fc" id="L353">            j++;</span>
+<span class="fc" id="L354">        }</span>
 
         // 5. Set-up measurement matrix using (9.163)
-<span class="fc" id="L353">        final Matrix hMatrix = new Matrix(2 * numberOfMeasurements, GNSSEstimation.NUM_PARAMETERS);</span>
-<span class="fc bfc" id="L354" title="All 2 branches covered.">        for (int j1 = 0, j2 = numberOfMeasurements; j1 &lt; numberOfMeasurements; j1++, j2++) {</span>
-<span class="fc bfc" id="L355" title="All 2 branches covered.">            for (int i1 = 0, i2 = 3; i1 &lt; CoordinateTransformation.ROWS; i1++, i2++) {</span>
-<span class="fc" id="L356">                final double value = -uAseT.getElementAt(j1, i1);</span>
+<span class="fc" id="L357">        final Matrix h = new Matrix(2 * numberOfMeasurements, GNSSEstimation.NUM_PARAMETERS);</span>
+<span class="fc bfc" id="L358" title="All 2 branches covered.">        for (int j1 = 0, j2 = numberOfMeasurements; j1 &lt; numberOfMeasurements; j1++, j2++) {</span>
+<span class="fc bfc" id="L359" title="All 2 branches covered.">            for (int i1 = 0, i2 = 3; i1 &lt; CoordinateTransformation.ROWS; i1++, i2++) {</span>
+<span class="fc" id="L360">                final double value = -uAseT.getElementAt(j1, i1);</span>
 
-<span class="fc" id="L358">                hMatrix.setElementAt(j1, i1, value);</span>
-<span class="fc" id="L359">                hMatrix.setElementAt(j2, i2, value);</span>
+<span class="fc" id="L362">                h.setElementAt(j1, i1, value);</span>
+<span class="fc" id="L363">                h.setElementAt(j2, i2, value);</span>
             }
-<span class="fc" id="L361">            hMatrix.setElementAt(j1, 6, 1.0);</span>
-<span class="fc" id="L362">            hMatrix.setElementAt(j2, 7, 1.0);</span>
+<span class="fc" id="L365">            h.setElementAt(j1, 6, 1.0);</span>
+<span class="fc" id="L366">            h.setElementAt(j2, 7, 1.0);</span>
         }
 
         // 6. Set-up measurement noise covariance matrix assuming all measurements are independent
         // and have equal variance for a given measurement type
-<span class="fc" id="L367">        final double pseudoRangeSD = config.getPseudoRangeSD();</span>
-<span class="fc" id="L368">        final double pseudoRangeSD2 = pseudoRangeSD * pseudoRangeSD;</span>
-<span class="fc" id="L369">        final double rangeRateSD = config.getRangeRateSD();</span>
-<span class="fc" id="L370">        final double rangeRateSD2 = rangeRateSD * rangeRateSD;</span>
-<span class="fc" id="L371">        final Matrix rMatrix = new Matrix(2 * numberOfMeasurements, 2 * numberOfMeasurements);</span>
-<span class="fc bfc" id="L372" title="All 2 branches covered.">        for (int i1 = 0, i2 = numberOfMeasurements; i1 &lt; numberOfMeasurements; i1++, i2++) {</span>
-<span class="fc" id="L373">            rMatrix.setElementAt(i1, i1, pseudoRangeSD2);</span>
-<span class="fc" id="L374">            rMatrix.setElementAt(i2, i2, rangeRateSD2);</span>
+<span class="fc" id="L371">        final double pseudoRangeSD = config.getPseudoRangeSD();</span>
+<span class="fc" id="L372">        final double pseudoRangeSD2 = pseudoRangeSD * pseudoRangeSD;</span>
+<span class="fc" id="L373">        final double rangeRateSD = config.getRangeRateSD();</span>
+<span class="fc" id="L374">        final double rangeRateSD2 = rangeRateSD * rangeRateSD;</span>
+<span class="fc" id="L375">        final Matrix r = new Matrix(2 * numberOfMeasurements, 2 * numberOfMeasurements);</span>
+<span class="fc bfc" id="L376" title="All 2 branches covered.">        for (int i1 = 0, i2 = numberOfMeasurements; i1 &lt; numberOfMeasurements; i1++, i2++) {</span>
+<span class="fc" id="L377">            r.setElementAt(i1, i1, pseudoRangeSD2);</span>
+<span class="fc" id="L378">            r.setElementAt(i2, i2, rangeRateSD2);</span>
         }
 
         // 7. Calculate Kalman gain using (3.21)
-<span class="fc" id="L378">        final Matrix hMatrixTransposed = hMatrix.transposeAndReturnNew();</span>
-<span class="fc" id="L379">        final Matrix tmp8 = hMatrix.multiplyAndReturnNew(</span>
-<span class="fc" id="L380">                pMatrixPropagated.multiplyAndReturnNew(hMatrixTransposed));</span>
-<span class="fc" id="L381">        tmp8.add(rMatrix);</span>
-<span class="fc" id="L382">        final Matrix tmp9 = Utils.inverse(tmp8);</span>
-<span class="fc" id="L383">        final Matrix kMatrix = pMatrixPropagated.multiplyAndReturnNew(hMatrixTransposed);</span>
-<span class="fc" id="L384">        kMatrix.multiply(tmp9);</span>
+<span class="fc" id="L382">        final Matrix hTransposed = h.transposeAndReturnNew();</span>
+<span class="fc" id="L383">        final Matrix tmp8 = h.multiplyAndReturnNew(</span>
+<span class="fc" id="L384">                pMatrixPropagated.multiplyAndReturnNew(hTransposed));</span>
+<span class="fc" id="L385">        tmp8.add(r);</span>
+<span class="fc" id="L386">        final Matrix tmp9 = Utils.inverse(tmp8);</span>
+<span class="fc" id="L387">        final Matrix k = pMatrixPropagated.multiplyAndReturnNew(hTransposed);</span>
+<span class="fc" id="L388">        k.multiply(tmp9);</span>
 
         // 8. Formulate measurement innovations using (3.88)
-<span class="fc" id="L387">        final Matrix deltaZ = new Matrix(2 * numberOfMeasurements, 1);</span>
-<span class="fc" id="L388">        int i1 = 0;</span>
-<span class="fc" id="L389">        int i2 = numberOfMeasurements;</span>
-<span class="fc bfc" id="L390" title="All 2 branches covered.">        for (final GNSSMeasurement measurement : measurements) {</span>
-<span class="fc" id="L391">            deltaZ.setElementAtIndex(i1, measurement.getPseudoRange()</span>
-<span class="fc" id="L392">                    - predMeas.getElementAt(i1, 0));</span>
-<span class="fc" id="L393">            deltaZ.setElementAtIndex(i2, measurement.getPseudoRate()</span>
-<span class="fc" id="L394">                    - predMeas.getElementAt(i1, 1));</span>
-<span class="fc" id="L395">            i1++;</span>
-<span class="fc" id="L396">            i2++;</span>
-<span class="fc" id="L397">        }</span>
+<span class="fc" id="L391">        final Matrix deltaZ = new Matrix(2 * numberOfMeasurements, 1);</span>
+<span class="fc" id="L392">        int i1 = 0;</span>
+<span class="fc" id="L393">        int i2 = numberOfMeasurements;</span>
+<span class="fc bfc" id="L394" title="All 2 branches covered.">        for (final GNSSMeasurement measurement : measurements) {</span>
+<span class="fc" id="L395">            deltaZ.setElementAtIndex(i1, measurement.getPseudoRange()</span>
+<span class="fc" id="L396">                    - predMeas.getElementAt(i1, 0));</span>
+<span class="fc" id="L397">            deltaZ.setElementAtIndex(i2, measurement.getPseudoRate()</span>
+<span class="fc" id="L398">                    - predMeas.getElementAt(i1, 1));</span>
+<span class="fc" id="L399">            i1++;</span>
+<span class="fc" id="L400">            i2++;</span>
+<span class="fc" id="L401">        }</span>
 
         // 9. Update state estimates using (3.24)
-<span class="fc" id="L400">        xEstPropagated.add(kMatrix.multiplyAndReturnNew(deltaZ));</span>
+<span class="fc" id="L404">        xEstPropagated.add(k.multiplyAndReturnNew(deltaZ));</span>
 
         // xEstPropagated now contains updated state
-<span class="fc" id="L403">        updatedEstimation.fromMatrix(xEstPropagated);</span>
+<span class="fc" id="L407">        updatedEstimation.fromMatrix(xEstPropagated);</span>
 
         // 10. Update state estimation error covariance matrix using (3.25)
-<span class="pc bpc" id="L406" title="1 of 2 branches missed.">        if (updatedCovariance.getRows() != GNSSEstimation.NUM_PARAMETERS ||</span>
-<span class="pc bpc" id="L407" title="1 of 2 branches missed.">                updatedCovariance.getColumns() != GNSSEstimation.NUM_PARAMETERS) {</span>
-<span class="nc" id="L408">            updatedCovariance.resize(GNSSEstimation.NUM_PARAMETERS,</span>
+<span class="pc bpc" id="L410" title="1 of 2 branches missed.">        if (updatedCovariance.getRows() != GNSSEstimation.NUM_PARAMETERS ||</span>
+<span class="pc bpc" id="L411" title="1 of 2 branches missed.">                updatedCovariance.getColumns() != GNSSEstimation.NUM_PARAMETERS) {</span>
+<span class="nc" id="L412">            updatedCovariance.resize(GNSSEstimation.NUM_PARAMETERS,</span>
                     GNSSEstimation.NUM_PARAMETERS);
         }
-<span class="fc" id="L411">        Matrix.identity(updatedCovariance);</span>
-<span class="fc" id="L412">        kMatrix.multiply(hMatrix);</span>
-<span class="fc" id="L413">        updatedCovariance.subtract(kMatrix);</span>
-<span class="fc" id="L414">        updatedCovariance.multiply(pMatrixPropagated);</span>
-<span class="fc" id="L415">    }</span>
+<span class="fc" id="L415">        Matrix.identity(updatedCovariance);</span>
+<span class="fc" id="L416">        k.multiply(h);</span>
+<span class="fc" id="L417">        updatedCovariance.subtract(k);</span>
+<span class="fc" id="L418">        updatedCovariance.multiply(pMatrixPropagated);</span>
+<span class="fc" id="L419">    }</span>
 
     /**
      * Converts time instance into a value expressed in seconds.
@@ -421,8 +425,8 @@ import java.util.Collection;
      * @return time value expressed in seconds.
      */
     private static double convertTime(final Time time) {
-<span class="fc" id="L424">        return TimeConverter.convert(time.getValue().doubleValue(),</span>
-<span class="fc" id="L425">                time.getUnit(), TimeUnit.SECOND);</span>
+<span class="fc" id="L428">        return TimeConverter.convert(time.getValue().doubleValue(),</span>
+<span class="fc" id="L429">                time.getUnit(), TimeUnit.SECOND);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
