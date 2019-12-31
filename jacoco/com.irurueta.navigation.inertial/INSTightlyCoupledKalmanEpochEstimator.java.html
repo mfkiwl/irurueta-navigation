@@ -93,367 +93,368 @@ import java.util.Collection;
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
 
         // Skew symmetric matrix of Earth rate
-<span class="nc" id="L96">        final Matrix omegaIe = Utils.skewMatrix(</span>
+<span class="fc" id="L96">        final Matrix omegaIe = Utils.skewMatrix(</span>
                 new double[]{0.0, 0.0, EARTH_ROTATION_RATE});
 
         // SYSTEM PROPAGATION PHASE
 
         // 1. Determine transition matrix using (14.50) (first-order approx)
-<span class="nc" id="L102">        final Matrix phiMatrix = Matrix.identity(</span>
+<span class="fc" id="L102">        final Matrix phiMatrix = Matrix.identity(</span>
                 INSTightlyCoupledKalmanState.NUM_PARAMS,
                 INSTightlyCoupledKalmanState.NUM_PARAMS);
 
-<span class="nc" id="L106">        final Matrix tmp1 = omegaIe.multiplyByScalarAndReturnNew(</span>
+<span class="fc" id="L106">        final Matrix tmp1 = omegaIe.multiplyByScalarAndReturnNew(</span>
                 propagationInterval);
-<span class="nc" id="L108">        final Matrix tmp2 = phiMatrix.getSubmatrix(0, 0,</span>
+<span class="fc" id="L108">        final Matrix tmp2 = phiMatrix.getSubmatrix(0, 0,</span>
                 2, 2);
-<span class="nc" id="L110">        tmp2.subtract(tmp1);</span>
+<span class="fc" id="L110">        tmp2.subtract(tmp1);</span>
 
-<span class="nc" id="L112">        phiMatrix.setSubmatrix(0, 0,</span>
+<span class="fc" id="L112">        phiMatrix.setSubmatrix(0, 0,</span>
                 2, 2, tmp2);
 
-<span class="nc" id="L115">        final Matrix estCbeOld = previousState</span>
-<span class="nc" id="L116">                .getBodyToEcefCoordinateTransformationMatrix();</span>
-<span class="nc" id="L117">        tmp1.copyFrom(estCbeOld);</span>
-<span class="nc" id="L118">        tmp1.multiplyByScalar(propagationInterval);</span>
+<span class="fc" id="L115">        final Matrix estCbeOld = previousState</span>
+<span class="fc" id="L116">                .getBodyToEcefCoordinateTransformationMatrix();</span>
+<span class="fc" id="L117">        tmp1.copyFrom(estCbeOld);</span>
+<span class="fc" id="L118">        tmp1.multiplyByScalar(propagationInterval);</span>
 
-<span class="nc" id="L120">        phiMatrix.setSubmatrix(0, 12,</span>
+<span class="fc" id="L120">        phiMatrix.setSubmatrix(0, 12,</span>
                 2, 14, tmp1);
-<span class="nc" id="L122">        phiMatrix.setSubmatrix(3, 9,</span>
+<span class="fc" id="L122">        phiMatrix.setSubmatrix(3, 9,</span>
                 5, 11, tmp1);
 
-<span class="nc" id="L125">        final Matrix measFibb = new Matrix(BodyKinematics.COMPONENTS, 1);</span>
-<span class="nc" id="L126">        measFibb.setElementAtIndex(0, fx);</span>
-<span class="nc" id="L127">        measFibb.setElementAtIndex(1, fy);</span>
-<span class="nc" id="L128">        measFibb.setElementAtIndex(2, fz);</span>
+<span class="fc" id="L125">        final Matrix measFibb = new Matrix(BodyKinematics.COMPONENTS, 1);</span>
+<span class="fc" id="L126">        measFibb.setElementAtIndex(0, fx);</span>
+<span class="fc" id="L127">        measFibb.setElementAtIndex(1, fy);</span>
+<span class="fc" id="L128">        measFibb.setElementAtIndex(2, fz);</span>
 
-<span class="nc" id="L130">        estCbeOld.multiply(measFibb, tmp1);</span>
+<span class="fc" id="L130">        estCbeOld.multiply(measFibb, tmp1);</span>
 
-<span class="nc" id="L132">        Utils.skewMatrix(tmp1, tmp2);</span>
-<span class="nc" id="L133">        tmp2.multiplyByScalar(-propagationInterval);</span>
+<span class="fc" id="L132">        Utils.skewMatrix(tmp1, tmp2);</span>
+<span class="fc" id="L133">        tmp2.multiplyByScalar(-propagationInterval);</span>
 
-<span class="nc" id="L135">        phiMatrix.setSubmatrix(3, 0,</span>
+<span class="fc" id="L135">        phiMatrix.setSubmatrix(3, 0,</span>
                 5, 2, tmp2);
 
-<span class="nc" id="L138">        phiMatrix.getSubmatrix(3, 3,</span>
+<span class="fc" id="L138">        phiMatrix.getSubmatrix(3, 3,</span>
                 5, 5, tmp1);
-<span class="nc" id="L140">        tmp2.copyFrom(omegaIe);</span>
-<span class="nc" id="L141">        tmp2.multiplyByScalar(2.0 * propagationInterval);</span>
-<span class="nc" id="L142">        tmp1.subtract(tmp2);</span>
-<span class="nc" id="L143">        phiMatrix.setSubmatrix(3, 3,</span>
+<span class="fc" id="L140">        tmp2.copyFrom(omegaIe);</span>
+<span class="fc" id="L141">        tmp2.multiplyByScalar(2.0 * propagationInterval);</span>
+<span class="fc" id="L142">        tmp1.subtract(tmp2);</span>
+<span class="fc" id="L143">        phiMatrix.setSubmatrix(3, 3,</span>
                 5, 5, tmp1);
 
-<span class="nc" id="L146">        final double sinPrevLat = Math.sin(previousLatitude);</span>
-<span class="nc" id="L147">        final double cosPrevLat = Math.cos(previousLatitude);</span>
-<span class="nc" id="L148">        final double sinPrevLat2 = sinPrevLat * sinPrevLat;</span>
-<span class="nc" id="L149">        final double cosPrevLat2 = cosPrevLat * cosPrevLat;</span>
+<span class="fc" id="L146">        final double sinPrevLat = Math.sin(previousLatitude);</span>
+<span class="fc" id="L147">        final double cosPrevLat = Math.cos(previousLatitude);</span>
+<span class="fc" id="L148">        final double sinPrevLat2 = sinPrevLat * sinPrevLat;</span>
+<span class="fc" id="L149">        final double cosPrevLat2 = cosPrevLat * cosPrevLat;</span>
 
         // From (2.137)
-<span class="nc" id="L152">        final double geocentricRadius = EARTH_EQUATORIAL_RADIUS_WGS84</span>
-<span class="nc" id="L153">                / Math.sqrt(1.0 - Math.pow(EARTH_ECCENTRICITY * sinPrevLat, 2.0))</span>
-<span class="nc" id="L154">                * Math.sqrt(cosPrevLat2</span>
-<span class="nc" id="L155">                + Math.pow(1.0 - EARTH_ECCENTRICITY * EARTH_ECCENTRICITY, 2.0) * sinPrevLat2);</span>
+<span class="fc" id="L152">        final double geocentricRadius = EARTH_EQUATORIAL_RADIUS_WGS84</span>
+<span class="fc" id="L153">                / Math.sqrt(1.0 - Math.pow(EARTH_ECCENTRICITY * sinPrevLat, 2.0))</span>
+<span class="fc" id="L154">                * Math.sqrt(cosPrevLat2</span>
+<span class="fc" id="L155">                + Math.pow(1.0 - EARTH_ECCENTRICITY * EARTH_ECCENTRICITY, 2.0) * sinPrevLat2);</span>
 
-<span class="nc" id="L157">        final double prevX = previousState.getX();</span>
-<span class="nc" id="L158">        final double prevY = previousState.getY();</span>
-<span class="nc" id="L159">        final double prevZ = previousState.getZ();</span>
-<span class="nc" id="L160">        final ECEFGravity gravity = ECEFGravityEstimator.estimateGravityAndReturnNew(</span>
+<span class="fc" id="L157">        final double prevX = previousState.getX();</span>
+<span class="fc" id="L158">        final double prevY = previousState.getY();</span>
+<span class="fc" id="L159">        final double prevZ = previousState.getZ();</span>
+<span class="fc" id="L160">        final ECEFGravity gravity = ECEFGravityEstimator.estimateGravityAndReturnNew(</span>
                 prevX, prevY, prevZ);
 
-<span class="nc" id="L163">        final double previousPositionNorm = Math.sqrt(prevX * prevX +</span>
+<span class="fc" id="L163">        final double previousPositionNorm = Math.sqrt(prevX * prevX +</span>
                 prevY * prevY + prevZ * prevZ);
 
-<span class="nc" id="L166">        final Matrix estRebeOld = new Matrix(ECEFPosition.COMPONENTS, 1);</span>
-<span class="nc" id="L167">        estRebeOld.setElementAtIndex(0, prevX);</span>
-<span class="nc" id="L168">        estRebeOld.setElementAtIndex(1, prevY);</span>
-<span class="nc" id="L169">        estRebeOld.setElementAtIndex(2, prevZ);</span>
+<span class="fc" id="L166">        final Matrix estRebeOld = new Matrix(ECEFPosition.COMPONENTS, 1);</span>
+<span class="fc" id="L167">        estRebeOld.setElementAtIndex(0, prevX);</span>
+<span class="fc" id="L168">        estRebeOld.setElementAtIndex(1, prevY);</span>
+<span class="fc" id="L169">        estRebeOld.setElementAtIndex(2, prevZ);</span>
 
-<span class="nc" id="L171">        final Matrix g = gravity.asMatrix();</span>
-<span class="nc" id="L172">        g.multiplyByScalar(-2.0 * propagationInterval / geocentricRadius);</span>
+<span class="fc" id="L171">        final Matrix g = gravity.asMatrix();</span>
+<span class="fc" id="L172">        g.multiplyByScalar(-2.0 * propagationInterval / geocentricRadius);</span>
 
-<span class="nc" id="L174">        final Matrix estRebeOldTrans = estRebeOld.transposeAndReturnNew();</span>
-<span class="nc" id="L175">        estRebeOldTrans.multiplyByScalar(1.0 / previousPositionNorm);</span>
+<span class="fc" id="L174">        final Matrix estRebeOldTrans = estRebeOld.transposeAndReturnNew();</span>
+<span class="fc" id="L175">        estRebeOldTrans.multiplyByScalar(1.0 / previousPositionNorm);</span>
 
-<span class="nc" id="L177">        g.multiply(estRebeOldTrans, tmp1);</span>
+<span class="fc" id="L177">        g.multiply(estRebeOldTrans, tmp1);</span>
 
-<span class="nc" id="L179">        phiMatrix.setSubmatrix(3, 6,</span>
+<span class="fc" id="L179">        phiMatrix.setSubmatrix(3, 6,</span>
                 5, 8, tmp1);
 
-<span class="nc bnc" id="L182" title="All 2 branches missed.">        for (int i = 0; i &lt; ECEFPosition.COMPONENTS; i++) {</span>
-<span class="nc" id="L183">            phiMatrix.setElementAt(6 + i, 3 + i, propagationInterval);</span>
+<span class="fc bfc" id="L182" title="All 2 branches covered.">        for (int i = 0; i &lt; ECEFPosition.COMPONENTS; i++) {</span>
+<span class="fc" id="L183">            phiMatrix.setElementAt(6 + i, 3 + i, propagationInterval);</span>
         }
 
-<span class="nc" id="L186">        phiMatrix.setElementAt(15, 16, propagationInterval);</span>
+<span class="fc" id="L186">        phiMatrix.setElementAt(15, 16, propagationInterval);</span>
 
 
         // 2. Determine approximate system noise covariance matrix using (14.82)
-<span class="nc" id="L190">        final Matrix qPrimeMatrix = new Matrix(</span>
+<span class="fc" id="L190">        final Matrix qPrimeMatrix = new Matrix(</span>
                 INSTightlyCoupledKalmanState.NUM_PARAMS,
                 INSTightlyCoupledKalmanState.NUM_PARAMS);
 
-<span class="nc" id="L194">        final double gyroNoisePSD = config.getGyroNoisePSD();</span>
-<span class="nc" id="L195">        final double gyroNoiseValue = gyroNoisePSD * propagationInterval;</span>
-<span class="nc bnc" id="L196" title="All 2 branches missed.">        for (int i = 0; i &lt; 3; i++) {</span>
-<span class="nc" id="L197">            qPrimeMatrix.setElementAt(i, i, gyroNoiseValue);</span>
+<span class="fc" id="L194">        final double gyroNoisePSD = config.getGyroNoisePSD();</span>
+<span class="fc" id="L195">        final double gyroNoiseValue = gyroNoisePSD * propagationInterval;</span>
+<span class="fc bfc" id="L196" title="All 2 branches covered.">        for (int i = 0; i &lt; 3; i++) {</span>
+<span class="fc" id="L197">            qPrimeMatrix.setElementAt(i, i, gyroNoiseValue);</span>
         }
 
-<span class="nc" id="L200">        final double accelNoisePSD = config.getAccelerometerNoisePSD();</span>
-<span class="nc" id="L201">        final double accelNoiseValue = accelNoisePSD * propagationInterval;</span>
-<span class="nc bnc" id="L202" title="All 2 branches missed.">        for (int i = 3; i &lt; 6; i++) {</span>
-<span class="nc" id="L203">            qPrimeMatrix.setElementAt(i, i, accelNoiseValue);</span>
+<span class="fc" id="L200">        final double accelNoisePSD = config.getAccelerometerNoisePSD();</span>
+<span class="fc" id="L201">        final double accelNoiseValue = accelNoisePSD * propagationInterval;</span>
+<span class="fc bfc" id="L202" title="All 2 branches covered.">        for (int i = 3; i &lt; 6; i++) {</span>
+<span class="fc" id="L203">            qPrimeMatrix.setElementAt(i, i, accelNoiseValue);</span>
         }
 
-<span class="nc" id="L206">        final double accelBiasPSD = config.getAccelerometerBiasPSD();</span>
-<span class="nc" id="L207">        final double accelBiasValue = accelBiasPSD * propagationInterval;</span>
-<span class="nc bnc" id="L208" title="All 2 branches missed.">        for (int i = 9; i &lt; 12; i++) {</span>
-<span class="nc" id="L209">            qPrimeMatrix.setElementAt(i, i, accelBiasValue);</span>
+<span class="fc" id="L206">        final double accelBiasPSD = config.getAccelerometerBiasPSD();</span>
+<span class="fc" id="L207">        final double accelBiasValue = accelBiasPSD * propagationInterval;</span>
+<span class="fc bfc" id="L208" title="All 2 branches covered.">        for (int i = 9; i &lt; 12; i++) {</span>
+<span class="fc" id="L209">            qPrimeMatrix.setElementAt(i, i, accelBiasValue);</span>
         }
 
-<span class="nc" id="L212">        final double gyroBiasPSD = config.getGyroBiasPSD();</span>
-<span class="nc" id="L213">        final double gyroBiasValue = gyroBiasPSD * propagationInterval;</span>
-<span class="nc bnc" id="L214" title="All 2 branches missed.">        for (int i = 12; i &lt; 15; i++) {</span>
-<span class="nc" id="L215">            qPrimeMatrix.setElementAt(i, i, gyroBiasValue);</span>
+<span class="fc" id="L212">        final double gyroBiasPSD = config.getGyroBiasPSD();</span>
+<span class="fc" id="L213">        final double gyroBiasValue = gyroBiasPSD * propagationInterval;</span>
+<span class="fc bfc" id="L214" title="All 2 branches covered.">        for (int i = 12; i &lt; 15; i++) {</span>
+<span class="fc" id="L215">            qPrimeMatrix.setElementAt(i, i, gyroBiasValue);</span>
         }
 
-<span class="nc" id="L218">        final double clockPhasePSD = config.getClockPhasePSD();</span>
-<span class="nc" id="L219">        final double clockPhaseValue = clockPhasePSD * propagationInterval;</span>
-<span class="nc" id="L220">        qPrimeMatrix.setElementAt(15, 15, clockPhaseValue);</span>
+<span class="fc" id="L218">        final double clockPhasePSD = config.getClockPhasePSD();</span>
+<span class="fc" id="L219">        final double clockPhaseValue = clockPhasePSD * propagationInterval;</span>
+<span class="fc" id="L220">        qPrimeMatrix.setElementAt(15, 15, clockPhaseValue);</span>
 
-<span class="nc" id="L222">        final double clockFreqPSD = config.getClockFrequencyPSD();</span>
-<span class="nc" id="L223">        final double clockFreqValue = clockFreqPSD * propagationInterval;</span>
-<span class="nc" id="L224">        qPrimeMatrix.setElementAt(16, 16, clockFreqValue);</span>
+<span class="fc" id="L222">        final double clockFreqPSD = config.getClockFrequencyPSD();</span>
+<span class="fc" id="L223">        final double clockFreqValue = clockFreqPSD * propagationInterval;</span>
+<span class="fc" id="L224">        qPrimeMatrix.setElementAt(16, 16, clockFreqValue);</span>
 
 
         // 3. Propagate state estimates using (3.14) noting that only the clock
         // states are non-zero due to closed-loop correction
-<span class="nc" id="L229">        final double prevClockOffset = previousState.getReceiverClockOffset();</span>
-<span class="nc" id="L230">        final double prevClockDrift = previousState.getReceiverClockDrift();</span>
+<span class="fc" id="L229">        final double prevClockOffset = previousState.getReceiverClockOffset();</span>
+<span class="fc" id="L230">        final double prevClockDrift = previousState.getReceiverClockDrift();</span>
 
-<span class="nc" id="L232">        final Matrix xEstPropagated = new Matrix(INSTightlyCoupledKalmanState.NUM_PARAMS, 1);</span>
-<span class="nc" id="L233">        xEstPropagated.setElementAtIndex(15, prevClockOffset</span>
+<span class="fc" id="L232">        final Matrix xEstPropagated = new Matrix(INSTightlyCoupledKalmanState.NUM_PARAMS, 1);</span>
+<span class="fc" id="L233">        xEstPropagated.setElementAtIndex(15, prevClockOffset</span>
                 + prevClockDrift * propagationInterval);
-<span class="nc" id="L235">        xEstPropagated.setElementAtIndex(16, prevClockDrift);</span>
+<span class="fc" id="L235">        xEstPropagated.setElementAtIndex(16, prevClockDrift);</span>
 
         // 4. Propagate state estimation error covariance matrix using (3.46)
-<span class="nc" id="L238">        final Matrix pMatrixOld = previousState.getCovariance();</span>
+<span class="fc" id="L238">        final Matrix pMatrixOld = previousState.getCovariance();</span>
 
-<span class="nc" id="L240">        qPrimeMatrix.multiplyByScalar(0.5);</span>
+<span class="fc" id="L240">        qPrimeMatrix.multiplyByScalar(0.5);</span>
 
-<span class="nc" id="L242">        final Matrix tmp3 = pMatrixOld.addAndReturnNew(qPrimeMatrix);</span>
-<span class="nc" id="L243">        final Matrix pMatrixPropagated = phiMatrix.multiplyAndReturnNew(tmp3);</span>
+<span class="fc" id="L242">        final Matrix tmp3 = pMatrixOld.addAndReturnNew(qPrimeMatrix);</span>
+<span class="fc" id="L243">        final Matrix pMatrixPropagated = phiMatrix.multiplyAndReturnNew(tmp3);</span>
 
-<span class="nc" id="L245">        phiMatrix.transpose();</span>
-<span class="nc" id="L246">        pMatrixPropagated.multiply(phiMatrix);</span>
+<span class="fc" id="L245">        phiMatrix.transpose();</span>
+<span class="fc" id="L246">        pMatrixPropagated.multiply(phiMatrix);</span>
 
-<span class="nc" id="L248">        pMatrixPropagated.add(qPrimeMatrix);</span>
+<span class="fc" id="L248">        pMatrixPropagated.add(qPrimeMatrix);</span>
 
 
         // MEASUREMENT UPDATE PHASE
 
-<span class="nc" id="L253">        final int numberOfMeasurements = measurements.size();</span>
-<span class="nc" id="L254">        final Matrix uAseT = new Matrix(numberOfMeasurements, 3);</span>
-<span class="nc" id="L255">        final Matrix predMeas = new Matrix(numberOfMeasurements, 2);</span>
+<span class="fc" id="L253">        final int numberOfMeasurements = measurements.size();</span>
+<span class="fc" id="L254">        final Matrix uAseT = new Matrix(numberOfMeasurements, 3);</span>
+<span class="fc" id="L255">        final Matrix predMeas = new Matrix(numberOfMeasurements, 2);</span>
 
-<span class="nc" id="L257">        final Matrix cei = Matrix.identity(CoordinateTransformation.ROWS,</span>
+<span class="fc" id="L257">        final Matrix cei = Matrix.identity(CoordinateTransformation.ROWS,</span>
                 CoordinateTransformation.COLS);
-<span class="nc" id="L259">        final Matrix satellitePosition = new Matrix(CoordinateTransformation.ROWS, 1);</span>
-<span class="nc" id="L260">        final Matrix satelliteVelocity = new Matrix(CoordinateTransformation.ROWS, 1);</span>
-<span class="nc" id="L261">        final Matrix deltaR = new Matrix(CoordinateTransformation.ROWS, 1);</span>
-<span class="nc" id="L262">        final Matrix tmp1b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
-<span class="nc" id="L263">        final Matrix tmp2b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
-<span class="nc" id="L264">        final Matrix tmp3b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
-<span class="nc" id="L265">        final Matrix tmp4b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
-<span class="nc" id="L266">        final Matrix tmp5b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
-<span class="nc" id="L267">        final Matrix tmp6b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
-<span class="nc" id="L268">        final Matrix tmp7b = new Matrix(1, CoordinateTransformation.ROWS);</span>
+<span class="fc" id="L259">        final Matrix satellitePosition = new Matrix(CoordinateTransformation.ROWS, 1);</span>
+<span class="fc" id="L260">        final Matrix satelliteVelocity = new Matrix(CoordinateTransformation.ROWS, 1);</span>
+<span class="fc" id="L261">        final Matrix deltaR = new Matrix(CoordinateTransformation.ROWS, 1);</span>
+<span class="fc" id="L262">        final Matrix tmp1b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
+<span class="fc" id="L263">        final Matrix tmp2b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
+<span class="fc" id="L264">        final Matrix tmp3b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
+<span class="fc" id="L265">        final Matrix tmp4b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
+<span class="fc" id="L266">        final Matrix tmp5b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
+<span class="fc" id="L267">        final Matrix tmp6b = new Matrix(CoordinateTransformation.ROWS, 1);</span>
+<span class="fc" id="L268">        final Matrix tmp7b = new Matrix(1, CoordinateTransformation.ROWS);</span>
 
-<span class="nc" id="L270">        final double prevVx = previousState.getVx();</span>
-<span class="nc" id="L271">        final double prevVy = previousState.getVy();</span>
-<span class="nc" id="L272">        final double prevVz = previousState.getVz();</span>
+<span class="fc" id="L270">        final double prevVx = previousState.getVx();</span>
+<span class="fc" id="L271">        final double prevVy = previousState.getVy();</span>
+<span class="fc" id="L272">        final double prevVz = previousState.getVz();</span>
 
-<span class="nc" id="L274">        final Matrix estVebeOld = new Matrix(ECEFVelocity.COMPONENTS, 1);</span>
-<span class="nc" id="L275">        estVebeOld.setElementAtIndex(0, prevVx);</span>
-<span class="nc" id="L276">        estVebeOld.setElementAtIndex(1, prevVy);</span>
-<span class="nc" id="L277">        estVebeOld.setElementAtIndex(2, prevVz);</span>
+<span class="fc" id="L274">        final Matrix estVebeOld = new Matrix(ECEFVelocity.COMPONENTS, 1);</span>
+<span class="fc" id="L275">        estVebeOld.setElementAtIndex(0, prevVx);</span>
+<span class="fc" id="L276">        estVebeOld.setElementAtIndex(1, prevVy);</span>
+<span class="fc" id="L277">        estVebeOld.setElementAtIndex(2, prevVz);</span>
 
-<span class="nc" id="L279">        int j = 0;</span>
-<span class="nc bnc" id="L280" title="All 2 branches missed.">        for (final GNSSMeasurement measurement : measurements) {</span>
+<span class="fc" id="L279">        int j = 0;</span>
+<span class="fc bfc" id="L280" title="All 2 branches covered.">        for (final GNSSMeasurement measurement : measurements) {</span>
             // Predict approx range
-<span class="nc" id="L282">            final double measX = measurement.getX();</span>
-<span class="nc" id="L283">            final double measY = measurement.getY();</span>
-<span class="nc" id="L284">            final double measZ = measurement.getZ();</span>
+<span class="fc" id="L282">            final double measX = measurement.getX();</span>
+<span class="fc" id="L283">            final double measY = measurement.getY();</span>
+<span class="fc" id="L284">            final double measZ = measurement.getZ();</span>
 
-<span class="nc" id="L286">            final double deltaX = measX - prevX;</span>
-<span class="nc" id="L287">            final double deltaY = measY - prevY;</span>
-<span class="nc" id="L288">            final double deltaZ = measZ - prevZ;</span>
-<span class="nc" id="L289">            final double approxRange = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);</span>
+<span class="fc" id="L286">            final double deltaX = measX - prevX;</span>
+<span class="fc" id="L287">            final double deltaY = measY - prevY;</span>
+<span class="fc" id="L288">            final double deltaZ = measZ - prevZ;</span>
+<span class="fc" id="L289">            final double approxRange = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);</span>
 
             // Calculate frame rotation during signal transit time using (8.36)
-<span class="nc" id="L292">            final double ceiValue = EARTH_ROTATION_RATE * approxRange / SPEED_OF_LIGHT;</span>
-<span class="nc" id="L293">            cei.setElementAt(0, 1, ceiValue);</span>
-<span class="nc" id="L294">            cei.setElementAt(1, 0, -ceiValue);</span>
+<span class="fc" id="L292">            final double ceiValue = EARTH_ROTATION_RATE * approxRange / SPEED_OF_LIGHT;</span>
+<span class="fc" id="L293">            Matrix.identity(cei);</span>
+<span class="fc" id="L294">            cei.setElementAt(0, 1, ceiValue);</span>
+<span class="fc" id="L295">            cei.setElementAt(1, 0, -ceiValue);</span>
 
             // Predict pseudo-range using (9.165)
-<span class="nc" id="L297">            satellitePosition.setElementAtIndex(0, measX);</span>
-<span class="nc" id="L298">            satellitePosition.setElementAtIndex(1, measY);</span>
-<span class="nc" id="L299">            satellitePosition.setElementAtIndex(2, measZ);</span>
+<span class="fc" id="L298">            satellitePosition.setElementAtIndex(0, measX);</span>
+<span class="fc" id="L299">            satellitePosition.setElementAtIndex(1, measY);</span>
+<span class="fc" id="L300">            satellitePosition.setElementAtIndex(2, measZ);</span>
 
-<span class="nc" id="L301">            cei.multiply(satellitePosition, deltaR);</span>
-<span class="nc bnc" id="L302" title="All 2 branches missed.">            for (int i = 0; i &lt; CoordinateTransformation.ROWS; i++) {</span>
-<span class="nc" id="L303">                deltaR.setElementAtIndex(i, deltaR.getElementAtIndex(i)</span>
-<span class="nc" id="L304">                        - estRebeOld.getElementAtIndex(i));</span>
+<span class="fc" id="L302">            cei.multiply(satellitePosition, deltaR);</span>
+<span class="fc bfc" id="L303" title="All 2 branches covered.">            for (int i = 0; i &lt; CoordinateTransformation.ROWS; i++) {</span>
+<span class="fc" id="L304">                deltaR.setElementAtIndex(i, deltaR.getElementAtIndex(i)</span>
+<span class="fc" id="L305">                        - estRebeOld.getElementAtIndex(i));</span>
             }
-<span class="nc" id="L306">            final double range = Utils.normF(deltaR);</span>
+<span class="fc" id="L307">            final double range = Utils.normF(deltaR);</span>
 
-<span class="nc" id="L308">            predMeas.setElementAt(j, 0, range</span>
-<span class="nc" id="L309">                    + xEstPropagated.getElementAtIndex(15));</span>
+<span class="fc" id="L309">            predMeas.setElementAt(j, 0, range</span>
+<span class="fc" id="L310">                    + xEstPropagated.getElementAtIndex(15));</span>
 
             // Predict line of sight
-<span class="nc bnc" id="L312" title="All 2 branches missed.">            for (int i = 0; i &lt; CoordinateTransformation.ROWS; i++) {</span>
-<span class="nc" id="L313">                uAseT.setElementAt(j, i, deltaR.getElementAtIndex(i) / range);</span>
+<span class="fc bfc" id="L313" title="All 2 branches covered.">            for (int i = 0; i &lt; CoordinateTransformation.ROWS; i++) {</span>
+<span class="fc" id="L314">                uAseT.setElementAt(j, i, deltaR.getElementAtIndex(i) / range);</span>
             }
 
             // Predict pseudo-range rae using (9.165)
-<span class="nc" id="L317">            satelliteVelocity.setElementAtIndex(0, measurement.getVx());</span>
-<span class="nc" id="L318">            satelliteVelocity.setElementAtIndex(1, measurement.getVy());</span>
-<span class="nc" id="L319">            satelliteVelocity.setElementAtIndex(2, measurement.getVz());</span>
+<span class="fc" id="L318">            satelliteVelocity.setElementAtIndex(0, measurement.getVx());</span>
+<span class="fc" id="L319">            satelliteVelocity.setElementAtIndex(1, measurement.getVy());</span>
+<span class="fc" id="L320">            satelliteVelocity.setElementAtIndex(2, measurement.getVz());</span>
 
-<span class="nc" id="L321">            omegaIe.multiply(satellitePosition, tmp1b);</span>
-<span class="nc" id="L322">            satelliteVelocity.add(tmp1b, tmp2b);</span>
-<span class="nc" id="L323">            cei.multiply(tmp2b, tmp3b);</span>
+<span class="fc" id="L322">            omegaIe.multiply(satellitePosition, tmp1b);</span>
+<span class="fc" id="L323">            satelliteVelocity.add(tmp1b, tmp2b);</span>
+<span class="fc" id="L324">            cei.multiply(tmp2b, tmp3b);</span>
 
-<span class="nc" id="L325">            omegaIe.multiply(estRebeOld, tmp4b);</span>
-<span class="nc" id="L326">            estVebeOld.add(tmp4b, tmp6b);</span>
+<span class="fc" id="L326">            omegaIe.multiply(estRebeOld, tmp4b);</span>
+<span class="fc" id="L327">            estVebeOld.add(tmp4b, tmp6b);</span>
 
-<span class="nc" id="L328">            tmp3b.subtract(tmp6b, tmp5b);</span>
+<span class="fc" id="L329">            tmp3b.subtract(tmp6b, tmp5b);</span>
 
-<span class="nc" id="L330">            uAseT.getSubmatrix(j, 0, j, 2, tmp7b);</span>
+<span class="fc" id="L331">            uAseT.getSubmatrix(j, 0, j, 2, tmp7b);</span>
 
-<span class="nc" id="L332">            final double rangeRate = Utils.dotProduct(tmp7b, tmp5b);</span>
+<span class="fc" id="L333">            final double rangeRate = Utils.dotProduct(tmp7b, tmp5b);</span>
 
-<span class="nc" id="L334">            predMeas.setElementAt(j, 1, rangeRate</span>
-<span class="nc" id="L335">                    + xEstPropagated.getElementAtIndex(16));</span>
+<span class="fc" id="L335">            predMeas.setElementAt(j, 1, rangeRate</span>
+<span class="fc" id="L336">                    + xEstPropagated.getElementAtIndex(16));</span>
 
-<span class="nc" id="L337">            j++;</span>
-<span class="nc" id="L338">        }</span>
+<span class="fc" id="L338">            j++;</span>
+<span class="fc" id="L339">        }</span>
 
         // 5. Set-up measurement matrix using (14.126)
-<span class="nc" id="L341">        final Matrix h = new Matrix(2 * numberOfMeasurements, INSTightlyCoupledKalmanState.NUM_PARAMS);</span>
-<span class="nc bnc" id="L342" title="All 2 branches missed.">        for (int j1 = 0, j2 = numberOfMeasurements; j1 &lt; numberOfMeasurements; j1++, j2++) {</span>
-<span class="nc bnc" id="L343" title="All 2 branches missed.">            for (int i1 = 0, i2 = 3; i1 &lt; CoordinateTransformation.ROWS; i1++, i2++) {</span>
-<span class="nc" id="L344">                final double value = uAseT.getElementAt(j1, i1);</span>
+<span class="fc" id="L342">        final Matrix h = new Matrix(2 * numberOfMeasurements, INSTightlyCoupledKalmanState.NUM_PARAMS);</span>
+<span class="fc bfc" id="L343" title="All 2 branches covered.">        for (int j1 = 0, j2 = numberOfMeasurements; j1 &lt; numberOfMeasurements; j1++, j2++) {</span>
+<span class="fc bfc" id="L344" title="All 2 branches covered.">            for (int i1 = 0, i2 = 6, i3 = 3; i1 &lt; CoordinateTransformation.ROWS; i1++, i2++, i3++) {</span>
+<span class="fc" id="L345">                final double value = uAseT.getElementAt(j1, i1);</span>
 
-<span class="nc" id="L346">                h.setElementAt(j1, i1, value);</span>
-<span class="nc" id="L347">                h.setElementAt(j2, i2, value);</span>
+<span class="fc" id="L347">                h.setElementAt(j1, i2, value);</span>
+<span class="fc" id="L348">                h.setElementAt(j2, i3, value);</span>
             }
-<span class="nc" id="L349">            h.setElementAt(j1, 15, 1.0);</span>
-<span class="nc" id="L350">            h.setElementAt(j2, 16, 1.0);</span>
+<span class="fc" id="L350">            h.setElementAt(j1, 15, 1.0);</span>
+<span class="fc" id="L351">            h.setElementAt(j2, 16, 1.0);</span>
         }
 
         // 6. Set-up measurement noise covariance matrix assuming all measurements are independent
         // and have equal variance for a given measurement type.
-<span class="nc" id="L355">        final double pseudoRangeSD = config.getPseudoRangeSD();</span>
-<span class="nc" id="L356">        final double pseudoRangeSD2 = pseudoRangeSD * pseudoRangeSD;</span>
-<span class="nc" id="L357">        final double rangeRateSD = config.getRangeRateSD();</span>
-<span class="nc" id="L358">        final double rangeRateSD2 = rangeRateSD * rangeRateSD;</span>
-<span class="nc" id="L359">        final Matrix r = new Matrix(2 * numberOfMeasurements, 2 * numberOfMeasurements);</span>
-<span class="nc bnc" id="L360" title="All 2 branches missed.">        for (int i1 = 0, i2 = numberOfMeasurements; i1 &lt; numberOfMeasurements; i1++, i2++) {</span>
-<span class="nc" id="L361">            r.setElementAt(i1, i1, pseudoRangeSD2);</span>
-<span class="nc" id="L362">            r.setElementAt(i2, i2, rangeRateSD2);</span>
+<span class="fc" id="L356">        final double pseudoRangeSD = config.getPseudoRangeSD();</span>
+<span class="fc" id="L357">        final double pseudoRangeSD2 = pseudoRangeSD * pseudoRangeSD;</span>
+<span class="fc" id="L358">        final double rangeRateSD = config.getRangeRateSD();</span>
+<span class="fc" id="L359">        final double rangeRateSD2 = rangeRateSD * rangeRateSD;</span>
+<span class="fc" id="L360">        final Matrix r = new Matrix(2 * numberOfMeasurements, 2 * numberOfMeasurements);</span>
+<span class="fc bfc" id="L361" title="All 2 branches covered.">        for (int i1 = 0, i2 = numberOfMeasurements; i1 &lt; numberOfMeasurements; i1++, i2++) {</span>
+<span class="fc" id="L362">            r.setElementAt(i1, i1, pseudoRangeSD2);</span>
+<span class="fc" id="L363">            r.setElementAt(i2, i2, rangeRateSD2);</span>
         }
 
         // 7. Calculate Kalman gain using (3.21)
-<span class="nc" id="L366">        final Matrix hTransposed = h.transposeAndReturnNew();</span>
-<span class="nc" id="L367">        final Matrix tmp8b = h.multiplyAndReturnNew(</span>
-<span class="nc" id="L368">                pMatrixPropagated.multiplyAndReturnNew(hTransposed));</span>
-<span class="nc" id="L369">        tmp8b.add(r);</span>
-<span class="nc" id="L370">        final Matrix tmp9b = Utils.inverse(tmp8b);</span>
-<span class="nc" id="L371">        final Matrix k = pMatrixPropagated.multiplyAndReturnNew(hTransposed);</span>
-<span class="nc" id="L372">        k.multiply(tmp9b);</span>
+<span class="fc" id="L367">        final Matrix hTransposed = h.transposeAndReturnNew();</span>
+<span class="fc" id="L368">        final Matrix tmp8b = h.multiplyAndReturnNew(</span>
+<span class="fc" id="L369">                pMatrixPropagated.multiplyAndReturnNew(hTransposed));</span>
+<span class="fc" id="L370">        tmp8b.add(r);</span>
+<span class="fc" id="L371">        final Matrix tmp9b = Utils.inverse(tmp8b);</span>
+<span class="fc" id="L372">        final Matrix k = pMatrixPropagated.multiplyAndReturnNew(hTransposed);</span>
+<span class="fc" id="L373">        k.multiply(tmp9b);</span>
 
         // 8. Formulate measurement innovations using (14.119)
-<span class="nc" id="L375">        final Matrix deltaZ = new Matrix(2 * numberOfMeasurements, 1);</span>
-<span class="nc" id="L376">        int i1 = 0;</span>
-<span class="nc" id="L377">        int i2 = numberOfMeasurements;</span>
-<span class="nc bnc" id="L378" title="All 2 branches missed.">        for (final GNSSMeasurement measurement : measurements) {</span>
-<span class="nc" id="L379">            deltaZ.setElementAtIndex(i1, measurement.getPseudoRange()</span>
-<span class="nc" id="L380">                    - predMeas.getElementAt(i1, 0));</span>
-<span class="nc" id="L381">            deltaZ.setElementAtIndex(i2, measurement.getPseudoRate()</span>
-<span class="nc" id="L382">                    - predMeas.getElementAt(i1, 1));</span>
+<span class="fc" id="L376">        final Matrix deltaZ = new Matrix(2 * numberOfMeasurements, 1);</span>
+<span class="fc" id="L377">        int i1 = 0;</span>
+<span class="fc" id="L378">        int i2 = numberOfMeasurements;</span>
+<span class="fc bfc" id="L379" title="All 2 branches covered.">        for (final GNSSMeasurement measurement : measurements) {</span>
+<span class="fc" id="L380">            deltaZ.setElementAtIndex(i1, measurement.getPseudoRange()</span>
+<span class="fc" id="L381">                    - predMeas.getElementAt(i1, 0));</span>
+<span class="fc" id="L382">            deltaZ.setElementAtIndex(i2, measurement.getPseudoRate()</span>
+<span class="fc" id="L383">                    - predMeas.getElementAt(i1, 1));</span>
 
-<span class="nc" id="L384">            i1++;</span>
-<span class="nc" id="L385">            i2++;</span>
-<span class="nc" id="L386">        }</span>
+<span class="fc" id="L385">            i1++;</span>
+<span class="fc" id="L386">            i2++;</span>
+<span class="fc" id="L387">        }</span>
 
         // 9. Update state estimates using (3.24)
-<span class="nc" id="L389">        xEstPropagated.add(k.multiplyAndReturnNew(deltaZ));</span>
+<span class="fc" id="L390">        xEstPropagated.add(k.multiplyAndReturnNew(deltaZ));</span>
 
         // xEstPropagated now contains updated state
 
         // 10. Update state estimation error covariance matrix using (3.25)
-<span class="nc" id="L394">        Matrix updatedCovariance = result.getCovariance();</span>
-<span class="nc bnc" id="L395" title="All 2 branches missed.">        if (updatedCovariance == null ||</span>
-<span class="nc bnc" id="L396" title="All 2 branches missed.">                updatedCovariance.getRows() != INSTightlyCoupledKalmanState.NUM_PARAMS ||</span>
-<span class="nc bnc" id="L397" title="All 2 branches missed.">                updatedCovariance.getColumns() != INSTightlyCoupledKalmanState.NUM_PARAMS) {</span>
-<span class="nc" id="L398">            updatedCovariance = Matrix.identity(INSTightlyCoupledKalmanState.NUM_PARAMS,</span>
+<span class="fc" id="L395">        Matrix updatedCovariance = result.getCovariance();</span>
+<span class="pc bpc" id="L396" title="1 of 2 branches missed.">        if (updatedCovariance == null ||</span>
+<span class="nc bnc" id="L397" title="All 2 branches missed.">                updatedCovariance.getRows() != INSTightlyCoupledKalmanState.NUM_PARAMS ||</span>
+<span class="nc bnc" id="L398" title="All 2 branches missed.">                updatedCovariance.getColumns() != INSTightlyCoupledKalmanState.NUM_PARAMS) {</span>
+<span class="fc" id="L399">            updatedCovariance = Matrix.identity(INSTightlyCoupledKalmanState.NUM_PARAMS,</span>
                     INSTightlyCoupledKalmanState.NUM_PARAMS);
         } else {
-<span class="nc" id="L401">            Matrix.identity(updatedCovariance);</span>
+<span class="nc" id="L402">            Matrix.identity(updatedCovariance);</span>
         }
-<span class="nc" id="L403">        k.multiply(h);</span>
-<span class="nc" id="L404">        updatedCovariance.subtract(k);</span>
-<span class="nc" id="L405">        updatedCovariance.multiply(pMatrixPropagated);</span>
+<span class="fc" id="L404">        k.multiply(h);</span>
+<span class="fc" id="L405">        updatedCovariance.subtract(k);</span>
+<span class="fc" id="L406">        updatedCovariance.multiply(pMatrixPropagated);</span>
 
 
         // CLOSED-LOOP CORRECTION
 
         // Correct attitude, velocity, and position using (14.7-9)
 
-<span class="nc" id="L412">        Matrix estCbeNew = result.getBodyToEcefCoordinateTransformationMatrix();</span>
-<span class="nc bnc" id="L413" title="All 2 branches missed.">        if (estCbeNew == null) {</span>
-<span class="nc" id="L414">            estCbeNew = Matrix.identity(CoordinateTransformation.ROWS,</span>
+<span class="fc" id="L413">        Matrix estCbeNew = result.getBodyToEcefCoordinateTransformationMatrix();</span>
+<span class="pc bpc" id="L414" title="1 of 2 branches missed.">        if (estCbeNew == null) {</span>
+<span class="fc" id="L415">            estCbeNew = Matrix.identity(CoordinateTransformation.ROWS,</span>
                     CoordinateTransformation.COLS);
         } else {
-<span class="nc" id="L417">            Matrix.identity(estCbeNew);</span>
+<span class="nc" id="L418">            Matrix.identity(estCbeNew);</span>
         }
 
-<span class="nc" id="L420">        xEstPropagated.getSubmatrix(0, 0,</span>
+<span class="fc" id="L421">        xEstPropagated.getSubmatrix(0, 0,</span>
                 2, 0, tmp1b);
-<span class="nc" id="L422">        estCbeNew.subtract(Utils.skewMatrix(tmp1b));</span>
-<span class="nc" id="L423">        estCbeNew.multiply(estCbeOld);</span>
+<span class="fc" id="L423">        estCbeNew.subtract(Utils.skewMatrix(tmp1b));</span>
+<span class="fc" id="L424">        estCbeNew.multiply(estCbeOld);</span>
 
 
-<span class="nc" id="L426">        result.setBodyToEcefCoordinateTransformationMatrix(estCbeNew);</span>
-<span class="nc" id="L427">        result.setVelocityCoordinates(</span>
-<span class="nc" id="L428">                prevVx - xEstPropagated.getElementAtIndex(3),</span>
-<span class="nc" id="L429">                prevVy - xEstPropagated.getElementAtIndex(4),</span>
-<span class="nc" id="L430">                prevVz - xEstPropagated.getElementAtIndex(5));</span>
-<span class="nc" id="L431">        result.setPositionCoordinates(</span>
-<span class="nc" id="L432">                prevX - xEstPropagated.getElementAtIndex(6),</span>
-<span class="nc" id="L433">                prevY - xEstPropagated.getElementAtIndex(7),</span>
-<span class="nc" id="L434">                prevZ - xEstPropagated.getElementAtIndex(8));</span>
-<span class="nc" id="L435">        result.setCovariance(updatedCovariance);</span>
+<span class="fc" id="L427">        result.setBodyToEcefCoordinateTransformationMatrix(estCbeNew);</span>
+<span class="fc" id="L428">        result.setVelocityCoordinates(</span>
+<span class="fc" id="L429">                prevVx - xEstPropagated.getElementAtIndex(3),</span>
+<span class="fc" id="L430">                prevVy - xEstPropagated.getElementAtIndex(4),</span>
+<span class="fc" id="L431">                prevVz - xEstPropagated.getElementAtIndex(5));</span>
+<span class="fc" id="L432">        result.setPositionCoordinates(</span>
+<span class="fc" id="L433">                prevX - xEstPropagated.getElementAtIndex(6),</span>
+<span class="fc" id="L434">                prevY - xEstPropagated.getElementAtIndex(7),</span>
+<span class="fc" id="L435">                prevZ - xEstPropagated.getElementAtIndex(8));</span>
+<span class="fc" id="L436">        result.setCovariance(updatedCovariance);</span>
 
         // Update IMU bias and GNSS receiver clock estimates
-<span class="nc" id="L438">        final double prevAccelBiasX = previousState.getAccelerationBiasX();</span>
-<span class="nc" id="L439">        final double prevAccelBiasY = previousState.getAccelerationBiasY();</span>
-<span class="nc" id="L440">        final double prevAccelBiasZ = previousState.getAccelerationBiasZ();</span>
-<span class="nc" id="L441">        final double prevGyroBiasX = previousState.getGyroBiasX();</span>
-<span class="nc" id="L442">        final double prevGyroBiasY = previousState.getGyroBiasY();</span>
-<span class="nc" id="L443">        final double prevGyroBiasZ = previousState.getGyroBiasZ();</span>
+<span class="fc" id="L439">        final double prevAccelBiasX = previousState.getAccelerationBiasX();</span>
+<span class="fc" id="L440">        final double prevAccelBiasY = previousState.getAccelerationBiasY();</span>
+<span class="fc" id="L441">        final double prevAccelBiasZ = previousState.getAccelerationBiasZ();</span>
+<span class="fc" id="L442">        final double prevGyroBiasX = previousState.getGyroBiasX();</span>
+<span class="fc" id="L443">        final double prevGyroBiasY = previousState.getGyroBiasY();</span>
+<span class="fc" id="L444">        final double prevGyroBiasZ = previousState.getGyroBiasZ();</span>
 
-<span class="nc" id="L445">        result.setAccelerationBiasCoordinates(</span>
-<span class="nc" id="L446">                prevAccelBiasX + xEstPropagated.getElementAtIndex(9),</span>
-<span class="nc" id="L447">                prevAccelBiasY + xEstPropagated.getElementAtIndex(10),</span>
-<span class="nc" id="L448">                prevAccelBiasZ + xEstPropagated.getElementAtIndex(11));</span>
-<span class="nc" id="L449">        result.setGyroBiasCoordinates(</span>
-<span class="nc" id="L450">                prevGyroBiasX + xEstPropagated.getElementAtIndex(12),</span>
-<span class="nc" id="L451">                prevGyroBiasY + xEstPropagated.getElementAtIndex(13),</span>
-<span class="nc" id="L452">                prevGyroBiasZ + xEstPropagated.getElementAtIndex(14));</span>
+<span class="fc" id="L446">        result.setAccelerationBiasCoordinates(</span>
+<span class="fc" id="L447">                prevAccelBiasX + xEstPropagated.getElementAtIndex(9),</span>
+<span class="fc" id="L448">                prevAccelBiasY + xEstPropagated.getElementAtIndex(10),</span>
+<span class="fc" id="L449">                prevAccelBiasZ + xEstPropagated.getElementAtIndex(11));</span>
+<span class="fc" id="L450">        result.setGyroBiasCoordinates(</span>
+<span class="fc" id="L451">                prevGyroBiasX + xEstPropagated.getElementAtIndex(12),</span>
+<span class="fc" id="L452">                prevGyroBiasY + xEstPropagated.getElementAtIndex(13),</span>
+<span class="fc" id="L453">                prevGyroBiasZ + xEstPropagated.getElementAtIndex(14));</span>
 
-<span class="nc" id="L454">        result.setReceiverClockOffset(xEstPropagated.getElementAtIndex(15));</span>
-<span class="nc" id="L455">        result.setReceiverClockDrift(xEstPropagated.getElementAtIndex(16));</span>
-<span class="nc" id="L456">    }</span>
+<span class="fc" id="L455">        result.setReceiverClockOffset(xEstPropagated.getElementAtIndex(15));</span>
+<span class="fc" id="L456">        result.setReceiverClockDrift(xEstPropagated.getElementAtIndex(16));</span>
+<span class="fc" id="L457">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -483,10 +484,10 @@ import java.util.Collection;
             final double fx, final double fy, final double fz,
             final double previousLatitude,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L486">        final INSTightlyCoupledKalmanState result = new INSTightlyCoupledKalmanState();</span>
-<span class="nc" id="L487">        estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L487">        final INSTightlyCoupledKalmanState result = new INSTightlyCoupledKalmanState();</span>
+<span class="fc" id="L488">        estimate(measurements, propagationInterval, previousState,</span>
                 fx, fy, fz, previousLatitude, config, result);
-<span class="nc" id="L489">        return result;</span>
+<span class="fc" id="L490">        return result;</span>
     }
 
     /**
@@ -519,9 +520,9 @@ import java.util.Collection;
             final double previousLatitude,
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
-<span class="nc" id="L522">        estimate(measurements, convertTime(propagationInterval),</span>
+<span class="fc" id="L523">        estimate(measurements, convertTime(propagationInterval),</span>
                 previousState, fx, fy, fz, previousLatitude, config, result);
-<span class="nc" id="L524">    }</span>
+<span class="fc" id="L525">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -551,7 +552,7 @@ import java.util.Collection;
             final double fx, final double fy, final double fz,
             final double previousLatitude,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L554">        return estimate(measurements, convertTime(propagationInterval),</span>
+<span class="fc" id="L555">        return estimate(measurements, convertTime(propagationInterval),</span>
                 previousState, fx, fy, fz, previousLatitude, config);
     }
 
@@ -584,18 +585,18 @@ import java.util.Collection;
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
 
-<span class="nc" id="L587">        final NEDPosition prevNedPosition = new NEDPosition();</span>
-<span class="nc" id="L588">        final NEDVelocity prevNedVelocity = new NEDVelocity();</span>
-<span class="nc" id="L589">        ECEFtoNEDPositionVelocityConverter.convertECEFtoNED(</span>
-<span class="nc" id="L590">                previousState.getX(), previousState.getY(), previousState.getZ(),</span>
-<span class="nc" id="L591">                previousState.getVx(), previousState.getVy(), previousState.getVz(),</span>
+<span class="fc" id="L588">        final NEDPosition prevNedPosition = new NEDPosition();</span>
+<span class="fc" id="L589">        final NEDVelocity prevNedVelocity = new NEDVelocity();</span>
+<span class="fc" id="L590">        ECEFtoNEDPositionVelocityConverter.convertECEFtoNED(</span>
+<span class="fc" id="L591">                previousState.getX(), previousState.getY(), previousState.getZ(),</span>
+<span class="fc" id="L592">                previousState.getVx(), previousState.getVy(), previousState.getVz(),</span>
                 prevNedPosition, prevNedVelocity);
 
-<span class="nc" id="L594">        final double previousLatitude = prevNedPosition.getLatitude();</span>
+<span class="fc" id="L595">        final double previousLatitude = prevNedPosition.getLatitude();</span>
 
-<span class="nc" id="L596">        estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L597">        estimate(measurements, propagationInterval, previousState,</span>
                 fx, fy, fz, previousLatitude, config, result);
-<span class="nc" id="L598">    }</span>
+<span class="fc" id="L599">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -623,10 +624,10 @@ import java.util.Collection;
             final INSTightlyCoupledKalmanState previousState,
             final double fx, final double fy, final double fz,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L626">        final INSTightlyCoupledKalmanState result = new INSTightlyCoupledKalmanState();</span>
-<span class="nc" id="L627">        estimate(measurements, propagationInterval, previousState, fx, fy, fz,</span>
+<span class="fc" id="L627">        final INSTightlyCoupledKalmanState result = new INSTightlyCoupledKalmanState();</span>
+<span class="fc" id="L628">        estimate(measurements, propagationInterval, previousState, fx, fy, fz,</span>
                 config, result);
-<span class="nc" id="L629">        return result;</span>
+<span class="fc" id="L630">        return result;</span>
     }
 
     /**
@@ -657,9 +658,9 @@ import java.util.Collection;
             final double fx, final double fy, final double fz,
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
-<span class="nc" id="L660">        estimate(measurements, convertTime(propagationInterval),</span>
+<span class="fc" id="L661">        estimate(measurements, convertTime(propagationInterval),</span>
                 previousState, fx, fy, fz, config, result);
-<span class="nc" id="L662">    }</span>
+<span class="fc" id="L663">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -686,7 +687,7 @@ import java.util.Collection;
             final INSTightlyCoupledKalmanState previousState,
             final double fx, final double fy, final double fz,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L689">        return estimate(measurements, convertTime(propagationInterval),</span>
+<span class="fc" id="L690">        return estimate(measurements, convertTime(propagationInterval),</span>
                 previousState, fx, fy, fz, config);
     }
 
@@ -714,13 +715,13 @@ import java.util.Collection;
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
 
-<span class="nc" id="L717">        final double fx = bodyKinematics.getFx();</span>
-<span class="nc" id="L718">        final double fy = bodyKinematics.getFy();</span>
-<span class="nc" id="L719">        final double fz = bodyKinematics.getFz();</span>
+<span class="fc" id="L718">        final double fx = bodyKinematics.getFx();</span>
+<span class="fc" id="L719">        final double fy = bodyKinematics.getFy();</span>
+<span class="fc" id="L720">        final double fz = bodyKinematics.getFz();</span>
 
-<span class="nc" id="L721">        estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L722">        estimate(measurements, propagationInterval, previousState,</span>
                 fx, fy, fz, previousLatitude, config, result);
-<span class="nc" id="L723">    }</span>
+<span class="fc" id="L724">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -743,10 +744,10 @@ import java.util.Collection;
             final BodyKinematics bodyKinematics,
             final double previousLatitude,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L746">        final INSTightlyCoupledKalmanState result = new INSTightlyCoupledKalmanState();</span>
-<span class="nc" id="L747">        estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L747">        final INSTightlyCoupledKalmanState result = new INSTightlyCoupledKalmanState();</span>
+<span class="fc" id="L748">        estimate(measurements, propagationInterval, previousState,</span>
                 bodyKinematics, previousLatitude, config, result);
-<span class="nc" id="L749">        return result;</span>
+<span class="fc" id="L750">        return result;</span>
     }
 
     /**
@@ -772,9 +773,9 @@ import java.util.Collection;
             final double previousLatitude,
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
-<span class="nc" id="L775">        estimate(measurements, convertTime(propagationInterval),</span>
+<span class="fc" id="L776">        estimate(measurements, convertTime(propagationInterval),</span>
                 previousState, bodyKinematics, previousLatitude, config, result);
-<span class="nc" id="L777">    }</span>
+<span class="fc" id="L778">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -797,7 +798,7 @@ import java.util.Collection;
             final BodyKinematics bodyKinematics,
             final double previousLatitude,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L800">        return estimate(measurements, convertTime(propagationInterval),</span>
+<span class="fc" id="L801">        return estimate(measurements, convertTime(propagationInterval),</span>
                 previousState, bodyKinematics, previousLatitude, config);
     }
 
@@ -823,13 +824,13 @@ import java.util.Collection;
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
 
-<span class="nc" id="L826">        final double fx = bodyKinematics.getFx();</span>
-<span class="nc" id="L827">        final double fy = bodyKinematics.getFy();</span>
-<span class="nc" id="L828">        final double fz = bodyKinematics.getFz();</span>
+<span class="fc" id="L827">        final double fx = bodyKinematics.getFx();</span>
+<span class="fc" id="L828">        final double fy = bodyKinematics.getFy();</span>
+<span class="fc" id="L829">        final double fz = bodyKinematics.getFz();</span>
 
-<span class="nc" id="L830">        estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L831">        estimate(measurements, propagationInterval, previousState,</span>
                 fx, fy, fz, config, result);
-<span class="nc" id="L832">    }</span>
+<span class="fc" id="L833">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -850,10 +851,10 @@ import java.util.Collection;
             final INSTightlyCoupledKalmanState previousState,
             final BodyKinematics bodyKinematics,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L853">        final INSTightlyCoupledKalmanState result = new INSTightlyCoupledKalmanState();</span>
-<span class="nc" id="L854">        estimate(measurements, propagationInterval, previousState, bodyKinematics,</span>
+<span class="fc" id="L854">        final INSTightlyCoupledKalmanState result = new INSTightlyCoupledKalmanState();</span>
+<span class="fc" id="L855">        estimate(measurements, propagationInterval, previousState, bodyKinematics,</span>
                 config, result);
-<span class="nc" id="L856">        return result;</span>
+<span class="fc" id="L857">        return result;</span>
     }
 
     /**
@@ -877,9 +878,9 @@ import java.util.Collection;
             final BodyKinematics bodyKinematics,
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
-<span class="nc" id="L880">        estimate(measurements, convertTime(propagationInterval), previousState,</span>
+<span class="fc" id="L881">        estimate(measurements, convertTime(propagationInterval), previousState,</span>
                 bodyKinematics, config, result);
-<span class="nc" id="L882">    }</span>
+<span class="fc" id="L883">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -900,7 +901,7 @@ import java.util.Collection;
             final INSTightlyCoupledKalmanState previousState,
             final BodyKinematics bodyKinematics,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L903">        return estimate(measurements, convertTime(propagationInterval),</span>
+<span class="fc" id="L904">        return estimate(measurements, convertTime(propagationInterval),</span>
                 previousState, bodyKinematics, config);
     }
 
@@ -934,9 +935,9 @@ import java.util.Collection;
             final Angle previousLatitude,
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
-<span class="nc" id="L937">        estimate(measurements, propagationInterval, previousState,</span>
-<span class="nc" id="L938">                fx, fy, fz, convertAngle(previousLatitude), config, result);</span>
-<span class="nc" id="L939">    }</span>
+<span class="fc" id="L938">        estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L939">                fx, fy, fz, convertAngle(previousLatitude), config, result);</span>
+<span class="fc" id="L940">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -966,8 +967,8 @@ import java.util.Collection;
             final double fx, final double fy, final double fz,
             final Angle previousLatitude,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L969">        return estimate(measurements, propagationInterval, previousState,</span>
-<span class="nc" id="L970">                fx, fy, fz, convertAngle(previousLatitude), config);</span>
+<span class="fc" id="L970">        return estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L971">                fx, fy, fz, convertAngle(previousLatitude), config);</span>
     }
 
     /**
@@ -1000,10 +1001,10 @@ import java.util.Collection;
             final Angle previousLatitude,
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
-<span class="nc" id="L1003">        estimate(measurements, propagationInterval, previousState,</span>
-<span class="nc" id="L1004">                fx, fy, fz, convertAngle(previousLatitude), config,</span>
+<span class="fc" id="L1004">        estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L1005">                fx, fy, fz, convertAngle(previousLatitude), config,</span>
                 result);
-<span class="nc" id="L1006">    }</span>
+<span class="fc" id="L1007">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -1033,8 +1034,8 @@ import java.util.Collection;
             final double fx, final double fy, final double fz,
             final Angle previousLatitude,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L1036">        return estimate(measurements, propagationInterval, previousState,</span>
-<span class="nc" id="L1037">                fx, fy, fz, convertAngle(previousLatitude), config);</span>
+<span class="fc" id="L1037">        return estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L1038">                fx, fy, fz, convertAngle(previousLatitude), config);</span>
     }
 
     /**
@@ -1060,9 +1061,9 @@ import java.util.Collection;
             final Angle previousLatitude,
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
-<span class="nc" id="L1063">        estimate(measurements, propagationInterval, previousState,</span>
-<span class="nc" id="L1064">                bodyKinematics, convertAngle(previousLatitude), config, result);</span>
-<span class="nc" id="L1065">    }</span>
+<span class="fc" id="L1064">        estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L1065">                bodyKinematics, convertAngle(previousLatitude), config, result);</span>
+<span class="fc" id="L1066">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -1085,8 +1086,8 @@ import java.util.Collection;
             final BodyKinematics bodyKinematics,
             final Angle previousLatitude,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L1088">        return estimate(measurements, propagationInterval, previousState,</span>
-<span class="nc" id="L1089">                bodyKinematics, convertAngle(previousLatitude), config);</span>
+<span class="fc" id="L1089">        return estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L1090">                bodyKinematics, convertAngle(previousLatitude), config);</span>
     }
 
     /**
@@ -1112,9 +1113,9 @@ import java.util.Collection;
             final Angle previousLatitude,
             final INSTightlyCoupledKalmanConfig config,
             final INSTightlyCoupledKalmanState result) throws AlgebraException {
-<span class="nc" id="L1115">        estimate(measurements, propagationInterval, previousState,</span>
-<span class="nc" id="L1116">                bodyKinematics, convertAngle(previousLatitude), config, result);</span>
-<span class="nc" id="L1117">    }</span>
+<span class="fc" id="L1116">        estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L1117">                bodyKinematics, convertAngle(previousLatitude), config, result);</span>
+<span class="fc" id="L1118">    }</span>
 
     /**
      * Estimates the update of Kalman filter state and covariance matrix for a single
@@ -1137,8 +1138,8 @@ import java.util.Collection;
             final BodyKinematics bodyKinematics,
             final Angle previousLatitude,
             final INSTightlyCoupledKalmanConfig config) throws AlgebraException {
-<span class="nc" id="L1140">        return estimate(measurements, propagationInterval, previousState,</span>
-<span class="nc" id="L1141">                bodyKinematics, convertAngle(previousLatitude), config);</span>
+<span class="fc" id="L1141">        return estimate(measurements, propagationInterval, previousState,</span>
+<span class="fc" id="L1142">                bodyKinematics, convertAngle(previousLatitude), config);</span>
     }
 
     /**
@@ -1148,8 +1149,8 @@ import java.util.Collection;
      * @return time value expressed in seconds.
      */
     private static double convertTime(final Time time) {
-<span class="nc" id="L1151">        return TimeConverter.convert(time.getValue().doubleValue(),</span>
-<span class="nc" id="L1152">                time.getUnit(), TimeUnit.SECOND);</span>
+<span class="fc" id="L1152">        return TimeConverter.convert(time.getValue().doubleValue(),</span>
+<span class="fc" id="L1153">                time.getUnit(), TimeUnit.SECOND);</span>
     }
 
     /**
@@ -1159,8 +1160,8 @@ import java.util.Collection;
      * @return angle value expressed in radians.
      */
     private static double convertAngle(final Angle angle) {
-<span class="nc" id="L1162">        return AngleConverter.convert(angle.getValue().doubleValue(),</span>
-<span class="nc" id="L1163">                angle.getUnit(), AngleUnit.RADIANS);</span>
+<span class="fc" id="L1163">        return AngleConverter.convert(angle.getValue().doubleValue(),</span>
+<span class="fc" id="L1164">                angle.getUnit(), AngleUnit.RADIANS);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
