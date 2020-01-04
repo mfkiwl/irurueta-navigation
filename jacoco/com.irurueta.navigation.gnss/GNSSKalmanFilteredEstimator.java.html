@@ -24,6 +24,7 @@ import com.irurueta.units.TimeUnit;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Calculates position, velocity, clock offset and clock drift using an
@@ -38,7 +39,7 @@ public class GNSSKalmanFilteredEstimator {
     /**
      * Internal estimator to compute least squares solution for GNSS measurements.
      */
-<span class="fc" id="L41">    private GNSSLeastSquaresPositionAndVelocityEstimator mLsEstimator =</span>
+<span class="fc" id="L42">    private GNSSLeastSquaresPositionAndVelocityEstimator mLsEstimator =</span>
             new GNSSLeastSquaresPositionAndVelocityEstimator();
 
     /**
@@ -47,7 +48,8 @@ public class GNSSKalmanFilteredEstimator {
     private GNSSKalmanFilteredEstimatorListener mListener;
 
     /**
-     * Minimum epoch interval between consecutive propagations or measurements.
+     * Minimum epoch interval expressed in seconds (s) between consecutive
+     * propagations or measurements.
      * Attempting to propagate results using Kalman filter or updating measurements when
      * intervals are lass than this value, will be ignored.
      */
@@ -89,8 +91,8 @@ public class GNSSKalmanFilteredEstimator {
     /**
      * Constructor.
      */
-<span class="fc" id="L92">    public GNSSKalmanFilteredEstimator() {</span>
-<span class="fc" id="L93">    }</span>
+<span class="fc" id="L94">    public GNSSKalmanFilteredEstimator() {</span>
+<span class="fc" id="L95">    }</span>
 
     /**
      * Constructor.
@@ -98,24 +100,24 @@ public class GNSSKalmanFilteredEstimator {
      * @param config GNSS Kalman filter configuration parameters (usually obtained
      *               through calibration).
      */
-<span class="fc" id="L101">    public GNSSKalmanFilteredEstimator(final GNSSKalmanConfig config) {</span>
-<span class="fc" id="L102">        mConfig = new GNSSKalmanConfig(config);</span>
-<span class="fc" id="L103">    }</span>
+<span class="fc" id="L103">    public GNSSKalmanFilteredEstimator(final GNSSKalmanConfig config) {</span>
+<span class="fc" id="L104">        mConfig = new GNSSKalmanConfig(config);</span>
+<span class="fc" id="L105">    }</span>
 
     /**
      * Constructor.
      *
-     * @param epochInterval minimum epoch interval between consecutive propagations or
-     *                      measurements.
+     * @param epochInterval minimum epoch interval expressed in seconds (s) between
+     *                      consecutive propagations or measurements.
      * @throws IllegalArgumentException if provided epoch interval is negative.
      */
-<span class="fc" id="L112">    public GNSSKalmanFilteredEstimator(final double epochInterval) {</span>
+<span class="fc" id="L114">    public GNSSKalmanFilteredEstimator(final double epochInterval) {</span>
         try {
-<span class="fc" id="L114">            setEpochInterval(epochInterval);</span>
-<span class="nc" id="L115">        } catch (final LockedException ignore) {</span>
+<span class="fc" id="L116">            setEpochInterval(epochInterval);</span>
+<span class="nc" id="L117">        } catch (final LockedException ignore) {</span>
             // never happens
-<span class="fc" id="L117">        }</span>
-<span class="fc" id="L118">    }</span>
+<span class="fc" id="L119">        }</span>
+<span class="fc" id="L120">    }</span>
 
     /**
      * Constructor.
@@ -123,24 +125,24 @@ public class GNSSKalmanFilteredEstimator {
      * @param listener listener to notify events raised by this instance.
      */
     public GNSSKalmanFilteredEstimator(
-<span class="fc" id="L126">            final GNSSKalmanFilteredEstimatorListener listener) {</span>
-<span class="fc" id="L127">        mListener = listener;</span>
-<span class="fc" id="L128">    }</span>
+<span class="fc" id="L128">            final GNSSKalmanFilteredEstimatorListener listener) {</span>
+<span class="fc" id="L129">        mListener = listener;</span>
+<span class="fc" id="L130">    }</span>
 
     /**
      * Constructor.
      *
      * @param config        GNSS Kalman filter configuration parameters (usually
      *                      obtained through calibration).
-     * @param epochInterval minimum epoch interval between consecutive propagations or
-     *                      measurements.
+     * @param epochInterval minimum epoch interval expressed in seconds (s) between
+     *                      consecutive propagations or measurements.
      * @throws IllegalArgumentException if provided epoch interval is negative.
      */
     public GNSSKalmanFilteredEstimator(final GNSSKalmanConfig config,
                                        final double epochInterval) {
-<span class="fc" id="L141">        this(epochInterval);</span>
-<span class="fc" id="L142">        mConfig = new GNSSKalmanConfig(config);</span>
-<span class="fc" id="L143">    }</span>
+<span class="fc" id="L143">        this(epochInterval);</span>
+<span class="fc" id="L144">        mConfig = new GNSSKalmanConfig(config);</span>
+<span class="fc" id="L145">    }</span>
 
     /**
      * Constructor.
@@ -152,41 +154,100 @@ public class GNSSKalmanFilteredEstimator {
     public GNSSKalmanFilteredEstimator(
             final GNSSKalmanConfig config,
             final GNSSKalmanFilteredEstimatorListener listener) {
-<span class="fc" id="L155">        this(config);</span>
-<span class="fc" id="L156">        mListener = listener;</span>
-<span class="fc" id="L157">    }</span>
+<span class="fc" id="L157">        this(config);</span>
+<span class="fc" id="L158">        mListener = listener;</span>
+<span class="fc" id="L159">    }</span>
 
     /**
      * Constructor.
      *
-     * @param epochInterval minimum epoch interval between consecutive propagations or
-     *                      measurements.
+     * @param epochInterval minimum epoch interval expressed in seconds (s) between
+     *                      consecutive propagations or measurements.
      * @param listener      listener to notify events raised by this instance.
      * @throws IllegalArgumentException if provided epoch interval is negative.
      */
     public GNSSKalmanFilteredEstimator(
             final double epochInterval,
             final GNSSKalmanFilteredEstimatorListener listener) {
-<span class="fc" id="L170">        this(epochInterval);</span>
-<span class="fc" id="L171">        mListener = listener;</span>
-<span class="fc" id="L172">    }</span>
+<span class="fc" id="L172">        this(epochInterval);</span>
+<span class="fc" id="L173">        mListener = listener;</span>
+<span class="fc" id="L174">    }</span>
 
     /**
      * Constructor.
      *
      * @param config        GNSS Kalman filter configuration parameters (usually obtained
      *                      through calibration).
-     * @param epochInterval minimum epoch interval between consecutive propagations or
-     *                      measurements.
+     * @param epochInterval minimum epoch interval expressed in seconds (s) between
+     *                      consecutive propagations or measurements.
      * @param listener      listener to notify events raised by this instance.
      * @throws IllegalArgumentException if provided epoch interval is negative.
      */
     public GNSSKalmanFilteredEstimator(
             final GNSSKalmanConfig config, final double epochInterval,
             final GNSSKalmanFilteredEstimatorListener listener) {
-<span class="fc" id="L187">        this(config, epochInterval);</span>
-<span class="fc" id="L188">        mListener = listener;</span>
-<span class="fc" id="L189">    }</span>
+<span class="fc" id="L189">        this(config, epochInterval);</span>
+<span class="fc" id="L190">        mListener = listener;</span>
+<span class="fc" id="L191">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param epochInterval minimum epoch interval between consecutive
+     *                      propagations or measurements.
+     * @throws IllegalArgumentException if provided epoch interval is negative.
+     */
+    public GNSSKalmanFilteredEstimator(final Time epochInterval) {
+<span class="fc" id="L201">        this(TimeConverter.convert(epochInterval.getValue().doubleValue(),</span>
+<span class="fc" id="L202">                epochInterval.getUnit(), TimeUnit.SECOND));</span>
+<span class="fc" id="L203">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param config        GNSS Kalman filter configuration parameters (usually
+     *                      obtained through calibration).
+     * @param epochInterval minimum epoch interval between consecutive propagations
+     *                      or measurements.
+     * @throws IllegalArgumentException if provided epoch interval is negative.
+     */
+    public GNSSKalmanFilteredEstimator(final GNSSKalmanConfig config,
+                                       final Time epochInterval) {
+<span class="fc" id="L216">        this(config, TimeConverter.convert(epochInterval.getValue().doubleValue(),</span>
+<span class="fc" id="L217">                epochInterval.getUnit(), TimeUnit.SECOND));</span>
+<span class="fc" id="L218">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param epochInterval minimum epoch interval between consecutive propagations
+     *                      or measurements.
+     * @param listener      listener to notify events raised by this instance.
+     * @throws IllegalArgumentException if provided epoch interval is negative.
+     */
+    public GNSSKalmanFilteredEstimator(
+            final Time epochInterval,
+            final GNSSKalmanFilteredEstimatorListener listener) {
+<span class="fc" id="L231">        this(epochInterval);</span>
+<span class="fc" id="L232">        mListener = listener;</span>
+<span class="fc" id="L233">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param config        GNSS Kalman filter configuration parameters (usually
+     *                      obtained through calibration).
+     * @param epochInterval minimum epoch interval between consecutive propagations
+     *                      or measurements.
+     * @param listener      listener to notify events raised by this instance.
+     * @throws IllegalArgumentException if provided epoch interval is negative.
+     */
+    public GNSSKalmanFilteredEstimator(
+            final GNSSKalmanConfig config, final Time epochInterval,
+            final GNSSKalmanFilteredEstimatorListener listener) {
+<span class="fc" id="L248">        this(config, epochInterval);</span>
+<span class="fc" id="L249">        mListener = listener;</span>
+<span class="fc" id="L250">    }</span>
 
     /**
      * Gets listener to notify events raised by this instance.
@@ -194,7 +255,7 @@ public class GNSSKalmanFilteredEstimator {
      * @return listener to notify events raised by this instance.
      */
     public GNSSKalmanFilteredEstimatorListener getListener() {
-<span class="fc" id="L197">        return mListener;</span>
+<span class="fc" id="L258">        return mListener;</span>
     }
 
     /**
@@ -205,16 +266,16 @@ public class GNSSKalmanFilteredEstimator {
      */
     public void setListener(final GNSSKalmanFilteredEstimatorListener listener)
             throws LockedException {
-<span class="fc bfc" id="L208" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L209">            throw new LockedException();</span>
+<span class="fc bfc" id="L269" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L270">            throw new LockedException();</span>
         }
 
-<span class="fc" id="L212">        mListener = listener;</span>
-<span class="fc" id="L213">    }</span>
+<span class="fc" id="L273">        mListener = listener;</span>
+<span class="fc" id="L274">    }</span>
 
     /**
-     * Gets minimum epoch interval between consecutive propagations or measurements
-     * expressed in seconds.
+     * Gets minimum epoch interval expressed in seconds (s) between consecutive
+     * propagations or measurements expressed in seconds.
      * Attempting to propagate results using Kalman filter or updating measurements
      * when intervals are less than this value, will be ignored.
      *
@@ -222,31 +283,31 @@ public class GNSSKalmanFilteredEstimator {
      * measurements.
      */
     public double getEpochInterval() {
-<span class="fc" id="L225">        return mEpochInterval;</span>
+<span class="fc" id="L286">        return mEpochInterval;</span>
     }
 
     /**
-     * Sets minimum epoch interval between consecutive propagations or measurements
-     * expressed in seconds.
+     * Sets minimum epoch interval expressed in seconds (s) between consecutive
+     * propagations or measurements expressed in seconds.
      * Attempting to propagate results using Kalman filter or updating measurements
      * when intervals are less than this value, will be ignored.
      *
-     * @param epochInterval minimum epoch interval between consecutive propagations
-     *                      or measurements.
+     * @param epochInterval minimum epoch interval expressed in seconds (s) between
+     *                      consecutive propagations or measurements.
      * @throws LockedException          if this estimator is already running.
      * @throws IllegalArgumentException if provided epoch interval is negative.
      */
     public void setEpochInterval(final double epochInterval) throws LockedException {
-<span class="fc bfc" id="L240" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L241">            throw new LockedException();</span>
+<span class="fc bfc" id="L301" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L302">            throw new LockedException();</span>
         }
 
-<span class="pc bpc" id="L244" title="1 of 2 branches missed.">        if (epochInterval &lt; 0.0) {</span>
-<span class="nc" id="L245">            throw new IllegalArgumentException();</span>
+<span class="pc bpc" id="L305" title="1 of 2 branches missed.">        if (epochInterval &lt; 0.0) {</span>
+<span class="nc" id="L306">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L248">        mEpochInterval = epochInterval;</span>
-<span class="fc" id="L249">    }</span>
+<span class="fc" id="L309">        mEpochInterval = epochInterval;</span>
+<span class="fc" id="L310">    }</span>
 
     /**
      * Gets minimum epoch interval between consecutive propagations or measurements.
@@ -256,9 +317,9 @@ public class GNSSKalmanFilteredEstimator {
      * @param result instance where minimum epoch interval will be stored.
      */
     public void getEpochIntervalAsTime(final Time result) {
-<span class="fc" id="L259">        result.setValue(mEpochInterval);</span>
-<span class="fc" id="L260">        result.setUnit(TimeUnit.SECOND);</span>
-<span class="fc" id="L261">    }</span>
+<span class="fc" id="L320">        result.setValue(mEpochInterval);</span>
+<span class="fc" id="L321">        result.setUnit(TimeUnit.SECOND);</span>
+<span class="fc" id="L322">    }</span>
 
     /**
      * Gets minimum epoch interval between consecutive propagations or measurements.
@@ -268,7 +329,7 @@ public class GNSSKalmanFilteredEstimator {
      * @return minimum epoch interval.
      */
     public Time getEpochIntervalAsTime() {
-<span class="fc" id="L271">        return new Time(mEpochInterval, TimeUnit.SECOND);</span>
+<span class="fc" id="L332">        return new Time(mEpochInterval, TimeUnit.SECOND);</span>
     }
 
     /**
@@ -281,11 +342,11 @@ public class GNSSKalmanFilteredEstimator {
      * @throws IllegalArgumentException if provided epoch interval is negative.
      */
     public void setEpochInterval(final Time epochInterval) throws LockedException {
-<span class="fc" id="L284">        final double epochIntervalSeconds = TimeConverter.convert(</span>
-<span class="fc" id="L285">                epochInterval.getValue().doubleValue(),</span>
-<span class="fc" id="L286">                epochInterval.getUnit(), TimeUnit.SECOND);</span>
-<span class="fc" id="L287">        setEpochInterval(epochIntervalSeconds);</span>
-<span class="fc" id="L288">    }</span>
+<span class="fc" id="L345">        final double epochIntervalSeconds = TimeConverter.convert(</span>
+<span class="fc" id="L346">                epochInterval.getValue().doubleValue(),</span>
+<span class="fc" id="L347">                epochInterval.getUnit(), TimeUnit.SECOND);</span>
+<span class="fc" id="L348">        setEpochInterval(epochIntervalSeconds);</span>
+<span class="fc" id="L349">    }</span>
 
     /**
      * Gets GNSS Kalman configuration parameters (usually obtained through
@@ -296,11 +357,11 @@ public class GNSSKalmanFilteredEstimator {
      * @return true if result instance is updated, false otherwise.
      */
     public boolean getConfig(final GNSSKalmanConfig result) {
-<span class="fc bfc" id="L299" title="All 2 branches covered.">        if (mConfig != null) {</span>
-<span class="fc" id="L300">            result.copyFrom(mConfig);</span>
-<span class="fc" id="L301">            return true;</span>
+<span class="fc bfc" id="L360" title="All 2 branches covered.">        if (mConfig != null) {</span>
+<span class="fc" id="L361">            result.copyFrom(mConfig);</span>
+<span class="fc" id="L362">            return true;</span>
         } else {
-<span class="fc" id="L303">            return false;</span>
+<span class="fc" id="L364">            return false;</span>
         }
     }
 
@@ -311,7 +372,7 @@ public class GNSSKalmanFilteredEstimator {
      * @return GNSS Kalman configuration parameters.
      */
     public GNSSKalmanConfig getConfig() {
-<span class="fc" id="L314">        return mConfig;</span>
+<span class="fc" id="L375">        return mConfig;</span>
     }
 
     /**
@@ -323,12 +384,12 @@ public class GNSSKalmanFilteredEstimator {
      */
     public void setConfig(final GNSSKalmanConfig config)
             throws LockedException {
-<span class="fc bfc" id="L326" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L327">            throw new LockedException();</span>
+<span class="fc bfc" id="L387" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L388">            throw new LockedException();</span>
         }
 
-<span class="fc" id="L330">        mConfig = new GNSSKalmanConfig(config);</span>
-<span class="fc" id="L331">    }</span>
+<span class="fc" id="L391">        mConfig = new GNSSKalmanConfig(config);</span>
+<span class="fc" id="L392">    }</span>
 
     /**
      * Gets last updated GNSS measurements of a collection of satellites.
@@ -336,8 +397,15 @@ public class GNSSKalmanFilteredEstimator {
      * @return last updated GNSS measurements of a collection of satellites.
      */
     public Collection&lt;GNSSMeasurement&gt; getMeasurements() {
-<span class="fc bfc" id="L339" title="All 2 branches covered.">        return mMeasurements != null ?</span>
-<span class="fc" id="L340">                new ArrayList&lt;&gt;(mMeasurements) : null;</span>
+<span class="fc bfc" id="L400" title="All 2 branches covered.">        if (mMeasurements == null) {</span>
+<span class="fc" id="L401">            return null;</span>
+        }
+
+<span class="fc" id="L404">        final List&lt;GNSSMeasurement&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L405" title="All 2 branches covered.">        for (GNSSMeasurement measurement : mMeasurements) {</span>
+<span class="fc" id="L406">            result.add(new GNSSMeasurement(measurement));</span>
+<span class="fc" id="L407">        }</span>
+<span class="fc" id="L408">        return result;</span>
     }
 
     /**
@@ -348,7 +416,7 @@ public class GNSSKalmanFilteredEstimator {
      * clock offset and clock drift.
      */
     public GNSSEstimation getEstimation() {
-<span class="fc bfc" id="L351" title="All 2 branches covered.">        return mEstimation != null ? new GNSSEstimation(mEstimation) : null;</span>
+<span class="fc bfc" id="L419" title="All 2 branches covered.">        return mEstimation != null ? new GNSSEstimation(mEstimation) : null;</span>
     }
 
     /**
@@ -360,11 +428,11 @@ public class GNSSKalmanFilteredEstimator {
      * @return true if result estimation was updated, false otherwise.
      */
     public boolean getEstimation(final GNSSEstimation result) {
-<span class="fc bfc" id="L363" title="All 2 branches covered.">        if (mEstimation != null) {</span>
-<span class="fc" id="L364">            result.copyFrom(mEstimation);</span>
-<span class="fc" id="L365">            return true;</span>
+<span class="fc bfc" id="L431" title="All 2 branches covered.">        if (mEstimation != null) {</span>
+<span class="fc" id="L432">            result.copyFrom(mEstimation);</span>
+<span class="fc" id="L433">            return true;</span>
         } else {
-<span class="fc" id="L367">            return false;</span>
+<span class="fc" id="L435">            return false;</span>
         }
     }
 
@@ -376,11 +444,11 @@ public class GNSSKalmanFilteredEstimator {
      * with Kalman filter covariance error matrix.
      */
     public GNSSKalmanState getState() {
-<span class="fc bfc" id="L379" title="All 2 branches covered.">        return mState != null ? new GNSSKalmanState(mState) : null;</span>
+<span class="fc bfc" id="L447" title="All 2 branches covered.">        return mState != null ? new GNSSKalmanState(mState) : null;</span>
     }
 
     /**
-     * Gets current Kalman filter state containing current GNSS estimatino along with
+     * Gets current Kalman filter state containing current GNSS estimation along with
      * Kalman filter covariance error matrix.
      * This method does not update result instance if no state is available.
      *
@@ -388,11 +456,11 @@ public class GNSSKalmanFilteredEstimator {
      * @return true if result state was updated, false otherwise.
      */
     public boolean getState(final GNSSKalmanState result) {
-<span class="fc bfc" id="L391" title="All 2 branches covered.">        if (mState != null) {</span>
-<span class="fc" id="L392">            result.copyFrom(mState);</span>
-<span class="fc" id="L393">            return true;</span>
+<span class="fc bfc" id="L459" title="All 2 branches covered.">        if (mState != null) {</span>
+<span class="fc" id="L460">            result.copyFrom(mState);</span>
+<span class="fc" id="L461">            return true;</span>
         } else {
-<span class="fc" id="L395">            return false;</span>
+<span class="fc" id="L463">            return false;</span>
         }
     }
 
@@ -404,7 +472,7 @@ public class GNSSKalmanFilteredEstimator {
      * state was last propagated.
      */
     public Double getLastStateTimestamp() {
-<span class="fc" id="L407">        return mLastStateTimestamp;</span>
+<span class="fc" id="L475">        return mLastStateTimestamp;</span>
     }
 
     /**
@@ -415,12 +483,12 @@ public class GNSSKalmanFilteredEstimator {
      * @return true if result instance is updated, false otherwise.
      */
     public boolean getLastStateTimestampAsTime(final Time result) {
-<span class="fc bfc" id="L418" title="All 2 branches covered.">        if (mLastStateTimestamp != null) {</span>
-<span class="fc" id="L419">            result.setValue(mLastStateTimestamp);</span>
-<span class="fc" id="L420">            result.setUnit(TimeUnit.SECOND);</span>
-<span class="fc" id="L421">            return true;</span>
+<span class="fc bfc" id="L486" title="All 2 branches covered.">        if (mLastStateTimestamp != null) {</span>
+<span class="fc" id="L487">            result.setValue(mLastStateTimestamp);</span>
+<span class="fc" id="L488">            result.setUnit(TimeUnit.SECOND);</span>
+<span class="fc" id="L489">            return true;</span>
         } else {
-<span class="fc" id="L423">            return false;</span>
+<span class="fc" id="L491">            return false;</span>
         }
     }
 
@@ -431,8 +499,8 @@ public class GNSSKalmanFilteredEstimator {
      * propagated.
      */
     public Time getLastStateTimestampAsTime() {
-<span class="fc bfc" id="L434" title="All 2 branches covered.">        return mLastStateTimestamp != null ?</span>
-<span class="fc" id="L435">                new Time(mLastStateTimestamp, TimeUnit.SECOND) : null;</span>
+<span class="fc bfc" id="L502" title="All 2 branches covered.">        return mLastStateTimestamp != null ?</span>
+<span class="fc" id="L503">                new Time(mLastStateTimestamp, TimeUnit.SECOND) : null;</span>
     }
 
     /**
@@ -441,7 +509,7 @@ public class GNSSKalmanFilteredEstimator {
      * @return true if this estimator is running, false otherwise.
      */
     public boolean isRunning() {
-<span class="fc" id="L444">        return mRunning;</span>
+<span class="fc" id="L512">        return mRunning;</span>
     }
 
     /**
@@ -453,14 +521,14 @@ public class GNSSKalmanFilteredEstimator {
      */
     public static boolean isUpdateMeasurementsReady(
             final Collection&lt;GNSSMeasurement&gt; measurements) {
-<span class="fc" id="L456">        return GNSSLeastSquaresPositionAndVelocityEstimator</span>
-<span class="fc" id="L457">                .isValidMeasurements(measurements);</span>
+<span class="fc" id="L524">        return GNSSLeastSquaresPositionAndVelocityEstimator</span>
+<span class="fc" id="L525">                .isValidMeasurements(measurements);</span>
     }
 
     /**
      * Updates GNSS measurements of this estimator when new satellite measurements
      * are available.
-     * Call to this method will be ignored if interval between provided timestamp
+     * Calls to this method will be ignored if interval between provided timestamp
      * and last timestamp when Kalman filter was updated is less than epoch interval.
      *
      * @param measurements GNSS measurements to be updated.
@@ -474,8 +542,9 @@ public class GNSSKalmanFilteredEstimator {
     public boolean updateMeasurements(
             final Collection&lt;GNSSMeasurement&gt; measurements, final Time timestamp)
             throws LockedException, NotReadyException, GNSSException {
-<span class="fc" id="L477">        return updateMeasurements(measurements, TimeConverter.convert(</span>
-<span class="fc" id="L478">                timestamp.getValue().doubleValue(), timestamp.getUnit(), TimeUnit.SECOND));</span>
+<span class="fc" id="L545">        return updateMeasurements(measurements, TimeConverter.convert(</span>
+<span class="fc" id="L546">                timestamp.getValue().doubleValue(), timestamp.getUnit(),</span>
+                TimeUnit.SECOND));
     }
 
     /**
@@ -496,48 +565,47 @@ public class GNSSKalmanFilteredEstimator {
             final Collection&lt;GNSSMeasurement&gt; measurements, final double timestamp)
             throws LockedException, NotReadyException, GNSSException {
 
-<span class="fc bfc" id="L499" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L500">            throw new LockedException();</span>
+<span class="fc bfc" id="L568" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L569">            throw new LockedException();</span>
         }
 
-<span class="fc bfc" id="L503" title="All 2 branches covered.">        if (!isUpdateMeasurementsReady(measurements)) {</span>
-<span class="fc" id="L504">            throw new NotReadyException();</span>
+<span class="fc bfc" id="L572" title="All 2 branches covered.">        if (!isUpdateMeasurementsReady(measurements)) {</span>
+<span class="fc" id="L573">            throw new NotReadyException();</span>
         }
 
-<span class="fc bfc" id="L507" title="All 2 branches covered.">        if (mLastStateTimestamp != null &amp;&amp;</span>
-<span class="pc bpc" id="L508" title="1 of 2 branches missed.">                timestamp - mLastStateTimestamp &lt;= mEpochInterval) {</span>
-<span class="fc" id="L509">            return false;</span>
+<span class="fc bfc" id="L576" title="All 2 branches covered.">        if (mLastStateTimestamp != null &amp;&amp;</span>
+<span class="pc bpc" id="L577" title="1 of 2 branches missed.">                timestamp - mLastStateTimestamp &lt;= mEpochInterval) {</span>
+<span class="fc" id="L578">            return false;</span>
         }
 
         try {
-<span class="fc" id="L513">            mRunning = true;</span>
+<span class="fc" id="L582">            mRunning = true;</span>
 
-<span class="pc bpc" id="L515" title="1 of 2 branches missed.">            if (mListener != null) {</span>
-<span class="fc" id="L516">                mListener.onUpdateStart(this);</span>
+<span class="pc bpc" id="L584" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L585">                mListener.onUpdateStart(this);</span>
             }
 
-<span class="fc" id="L519">            mMeasurements = new ArrayList&lt;&gt;(measurements);</span>
+<span class="fc" id="L588">            mMeasurements = new ArrayList&lt;&gt;(measurements);</span>
 
-<span class="fc" id="L521">            mLsEstimator.setMeasurements(mMeasurements);</span>
-<span class="fc" id="L522">            mLsEstimator.setPriorPositionAndVelocityFromEstimation(mEstimation);</span>
-<span class="pc bpc" id="L523" title="1 of 2 branches missed.">            if (mEstimation != null) {</span>
-<span class="nc" id="L524">                mLsEstimator.estimate(mEstimation);</span>
+<span class="fc" id="L590">            mLsEstimator.setMeasurements(mMeasurements);</span>
+<span class="fc" id="L591">            mLsEstimator.setPriorPositionAndVelocityFromEstimation(mEstimation);</span>
+<span class="pc bpc" id="L592" title="1 of 2 branches missed.">            if (mEstimation != null) {</span>
+<span class="nc" id="L593">                mLsEstimator.estimate(mEstimation);</span>
             } else {
-<span class="fc" id="L526">                mEstimation = mLsEstimator.estimate();</span>
+<span class="fc" id="L595">                mEstimation = mLsEstimator.estimate();</span>
             }
 
-<span class="pc bpc" id="L529" title="1 of 2 branches missed.">            if (mListener != null) {</span>
-<span class="fc" id="L530">                mListener.onUpdateEnd(this);</span>
+<span class="pc bpc" id="L598" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L599">                mListener.onUpdateEnd(this);</span>
             }
 
-<span class="fc" id="L533">            mRunning = false;</span>
-
-<span class="fc" id="L535">            propagate(timestamp);</span>
         } finally {
-<span class="fc" id="L537">            mRunning = false;</span>
+<span class="fc" id="L603">            mRunning = false;</span>
         }
 
-<span class="fc" id="L540">        return true;</span>
+<span class="fc" id="L606">        propagate(timestamp);</span>
+
+<span class="fc" id="L608">        return true;</span>
     }
 
     /**
@@ -546,7 +614,7 @@ public class GNSSKalmanFilteredEstimator {
      * @return true if estimator is ready, false otherwise.
      */
     public boolean isPropagateReady() {
-<span class="fc bfc" id="L549" title="All 4 branches covered.">        return mConfig != null &amp;&amp; mEstimation != null;</span>
+<span class="fc bfc" id="L617" title="All 4 branches covered.">        return mConfig != null &amp;&amp; mEstimation != null;</span>
     }
 
     /**
@@ -563,8 +631,8 @@ public class GNSSKalmanFilteredEstimator {
      */
     public boolean propagate(final Time timestamp) throws LockedException,
             NotReadyException, GNSSException {
-<span class="fc" id="L566">        return propagate(TimeConverter.convert(timestamp.getValue().doubleValue(),</span>
-<span class="fc" id="L567">                timestamp.getUnit(), TimeUnit.SECOND));</span>
+<span class="fc" id="L634">        return propagate(TimeConverter.convert(timestamp.getValue().doubleValue(),</span>
+<span class="fc" id="L635">                timestamp.getUnit(), TimeUnit.SECOND));</span>
     }
 
     /**
@@ -582,48 +650,48 @@ public class GNSSKalmanFilteredEstimator {
     public boolean propagate(final double timestamp) throws LockedException,
             NotReadyException, GNSSException {
 
-<span class="fc bfc" id="L585" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L586">            throw new LockedException();</span>
+<span class="fc bfc" id="L653" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L654">            throw new LockedException();</span>
         }
 
-<span class="fc bfc" id="L589" title="All 2 branches covered.">        if (!isPropagateReady()) {</span>
-<span class="fc" id="L590">            throw new NotReadyException();</span>
+<span class="fc bfc" id="L657" title="All 2 branches covered.">        if (!isPropagateReady()) {</span>
+<span class="fc" id="L658">            throw new NotReadyException();</span>
         }
 
-<span class="fc bfc" id="L593" title="All 2 branches covered.">        final double propagationInterval = mLastStateTimestamp != null ?</span>
-<span class="fc" id="L594">                timestamp - mLastStateTimestamp : 0.0;</span>
-<span class="fc bfc" id="L595" title="All 4 branches covered.">        if (mLastStateTimestamp != null &amp;&amp; propagationInterval &lt;= mEpochInterval) {</span>
-<span class="fc" id="L596">            return false;</span>
+<span class="fc bfc" id="L661" title="All 2 branches covered.">        final double propagationInterval = mLastStateTimestamp != null ?</span>
+<span class="fc" id="L662">                timestamp - mLastStateTimestamp : 0.0;</span>
+<span class="fc bfc" id="L663" title="All 4 branches covered.">        if (mLastStateTimestamp != null &amp;&amp; propagationInterval &lt;= mEpochInterval) {</span>
+<span class="fc" id="L664">            return false;</span>
         }
 
         try {
-<span class="fc" id="L600">            mRunning = true;</span>
+<span class="fc" id="L668">            mRunning = true;</span>
 
-<span class="pc bpc" id="L602" title="1 of 2 branches missed.">            if (mListener != null) {</span>
-<span class="fc" id="L603">                mListener.onPropagateStart(this);</span>
+<span class="pc bpc" id="L670" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L671">                mListener.onPropagateStart(this);</span>
             }
 
-<span class="fc bfc" id="L606" title="All 2 branches covered.">            if (mState == null) {</span>
-<span class="fc" id="L607">                mState = GNSSKalmanInitializer.initialize(mEstimation, mConfig);</span>
+<span class="fc bfc" id="L674" title="All 2 branches covered.">            if (mState == null) {</span>
+<span class="fc" id="L675">                mState = GNSSKalmanInitializer.initialize(mEstimation, mConfig);</span>
             }
 
-<span class="fc" id="L610">            GNSSKalmanEpochEstimator.estimate(mMeasurements, propagationInterval,</span>
+<span class="fc" id="L678">            GNSSKalmanEpochEstimator.estimate(mMeasurements, propagationInterval,</span>
                     mState, mConfig, mState);
-<span class="fc" id="L612">            mLastStateTimestamp = timestamp;</span>
+<span class="fc" id="L680">            mLastStateTimestamp = timestamp;</span>
 
-<span class="fc" id="L614">            mState.getEstimation(mEstimation);</span>
+<span class="fc" id="L682">            mState.getEstimation(mEstimation);</span>
 
-<span class="pc bpc" id="L616" title="1 of 2 branches missed.">            if (mListener != null) {</span>
-<span class="fc" id="L617">                mListener.onPropagateEnd(this);</span>
+<span class="pc bpc" id="L684" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L685">                mListener.onPropagateEnd(this);</span>
             }
 
-<span class="nc" id="L620">        } catch (final AlgebraException e) {</span>
-<span class="nc" id="L621">            throw new GNSSException(e);</span>
+<span class="nc" id="L688">        } catch (final AlgebraException e) {</span>
+<span class="nc" id="L689">            throw new GNSSException(e);</span>
         } finally {
-<span class="fc" id="L623">            mRunning = false;</span>
+<span class="fc" id="L691">            mRunning = false;</span>
         }
 
-<span class="fc" id="L626">        return true;</span>
+<span class="fc" id="L694">        return true;</span>
     }
 
     /**
@@ -632,21 +700,21 @@ public class GNSSKalmanFilteredEstimator {
      * @throws LockedException if this estimator is already running.
      */
     public void reset() throws LockedException {
-<span class="fc bfc" id="L635" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L636">            throw new LockedException();</span>
+<span class="fc bfc" id="L703" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L704">            throw new LockedException();</span>
         }
 
-<span class="fc" id="L639">        mRunning = true;</span>
-<span class="fc" id="L640">        mMeasurements = null;</span>
-<span class="fc" id="L641">        mEstimation = null;</span>
-<span class="fc" id="L642">        mState = null;</span>
-<span class="fc" id="L643">        mLastStateTimestamp = null;</span>
+<span class="fc" id="L707">        mRunning = true;</span>
+<span class="fc" id="L708">        mMeasurements = null;</span>
+<span class="fc" id="L709">        mEstimation = null;</span>
+<span class="fc" id="L710">        mState = null;</span>
+<span class="fc" id="L711">        mLastStateTimestamp = null;</span>
 
-<span class="pc bpc" id="L645" title="1 of 2 branches missed.">        if (mListener != null) {</span>
-<span class="fc" id="L646">            mListener.onReset(this);</span>
+<span class="pc bpc" id="L713" title="1 of 2 branches missed.">        if (mListener != null) {</span>
+<span class="fc" id="L714">            mListener.onReset(this);</span>
         }
 
-<span class="fc" id="L649">        mRunning = false;</span>
-<span class="fc" id="L650">    }</span>
+<span class="fc" id="L717">        mRunning = false;</span>
+<span class="fc" id="L718">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
