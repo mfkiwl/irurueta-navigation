@@ -1,0 +1,1610 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.calibration</a> &gt; <span class="el_source">KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator.java</span></div><h1>KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2020 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.inertial.calibration;
+
+import com.irurueta.algebra.AlgebraException;
+import com.irurueta.algebra.Matrix;
+import com.irurueta.algebra.Utils;
+import com.irurueta.algebra.WrongSizeException;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NotReadyException;
+import com.irurueta.navigation.frames.ECEFFrame;
+import com.irurueta.navigation.inertial.BodyKinematics;
+import com.irurueta.navigation.inertial.estimators.ECEFKinematicsEstimator;
+import com.irurueta.units.AngularSpeed;
+import com.irurueta.units.AngularSpeedConverter;
+import com.irurueta.units.AngularSpeedUnit;
+
+import java.util.Collection;
+
+/**
+ * Estimates gyroscope biases, cross couplings and scaling factors
+ * along with G-dependent cross biases introduced on the gyroscope by the
+ * specific forces sensed by the accelerometer.
+ * This estimator assumes that biases are known.
+ * &lt;p&gt;
+ * This calibrator uses a linear approach to find a minimum least squared error
+ * solution.
+ * &lt;p&gt;
+ * To use this calibrator at least 7 measurements at different known frames must
+ * be provided. In other words, accelerometer and gyroscope (i.e. body kinematics)
+ * samples must be obtained at 7 different positions, orientations and velocities
+ * (although typically velocities are always zero).
+ * &lt;p&gt;
+ * Measured gyroscope angular rates is assumed to follow the model shown below:
+ * &lt;pre&gt;
+ *     Ωmeas = bg + (I + Mg) * Ωtrue + Gg * ftrue + w
+ * &lt;/pre&gt;
+ * Where:
+ * - Ωmeas is the measured gyroscope angular rates. This is a 3x1 vector.
+ * - bg is the gyroscope bias. This is a known 3x1 vector.
+ * - I is the 3x3 identity matrix.
+ * - Mg is the 3x3 matrix containing cross-couplings and scaling factors. Ideally, on
+ * a perfect gyroscope, this should be a 3x3 zero matrix.
+ * - Ωtrue is ground-truth gyroscope angular rates.
+ * - Gg is the G-dependent cross biases introduced by the specific forces sensed
+ * by the accelerometer. Ideally, on a perfect gyroscope, this should be a 3x3
+ * zero matrix.
+ * - ftrue is ground-truth specific force. This is a 3x1 vector.
+ * - w is measurement noise. This is a 3x1 vector.
+ */
+public class KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator implements
+        KnownBiasAndFrameGyroscopeCalibrator&lt;FrameBodyKinematics,
+                KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener&gt; {
+
+    /**
+     * Indicates whether by default a common z-axis is assumed for both the accelerometer
+     * and gyroscope.
+     */
+    public static final boolean DEFAULT_USE_COMMON_Z_AXIS = false;
+
+    /**
+     * Required minimum number of measurements.
+     */
+    public static final int MINIMUM_MEASUREMENTS = 6;
+
+    /**
+     * Number of equations generated for each measurement.
+     */
+    private static final int EQUATIONS_PER_MEASUREMENT = 3;
+
+    /**
+     * Number of unknowns when common z-axis is assumed for both the accelerometer
+     * and gyroscope.
+     */
+    private static final int COMMON_Z_AXIS_UNKNOWNS = 15;
+
+    /**
+     * Number of unknowns for the general case.
+     */
+    private static final int GENERAL_UNKNOWNS = 18;
+
+    /**
+     * Contains a collection of body kinematics measurements taken at different
+     * frames (positions, orientations and velocities).
+     * If a single device IMU needs to be calibrated, typically all measurements are
+     * taken at the same position, with zero velocity and multiple orientations.
+     * However, if we just want to calibrate a given IMU model (e.g. obtain
+     * an average and less precise calibration for the IMU of a given phone model),
+     * we could take measurements collected throughout the planet at multiple positions
+     * while the phone remains static (e.g. while charging), hence each measurement
+     * position will change, velocity will remain zero and orientation will be
+     * typically constant at horizontal orientation while the phone remains on a
+     * flat surface.
+     */
+    private Collection&lt;? extends FrameBodyKinematics&gt; mMeasurements;
+
+    /**
+     * This flag indicates whether z-axis is assumed to be common for accelerometer
+     * and gyroscope.
+     * When enabled, this eliminates 3 variables from Mg matrix.
+     */
+<span class="fc" id="L115">    private boolean mCommonAxisUsed = DEFAULT_USE_COMMON_Z_AXIS;</span>
+
+    /**
+     * Listener to handle events raised by this calibrator.
+     */
+    private KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener mListener;
+
+    /**
+     * Known x coordinate of gyroscope bias expressed in radians per second (rad/s).
+     */
+    private double mBiasX;
+
+    /**
+     * Known y coordinate of gyroscope bias expressed in radians per second (rad/s).
+     */
+    private double mBiasY;
+
+    /**
+     * Known z coordinate of gyroscope bias expressed in radians per second (rad/s).
+     */
+    private double mBiasZ;
+
+    /**
+     * Estimated gyroscope scale factors and cross coupling errors.
+     * This is the product of matrix Tg containing cross coupling errors and Kg
+     * containing scaling factors.
+     * So that:
+     * &lt;pre&gt;
+     *     Mg = [sx    mxy  mxz] = Tg*Kg
+     *          [myx   sy   myz]
+     *          [mzx   mzy  sz ]
+     * &lt;/pre&gt;
+     * Where:
+     * &lt;pre&gt;
+     *     Kg = [sx 0   0 ]
+     *          [0  sy  0 ]
+     *          [0  0   sz]
+     * &lt;/pre&gt;
+     * and
+     * &lt;pre&gt;
+     *     Tg = [1          -alphaXy    alphaXz ]
+     *          [alphaYx    1           -alphaYz]
+     *          [-alphaZx   alphaZy     1       ]
+     * &lt;/pre&gt;
+     * Hence:
+     * &lt;pre&gt;
+     *     Mg = [sx    mxy  mxz] = Tg*Kg =  [sx             -sy * alphaXy   sz * alphaXz ]
+     *          [myx   sy   myz]            [sx * alphaYx   sy              -sz * alphaYz]
+     *          [mzx   mzy  sz ]            [-sx * alphaZx  sy * alphaZy    sz           ]
+     * &lt;/pre&gt;
+     * This instance allows any 3x3 matrix however, typically alphaYx, alphaZx and alphaZy
+     * are considered to be zero if the gyroscope z-axis is assumed to be the same
+     * as the body z-axis. When this is assumed, myx = mzx = mzy = 0 and the Mg matrix
+     * becomes upper diagonal:
+     * &lt;pre&gt;
+     *     Mg = [sx    mxy  mxz]
+     *          [0     sy   myz]
+     *          [0     0    sz ]
+     * &lt;/pre&gt;
+     * Values of this matrix are unitless.
+     */
+    private Matrix mEstimatedMg;
+
+    /**
+     * Estimated G-dependent cross biases introduced on the gyroscope by the
+     * specific forces sensed by the accelerometer.
+     * This instance allows any 3x3 matrix.
+     */
+    private Matrix mEstimatedGg;
+
+    /**
+     * Indicates whether calibrator is running.
+     */
+    private boolean mRunning;
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L193">    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator() {</span>
+<span class="fc" id="L194">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param listener listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+<span class="fc" id="L202">            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {</span>
+<span class="fc" id="L203">        mListener = listener;</span>
+<span class="fc" id="L204">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements collection of body kinematics measurements taken at
+     *                     different frames (positions, orientations and velocities).
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+<span class="fc" id="L213">            final Collection&lt;FrameBodyKinematics&gt; measurements) {</span>
+<span class="fc" id="L214">        mMeasurements = measurements;</span>
+<span class="fc" id="L215">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements collection of body kinematics measurements taken at
+     *                     different frames (positions, orientations and velocities).
+     * @param listener     listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L227">        this(measurements);</span>
+<span class="fc" id="L228">        mListener = listener;</span>
+<span class="fc" id="L229">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+<span class="fc" id="L238">            final boolean commonAxisUsed) {</span>
+<span class="fc" id="L239">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L240">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     * @param listener       listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final boolean commonAxisUsed,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L252">        this(commonAxisUsed);</span>
+<span class="fc" id="L253">        mListener = listener;</span>
+<span class="fc" id="L254">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements   collection of body kinematics measurements taken at
+     *                       different frames (positions, orientations and velocities).
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed) {
+<span class="fc" id="L267">        this(measurements);</span>
+<span class="fc" id="L268">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L269">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements   collection of body kinematics measurements taken at
+     *                       different frames (positions, orientations and velocities).
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     * @param listener       listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L284">        this(measurements, commonAxisUsed);</span>
+<span class="fc" id="L285">        mListener = listener;</span>
+<span class="fc" id="L286">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param biasX known x coordinate of gyroscope bias expressed in radians per second
+     *              (rad/s).
+     * @param biasY known y coordinate of gyroscope bias expressed in radians per second
+     *              (rad/s).
+     * @param biasZ known z coordinate of gyroscope bias expressed in radians per second
+     *              (rad/s).
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+<span class="fc" id="L299">            final double biasX, final double biasY, final double biasZ) {</span>
+        try {
+<span class="fc" id="L301">            setBiasCoordinates(biasX, biasY, biasZ);</span>
+<span class="nc" id="L302">        } catch (final LockedException ignore) {</span>
+            // never happens
+<span class="fc" id="L304">        }</span>
+<span class="fc" id="L305">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param biasX    known x coordinate of gyroscope bias expressed in radians per second
+     *                 (rad/s).
+     * @param biasY    known y coordinate of gyroscope bias expressed in radians per second
+     *                 (rad/s).
+     * @param biasZ    known z coordinate of gyroscope bias expressed in radians per second
+     *                 (rad/s).
+     * @param listener listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final double biasX, final double biasY, final double biasZ,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L321">        this(biasX, biasY, biasZ);</span>
+<span class="fc" id="L322">        mListener = listener;</span>
+<span class="fc" id="L323">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements collection of body kinematics measurements taken at
+     *                     different frames (positions, orientations and velocities).
+     * @param biasX        known x coordinate of gyroscope bias expressed in radians per second
+     *                     (rad/s).
+     * @param biasY        known y coordinate of gyroscope bias expressed in radians per second
+     *                     (rad/s).
+     * @param biasZ        known z coordinate of gyroscope bias expressed in radians per second
+     *                     (rad/s).
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final double biasX, final double biasY, final double biasZ) {
+<span class="fc" id="L340">        this(biasX, biasY, biasZ);</span>
+<span class="fc" id="L341">        mMeasurements = measurements;</span>
+<span class="fc" id="L342">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements collection of body kinematics measurements taken at
+     *                     different frames (positions, orientations and velocities).
+     * @param biasX        known x coordinate of gyroscope bias expressed in radians per second
+     *                     (rad/s).
+     * @param biasY        known y coordinate of gyroscope bias expressed in radians per second
+     *                     (rad/s).
+     * @param biasZ        known z coordinate of gyroscope bias expressed in radians per second
+     *                     (rad/s).
+     * @param listener     listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final double biasX, final double biasY, final double biasZ,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L361">        this(measurements, biasX, biasY, biasZ);</span>
+<span class="fc" id="L362">        mListener = listener;</span>
+<span class="fc" id="L363">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param biasX          known x coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param biasY          known y coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param biasZ          known z coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final double biasX, final double biasY, final double biasZ,
+            final boolean commonAxisUsed) {
+<span class="fc" id="L380">        this(biasX, biasY, biasZ);</span>
+<span class="fc" id="L381">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L382">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param biasX          known x coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param biasY          known y coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param biasZ          known z coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     * @param listener       listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final double biasX, final double biasY, final double biasZ,
+            final boolean commonAxisUsed,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L401">        this(biasX, biasY, biasZ, commonAxisUsed);</span>
+<span class="fc" id="L402">        mListener = listener;</span>
+<span class="fc" id="L403">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements   collection of body kinematics measurements taken at
+     *                       different frames (positions, orientations and velocities).
+     * @param biasX          known x coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param biasY          known y coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param biasZ          known z coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final double biasX, final double biasY, final double biasZ,
+            final boolean commonAxisUsed) {
+<span class="fc" id="L423">        this(measurements, biasX, biasY, biasZ);</span>
+<span class="fc" id="L424">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L425">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements   collection of body kinematics measurements taken at
+     *                       different frames (positions, orientations and velocities).
+     * @param biasX          known x coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param biasY          known y coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param biasZ          known z coordinate of gyroscope bias expressed in radians per second
+     *                       (rad/s).
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     * @param listener       listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final double biasX, final double biasY, final double biasZ,
+            final boolean commonAxisUsed,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L447">        this(measurements, biasX, biasY, biasZ, commonAxisUsed);</span>
+<span class="fc" id="L448">        mListener = listener;</span>
+<span class="fc" id="L449">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param biasX known x coordinate of gyroscope bias.
+     * @param biasY known y coordinate of gyroscope bias.
+     * @param biasZ known z coordinate of gyroscope bias.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final AngularSpeed biasX, final AngularSpeed biasY,
+<span class="fc" id="L460">            final AngularSpeed biasZ) {</span>
+        try {
+<span class="fc" id="L462">            setBiasCoordinates(biasX, biasY, biasZ);</span>
+<span class="nc" id="L463">        } catch (final LockedException ignore) {</span>
+            // never happens
+<span class="fc" id="L465">        }</span>
+<span class="fc" id="L466">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param biasX    known x coordinate of gyroscope bias.
+     * @param biasY    known y coordinate of gyroscope bias.
+     * @param biasZ    known z coordinate of gyroscope bias.
+     * @param listener listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final AngularSpeed biasX, final AngularSpeed biasY, final AngularSpeed biasZ,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L479">        this(biasX, biasY, biasZ);</span>
+<span class="fc" id="L480">        mListener = listener;</span>
+<span class="fc" id="L481">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements collection of body kinematics measurements taken at
+     *                     different frames (positions, orientations and velocities).
+     * @param biasX        known x coordinate of gyroscope bias.
+     * @param biasY        known y coordinate of gyroscope bias.
+     * @param biasZ        known z coordinate of gyroscope bias.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final AngularSpeed biasX, final AngularSpeed biasY, final AngularSpeed biasZ) {
+<span class="fc" id="L495">        this(biasX, biasY, biasZ);</span>
+<span class="fc" id="L496">        mMeasurements = measurements;</span>
+<span class="fc" id="L497">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements collection of body kinematics measurements taken at
+     *                     different frames (positions, orientations and velocities).
+     * @param biasX        known x coordinate of gyroscope bias.
+     * @param biasY        known y coordinate of gyroscope bias.
+     * @param biasZ        known z coordinate of gyroscope bias.
+     * @param listener     listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final AngularSpeed biasX, final AngularSpeed biasY, final AngularSpeed biasZ,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L513">        this(measurements, biasX, biasY, biasZ);</span>
+<span class="fc" id="L514">        mListener = listener;</span>
+<span class="fc" id="L515">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param biasX          known x coordinate of gyroscope bias.
+     * @param biasY          known y coordinate of gyroscope bias.
+     * @param biasZ          known z coordinate of gyroscope bias.
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final AngularSpeed biasX, final AngularSpeed biasY, final AngularSpeed biasZ,
+            final boolean commonAxisUsed) {
+<span class="fc" id="L529">        this(biasX, biasY, biasZ);</span>
+<span class="fc" id="L530">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L531">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param biasX          known x coordinate of gyroscope bias.
+     * @param biasY          known y coordinate of gyroscope bias.
+     * @param biasZ          known z coordinate of gyroscope bias.
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     * @param listener       listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final AngularSpeed biasX, final AngularSpeed biasY, final AngularSpeed biasZ,
+            final boolean commonAxisUsed,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L547">        this(biasX, biasY, biasZ, commonAxisUsed);</span>
+<span class="fc" id="L548">        mListener = listener;</span>
+<span class="fc" id="L549">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements   collection of body kinematics measurements taken at
+     *                       different frames (positions, orientations and velocities).
+     * @param biasX          known x coordinate of gyroscope bias.
+     * @param biasY          known y coordinate of gyroscope bias.
+     * @param biasZ          known z coordinate of gyroscope bias.
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final AngularSpeed biasX, final AngularSpeed biasY, final AngularSpeed biasZ,
+            final boolean commonAxisUsed) {
+<span class="fc" id="L566">        this(measurements, biasX, biasY, biasZ);</span>
+<span class="fc" id="L567">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L568">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements   collections of body kinematics measurements taken at
+     *                       different frames (positions, orientations and velocities).
+     * @param biasX          known x coordinate of gyroscope bias.
+     * @param biasY          known y coordinate of gyroscope bias.
+     * @param biasZ          known z coordinate of gyroscope bias.
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common for
+     *                       accelerometer and gyroscope.
+     * @param listener       listener to handle events raised by this calibrator.
+     */
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibrator(
+            final Collection&lt;FrameBodyKinematics&gt; measurements,
+            final AngularSpeed biasX, final AngularSpeed biasY, final AngularSpeed biasZ,
+            final boolean commonAxisUsed,
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L587">        this(measurements, biasX, biasY, biasZ, commonAxisUsed);</span>
+<span class="fc" id="L588">        mListener = listener;</span>
+<span class="fc" id="L589">    }</span>
+
+    /**
+     * Gets a collection of body kinematics measurements taken at different
+     * frames (positions, orientations and velocities).
+     * If a single device IMU needs to be calibrated, typically all measurements are
+     * taken at the same position, with zero velocity and multiple orientations.
+     * However, if we just want to calibrate a given IMU model (e.g. obtain
+     * an average and less precise calibration for the IMU of a given phone model),
+     * we could take measurements collected throughout the planet at multiple positions
+     * while the phone remains static (e.g. while charging), hence each measurement
+     * position will change, velocity will remain zero and orientation will be
+     * typically constant at horizontal orientation while the phone remains on a
+     * flat surface.
+     *
+     * @return a collection of body kinematics measurements taken at different
+     * frames (positions, orientations and velocities).
+     */
+    @Override
+    public Collection&lt;? extends FrameBodyKinematics&gt; getMeasurements() {
+<span class="fc" id="L609">        return mMeasurements;</span>
+    }
+
+    /**
+     * Sets a collection of body kinematics measurements taken at different
+     * frames (positions, orientations and velocities).
+     * If a single device IMU needs to be calibrated, typically all measurements are
+     * taken at the same position, with zero velocity and multiple orientations.
+     * However, if we just want to calibrate the a given IMU model (e.g. obtain
+     * an average and less precise calibration for the IMU of a given phone model),
+     * we could take measurements collected throughout the planet at multiple positions
+     * while the phone remains static (e.g. while charging), hence each measurement
+     * position will change, velocity will remain zero and orientation will be
+     * typically constant at horizontal orientation while the phone remains on a
+     * flat surface.
+     *
+     * @param measurements collection of body kinematics measurements taken at different
+     *                     frames (positions, orientations and velocities).
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setMeasurements(final Collection&lt;? extends FrameBodyKinematics&gt; measurements)
+            throws LockedException {
+<span class="fc bfc" id="L632" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L633">            throw new LockedException();</span>
+        }
+<span class="fc" id="L635">        mMeasurements = measurements;</span>
+<span class="fc" id="L636">    }</span>
+
+    /**
+     * Indicates whether z-axis is assumed to be common for accelerometer and
+     * gyroscope.
+     * When enabled, this eliminates 3 variables from Mg matrix.
+     *
+     * @return true if z-axis is assumed to be common for accelerometer and gyroscope,
+     * false otherwise.
+     */
+    @Override
+    public boolean isCommonAxisUsed() {
+<span class="fc" id="L648">        return mCommonAxisUsed;</span>
+    }
+
+    /**
+     * Specifies whether z-axis is assumed to be common for accelerometer and
+     * gyroscope.
+     * When enabled, this eliminates 3 variables from Mg matrix.
+     *
+     * @param commonAxisUsed true if z-axis is assumed to be common for accelerometer
+     *                       and gyroscope, false otherwise.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setCommonAxisUsed(final boolean commonAxisUsed) throws LockedException {
+<span class="fc bfc" id="L662" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L663">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L666">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L667">    }</span>
+
+    /**
+     * Gets listener to handle events raised by this calibrator.
+     *
+     * @return listener to handle events raised by this calibrator.
+     */
+    @Override
+    public KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener getListener() {
+<span class="fc" id="L676">        return mListener;</span>
+    }
+
+    /**
+     * Sets listener to handle events raised by this calibrator.
+     *
+     * @param listener listener to handle events raised by this calibrator.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setListener(
+            final KnownBiasAndFrameGyroscopeLinearLeastSquaresCalibratorListener listener)
+            throws LockedException {
+<span class="fc bfc" id="L689" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L690">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L693">        mListener = listener;</span>
+<span class="fc" id="L694">    }</span>
+
+    /**
+     * Gets known x coordinate of gyroscope bias expressed in radians per second
+     * (rad/s).
+     *
+     * @return x coordinate of gyroscope bias.
+     */
+    @Override
+    public double getBiasX() {
+<span class="fc" id="L704">        return mBiasX;</span>
+    }
+
+    /**
+     * Sets known x coordinate of gyroscope bias expressed in radians per second
+     * (rad/s).
+     *
+     * @param biasX x coordinate of gyroscope bias.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setBiasX(final double biasX) throws LockedException {
+<span class="fc bfc" id="L716" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L717">            throw new LockedException();</span>
+        }
+<span class="fc" id="L719">        mBiasX = biasX;</span>
+<span class="fc" id="L720">    }</span>
+
+    /**
+     * Gets known y coordinate of gyroscope bias expressed in radians per second
+     * (rad/s).
+     *
+     * @return y coordinate of gyroscope bias.
+     */
+    @Override
+    public double getBiasY() {
+<span class="fc" id="L730">        return mBiasY;</span>
+    }
+
+    /**
+     * Sets known y coordinate of gyroscope bias expressed in radians per second
+     * (rad/s).
+     *
+     * @param biasY y coordinate of gyroscope bias.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setBiasY(final double biasY) throws LockedException {
+<span class="fc bfc" id="L742" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L743">            throw new LockedException();</span>
+        }
+<span class="fc" id="L745">        mBiasY = biasY;</span>
+<span class="fc" id="L746">    }</span>
+
+    /**
+     * Gets known z coordinate of gyroscope bias expressed in radians per second
+     * (rad/s).
+     *
+     * @return z coordinate of gyroscope bias.
+     */
+    @Override
+    public double getBiasZ() {
+<span class="fc" id="L756">        return mBiasZ;</span>
+    }
+
+    /**
+     * Sets known z coordinate of gyroscope bias expressed in radians per second
+     * (rad/s).
+     *
+     * @param biasZ z coordinate of gyroscope bias.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setBiasZ(final double biasZ) throws LockedException {
+<span class="fc bfc" id="L768" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L769">            throw new LockedException();</span>
+        }
+<span class="fc" id="L771">        mBiasZ = biasZ;</span>
+<span class="fc" id="L772">    }</span>
+
+    /**
+     * Gets known x coordinate of gyroscope bias.
+     *
+     * @return x coordinate of gyroscope bias.
+     */
+    @Override
+    public AngularSpeed getBiasAngularSpeedX() {
+<span class="fc" id="L781">        return new AngularSpeed(mBiasX, AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+    }
+
+    /**
+     * Gets known x coordinate of gyroscope bias.
+     *
+     * @param result instance where result data will be stored.
+     */
+    @Override
+    public void getBiasAngularSpeedX(final AngularSpeed result) {
+<span class="fc" id="L791">        result.setValue(mBiasX);</span>
+<span class="fc" id="L792">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L793">    }</span>
+
+    /**
+     * Sets known x coordinate of gyroscope bias.
+     *
+     * @param biasX x coordinate of gyroscope bias.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setBiasX(final AngularSpeed biasX) throws LockedException {
+<span class="fc bfc" id="L803" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L804">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L807">        mBiasX = convertAngularSpeed(biasX);</span>
+<span class="fc" id="L808">    }</span>
+
+    /**
+     * Gets known y coordinate of gyroscope bias.
+     *
+     * @return y coordinate of gyroscope bias.
+     */
+    @Override
+    public AngularSpeed getBiasAngularSpeedY() {
+<span class="fc" id="L817">        return new AngularSpeed(mBiasY, AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+    }
+
+    /**
+     * Gets known y coordinate of gyroscope bias.
+     *
+     * @param result instance where result data will be stored.
+     */
+    @Override
+    public void getBiasAngularSpeedY(final AngularSpeed result) {
+<span class="fc" id="L827">        result.setValue(mBiasY);</span>
+<span class="fc" id="L828">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L829">    }</span>
+
+    /**
+     * Sets known y coordinate of gyroscope bias.
+     *
+     * @param biasY y coordinate of gyroscope bias.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setBiasY(final AngularSpeed biasY) throws LockedException {
+<span class="fc bfc" id="L839" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L840">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L843">        mBiasY = convertAngularSpeed(biasY);</span>
+<span class="fc" id="L844">    }</span>
+
+    /**
+     * Gets known z coordinate of gyroscope bias.
+     *
+     * @return z coordinate of gyroscope bias.
+     */
+    @Override
+    public AngularSpeed getBiasAngularSpeedZ() {
+<span class="fc" id="L853">        return new AngularSpeed(mBiasZ, AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+    }
+
+    /**
+     * Gets known z coordinate of gyroscope bias.
+     *
+     * @param result instance where result data will be stored.
+     */
+    @Override
+    public void getBiasAngularSpeedZ(final AngularSpeed result) {
+<span class="fc" id="L863">        result.setValue(mBiasZ);</span>
+<span class="fc" id="L864">        result.setUnit(AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L865">    }</span>
+
+    /**
+     * Sets known z coordinate of gyroscope bias.
+     *
+     * @param biasZ z coordinate of gyroscope bias.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setBiasZ(final AngularSpeed biasZ) throws LockedException {
+<span class="fc bfc" id="L875" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L876">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L879">        mBiasZ = convertAngularSpeed(biasZ);</span>
+<span class="fc" id="L880">    }</span>
+
+    /**
+     * Sets known gyroscope bias coordinates expressed in radians per second
+     * (rad/s).
+     *
+     * @param biasX x coordinate of gyroscope bias.
+     * @param biasY y coordinate of gyroscope bias.
+     * @param biasZ z coordinate of gyroscope bias.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setBiasCoordinates(final double biasX, final double biasY, final double biasZ)
+            throws LockedException {
+<span class="fc bfc" id="L894" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L895">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L898">        mBiasX = biasX;</span>
+<span class="fc" id="L899">        mBiasY = biasY;</span>
+<span class="fc" id="L900">        mBiasZ = biasZ;</span>
+<span class="fc" id="L901">    }</span>
+
+    /**
+     * Sets known gyroscope bias coordinates.
+     *
+     * @param biasX x coordinate of gyroscope bias.
+     * @param biasY y coordinate of gyroscope bias.
+     * @param biasZ z coordinate of gyroscope bias.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setBiasCoordinates(
+            final AngularSpeed biasX, final AngularSpeed biasY, final AngularSpeed biasZ)
+            throws LockedException {
+<span class="fc bfc" id="L915" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L916">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L919">        mBiasX = convertAngularSpeed(biasX);</span>
+<span class="fc" id="L920">        mBiasY = convertAngularSpeed(biasY);</span>
+<span class="fc" id="L921">        mBiasZ = convertAngularSpeed(biasZ);</span>
+<span class="fc" id="L922">    }</span>
+
+    /**
+     * Gets known gyroscope bias as an array.
+     * Array values are expressed in radians per second (rad/s).
+     *
+     * @return array containing coordinate of known bias.
+     */
+    @Override
+    public double[] getBias() {
+<span class="fc" id="L932">        final double[] result = new double[BodyKinematics.COMPONENTS];</span>
+<span class="fc" id="L933">        getBias(result);</span>
+<span class="fc" id="L934">        return result;</span>
+    }
+
+    /**
+     * Gets known gyroscope bias as an array.
+     * Array values are expressed in radians per second (rad/s).
+     *
+     * @param result instance where result data will be copied to.
+     * @throws IllegalArgumentException if provided array does not have length 3.
+     */
+    @Override
+    public void getBias(final double[] result) {
+<span class="fc bfc" id="L946" title="All 2 branches covered.">        if (result.length != BodyKinematics.COMPONENTS) {</span>
+<span class="fc" id="L947">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L949">        result[0] = mBiasX;</span>
+<span class="fc" id="L950">        result[1] = mBiasY;</span>
+<span class="fc" id="L951">        result[2] = mBiasZ;</span>
+<span class="fc" id="L952">    }</span>
+
+    /**
+     * Sets known gyroscope bias as an array.
+     * Array values are expressed in radians per second (rad/s).
+     *
+     * @param bias known gyroscope bias.
+     * @throws LockedException          if calibrator is currently running.
+     * @throws IllegalArgumentException if provided array does not have length 3.
+     */
+    @Override
+    public void setBias(final double[] bias) throws LockedException {
+<span class="fc bfc" id="L964" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L965">            throw new LockedException();</span>
+        }
+
+<span class="fc bfc" id="L968" title="All 2 branches covered.">        if (bias.length != BodyKinematics.COMPONENTS) {</span>
+<span class="fc" id="L969">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L971">        mBiasX = bias[0];</span>
+<span class="fc" id="L972">        mBiasY = bias[1];</span>
+<span class="fc" id="L973">        mBiasZ = bias[2];</span>
+<span class="fc" id="L974">    }</span>
+
+    /**
+     * Gets known gyroscope bias as a column matrix.
+     *
+     * @return known gyroscope bias as a column matrix.
+     */
+    @Override
+    public Matrix getBiasAsMatrix() {
+        Matrix result;
+        try {
+<span class="fc" id="L985">            result = new Matrix(BodyKinematics.COMPONENTS, 1);</span>
+<span class="fc" id="L986">            getBiasAsMatrix(result);</span>
+<span class="nc" id="L987">        } catch (final WrongSizeException ignore) {</span>
+            // never happens
+<span class="nc" id="L989">            result = null;</span>
+<span class="fc" id="L990">        }</span>
+<span class="fc" id="L991">        return result;</span>
+    }
+
+    /**
+     * Gets known gyroscope bias as a column matrix.
+     *
+     * @param result instance where result data will be copied to.
+     * @throws IllegalArgumentException if provided matrix is not 3x1.
+     */
+    @Override
+    public void getBiasAsMatrix(final Matrix result) {
+<span class="fc bfc" id="L1002" title="All 2 branches covered.">        if (result.getRows() != BodyKinematics.COMPONENTS</span>
+<span class="fc bfc" id="L1003" title="All 2 branches covered.">                || result.getColumns() != 1) {</span>
+<span class="fc" id="L1004">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L1006">        result.setElementAtIndex(0, mBiasX);</span>
+<span class="fc" id="L1007">        result.setElementAtIndex(1, mBiasY);</span>
+<span class="fc" id="L1008">        result.setElementAtIndex(2, mBiasZ);</span>
+<span class="fc" id="L1009">    }</span>
+
+    /**
+     * Sets known gyroscope bias as a column matrix.
+     *
+     * @param bias gyroscope bias to be set.
+     * @throws LockedException          if calibrator is currently running.
+     * @throws IllegalArgumentException if provided matrix is not 3x1.
+     */
+    @Override
+    public void setBias(final Matrix bias) throws LockedException {
+<span class="fc bfc" id="L1020" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1021">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L1023" title="All 2 branches covered.">        if (bias.getRows() != BodyKinematics.COMPONENTS</span>
+<span class="fc bfc" id="L1024" title="All 2 branches covered.">                || bias.getColumns() != 1) {</span>
+<span class="fc" id="L1025">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L1028">        mBiasX = bias.getElementAtIndex(0);</span>
+<span class="fc" id="L1029">        mBiasY = bias.getElementAtIndex(1);</span>
+<span class="fc" id="L1030">        mBiasZ = bias.getElementAtIndex(2);</span>
+<span class="fc" id="L1031">    }</span>
+
+    /**
+     * Indicates whether calibrator is ready to start the calibration.
+     *
+     * @return true if calibrator is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+<span class="fc bfc" id="L1040" title="All 2 branches covered.">        return mMeasurements != null</span>
+<span class="fc bfc" id="L1041" title="All 2 branches covered.">                &amp;&amp; mMeasurements.size() &gt;= MINIMUM_MEASUREMENTS;</span>
+    }
+
+    /**
+     * Indicates whether calibrator is currently running or not.
+     *
+     * @return true if calibrator is running, false otherwise.
+     */
+    @Override
+    public boolean isRunning() {
+<span class="fc" id="L1051">        return mRunning;</span>
+    }
+
+    /**
+     * Estimates gyroscope calibration parameters containing bias, scale factors,
+     * cross-coupling errors and g-dependant cross biases.
+     *
+     * @throws LockedException      if calibrator is currently running.
+     * @throws NotReadyException    if calibrator is not ready.
+     * @throws CalibrationException if calibration fails for numerical reasons.
+     */
+    @Override
+    public void calibrate() throws LockedException, NotReadyException, CalibrationException {
+<span class="fc bfc" id="L1064" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1065">            throw new LockedException();</span>
+        }
+
+<span class="pc bpc" id="L1068" title="1 of 2 branches missed.">        if (!isReady()) {</span>
+<span class="nc" id="L1069">            throw new NotReadyException();</span>
+        }
+
+        try {
+<span class="fc" id="L1073">            mRunning = true;</span>
+
+<span class="pc bpc" id="L1075" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L1076">                mListener.onCalibrateStart(this);</span>
+            }
+
+<span class="fc bfc" id="L1079" title="All 2 branches covered.">            if (mCommonAxisUsed) {</span>
+<span class="fc" id="L1080">                calibrateCommonAxis();</span>
+            } else {
+<span class="fc" id="L1082">                calibrateGeneral();</span>
+            }
+
+<span class="pc bpc" id="L1085" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L1086">                mListener.onCalibrateEnd(this);</span>
+            }
+
+<span class="nc" id="L1089">        } catch (final AlgebraException e) {</span>
+<span class="nc" id="L1090">            throw new CalibrationException(e);</span>
+        } finally {
+<span class="fc" id="L1092">            mRunning = false;</span>
+        }
+<span class="fc" id="L1094">    }</span>
+
+    /**
+     * Gets estimated gyroscope scale factors and cross coupling errors.
+     * This is the product of matrix Tg containing cross coupling errors and Kg
+     * containing scaling factors.
+     * So that:
+     * &lt;pre&gt;
+     *     Mg = [sx    mxy  mxz] = Tg*Kg
+     *          [myx   sy   myz]
+     *          [mzx   mzy  sz ]
+     * &lt;/pre&gt;
+     * Where:
+     * &lt;pre&gt;
+     *     Kg = [sx 0   0 ]
+     *          [0  sy  0 ]
+     *          [0  0   sz]
+     * &lt;/pre&gt;
+     * and
+     * &lt;pre&gt;
+     *     Tg = [1          -alphaXy    alphaXz ]
+     *          [alphaYx    1           -alphaYz]
+     *          [-alphaZx   alphaZy     1       ]
+     * &lt;/pre&gt;
+     * Hence:
+     * &lt;pre&gt;
+     *     Mg = [sx    mxy  mxz] = Tg*Kg =  [sx             -sy * alphaXy   sz * alphaXz ]
+     *          [myx   sy   myz]            [sx * alphaYx   sy              -sz * alphaYz]
+     *          [mzx   mzy  sz ]            [-sx * alphaZx  sy * alphaZy    sz           ]
+     * &lt;/pre&gt;
+     * This instance allows any 3x3 matrix however, typically alphaYx, alphaZx and alphaZy
+     * are considered to be zero if the gyroscope z-axis is assumed to be the same
+     * as the body z-axis. When this is assumed, myx = mzx = mzy = 0 and the Mg matrix
+     * becomes upper diagonal:
+     * &lt;pre&gt;
+     *     Mg = [sx    mxy  mxz]
+     *          [0     sy   myz]
+     *          [0     0    sz ]
+     * &lt;/pre&gt;
+     * Values of this matrix are unitless.
+     *
+     * @return estimated gyroscope scale factors and cross coupling errors.
+     */
+    @Override
+    public Matrix getEstimatedMg() {
+<span class="fc" id="L1139">        return mEstimatedMg;</span>
+    }
+
+    /**
+     * Gets estimated x-axis scale factor.
+     *
+     * @return estimated x-axis scale factor or null if not available.
+     */
+    @Override
+    public Double getEstimatedSx() {
+<span class="fc bfc" id="L1149" title="All 2 branches covered.">        return mEstimatedMg != null ?</span>
+<span class="fc" id="L1150">                mEstimatedMg.getElementAt(0, 0) : null;</span>
+    }
+
+    /**
+     * Gets estimated y-axis scale factor.
+     *
+     * @return estimated y-axis scale factor or null if not available.
+     */
+    @Override
+    public Double getEstimatedSy() {
+<span class="fc bfc" id="L1160" title="All 2 branches covered.">        return mEstimatedMg != null ?</span>
+<span class="fc" id="L1161">                mEstimatedMg.getElementAt(1, 1) : null;</span>
+    }
+
+    /**
+     * Gets estimated z-axis scale factor.
+     *
+     * @return estimated z-axis scale factor or null if not available.
+     */
+    @Override
+    public Double getEstimatedSz() {
+<span class="fc bfc" id="L1171" title="All 2 branches covered.">        return mEstimatedMg != null ?</span>
+<span class="fc" id="L1172">                mEstimatedMg.getElementAt(2, 2) : null;</span>
+    }
+
+    /**
+     * Gets estimated x-y cross-coupling error.
+     *
+     * @return estimated x-y cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMxy() {
+<span class="fc bfc" id="L1182" title="All 2 branches covered.">        return mEstimatedMg != null ?</span>
+<span class="fc" id="L1183">                mEstimatedMg.getElementAt(0, 1) : null;</span>
+    }
+
+    /**
+     * Gets estimated x-z cross-coupling error.
+     *
+     * @return estimated x-z cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMxz() {
+<span class="fc bfc" id="L1193" title="All 2 branches covered.">        return mEstimatedMg != null ?</span>
+<span class="fc" id="L1194">                mEstimatedMg.getElementAt(0, 2) : null;</span>
+    }
+
+    /**
+     * Gets estimated y-x cross-coupling error.
+     *
+     * @return estimated y-x cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMyx() {
+<span class="fc bfc" id="L1204" title="All 2 branches covered.">        return mEstimatedMg != null ?</span>
+<span class="fc" id="L1205">                mEstimatedMg.getElementAt(1, 0) : null;</span>
+    }
+
+    /**
+     * Gets estimated y-z cross-coupling error.
+     *
+     * @return estimated y-z cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMyz() {
+<span class="fc bfc" id="L1215" title="All 2 branches covered.">        return mEstimatedMg != null ?</span>
+<span class="fc" id="L1216">                mEstimatedMg.getElementAt(1, 2) : null;</span>
+    }
+
+    /**
+     * Gets estimated z-x cross-coupling error.
+     *
+     * @return estimated z-x cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMzx() {
+<span class="fc bfc" id="L1226" title="All 2 branches covered.">        return mEstimatedMg != null ?</span>
+<span class="fc" id="L1227">                mEstimatedMg.getElementAt(2, 0) : null;</span>
+    }
+
+    /**
+     * Gets estimated z-y cross-coupling error.
+     *
+     * @return estimated z-y cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMzy() {
+<span class="fc bfc" id="L1237" title="All 2 branches covered.">        return mEstimatedMg != null ?</span>
+<span class="fc" id="L1238">                mEstimatedMg.getElementAt(2, 1) : null;</span>
+    }
+
+    /**
+     * Gets estimated G-dependent cross biases introduced on the gyroscope by the
+     * specific forces sensed by the accelerometer.
+     *
+     * @return a 3x3 matrix containing g-dependent cross biases.
+     */
+    @Override
+    public Matrix getEstimatedGg() {
+<span class="fc" id="L1249">        return mEstimatedGg;</span>
+    }
+
+    /**
+     * Internal method to perform calibration when common z-axis is assumed for both
+     * the accelerometer and gyroscope.
+     *
+     * @throws AlgebraException if there are numerical errors.
+     */
+    private void calibrateCommonAxis() throws AlgebraException {
+        // The gyroscope model is:
+        // Ωmeas = bg + (I + Mg) * Ωtrue + Gg * ftrue + w
+
+        // Ideally a least squares solution tries to minimize noise component, so:
+        // Ωmeas = bg + (I + Mg) * Ωtrue + Gg * ftrue
+
+        // Hence:
+        // [Ωmeasx] = [bx] + ( [1   0   0] + [sx    mxy    mxz]) [Ωtruex] + [g11   g12   g13][ftruex]
+        // [Ωmeasy]   [by]     [0   1   0]   [myx   sy     myz]  [Ωtruey]   [g21   g22   g23][ftruey]
+        // [Ωmeasz]   [bz]     [0   0   1]   [mzx   mzy    sz ]  [Ωtruez]   [g31   g32   g33][ftruez]
+
+        // where myx = mzx = mzy = 0
+
+        // Hence:
+        // [Ωmeasx] = [bx] + ( [1   0   0] + [sx    mxy    mxz]) [Ωtruex] + [g11   g12   g13][ftruex]
+        // [Ωmeasy]   [by]     [0   1   0]   [0     sy     myz]  [Ωtruey]   [g21   g22   g23][ftruey]
+        // [Ωmeasz]   [bz]     [0   0   1]   [0     0      sz ]  [Ωtruez]   [g31   g32   g33][ftruez]
+
+
+        // [Ωmeasx] = [bx] + ( [1+sx  mxy    mxz ]) [Ωtruex] + [g11   g12   g13][ftruex]
+        // [Ωmeasy]   [by]     [0     1+sy   myz ]  [Ωtruey]   [g21   g22   g23][ftruey]
+        // [Ωmeasz]   [bz]     [0     0      1+sz]  [Ωtruez]   [g31   g32   g33][ftruez]
+
+        // Ωmeasx = bx + (1+sx) * Ωtruex + mxy * Ωtruey + mxz * Ωtruez + g11 * ftruex + g12 * ftruey + g13 * ftruez
+        // Ωmeasy = by + (1+sy) * Ωtruey + myz * Ωtruez + g21 * ftruex * g22 * ftruey + g23 * ftruez
+        // Ωmeasz = bz + (1+sz) * Ωtruez + g31 * ftruex + g32 * ftruey + g33 * ftruez
+
+        // Where the unknowns are: sx, sy, sz, mxy mxz, myz, g11, g12, g13, g21, g22, g23, g31, g32, g33
+        // Reordering:
+        // Ωmeasx = bx + Ωtruex + sx * Ωtruex + mxy * Ωtruey + mxz * Ωtruez + g11 * ftruex + g12 * ftruey + g13 * ftruez
+        // Ωmeasy = by + Ωtruey + sy * Ωtruey + myz * Ωtruez + g21 * ftruex * g22 * ftruey + g23 * ftruez
+        // Ωmeasz = bz + Ωtruez + sz * Ωtruez + g31 * ftruex + g32 * ftruey + g33 * ftruez
+
+        // Ωmeasx - Ωtruex - bx = sx * Ωtruex + mxy * Ωtruey + mxz * Ωtruez + g11 * ftruex + g12 * ftruey + g13 * ftruez
+        // Ωmeasy - Ωtruey - by = sy * Ωtruey + myz * Ωtruez + g21 * ftruex * g22 * ftruey + g23 * ftruez
+        // Ωmeasz - Ωtruez - bz = sz * Ωtruez + g31 * ftruex + g32 * ftruey + g33 * ftruez
+
+        // [Ωtruex  0       0       Ωtruey  Ωtruez  0       ftruex  ftruey  ftruez  0       0       0       0       0       0     ][sx ] =  [Ωmeasx - Ωtruex - bx]
+        // [0       Ωtruey  0       0       0       Ωtruez  0       0       0       ftruex  ftruey  ftruez  0       0       0     ][sy ]    [Ωmeasy - Ωtruey - by]
+        // [0       0       Ωtruez  0       0       0       0       0       0       0       0       0       ftruex  ftruey  ftruez][sz ]    [Ωmeasz - Ωtruez - bz]
+        //                                                                                                                         [mxy]
+        //                                                                                                                         [mxz]
+        //                                                                                                                         [myz]
+        //                                                                                                                         [g11]
+        //                                                                                                                         [g12]
+        //                                                                                                                         [g13]
+        //                                                                                                                         [g21]
+        //                                                                                                                         [g22]
+        //                                                                                                                         [g23]
+        //                                                                                                                         [g31]
+        //                                                                                                                         [g32]
+        //                                                                                                                         [g33]
+
+<span class="fc" id="L1312">        final BodyKinematics expectedKinematics = new BodyKinematics();</span>
+
+<span class="fc" id="L1314">        final int rows = EQUATIONS_PER_MEASUREMENT * mMeasurements.size();</span>
+<span class="fc" id="L1315">        final Matrix a = new Matrix(rows, COMMON_Z_AXIS_UNKNOWNS);</span>
+<span class="fc" id="L1316">        final Matrix b = new Matrix(rows, 1);</span>
+<span class="fc" id="L1317">        int i = 0;</span>
+<span class="fc bfc" id="L1318" title="All 2 branches covered.">        for (final FrameBodyKinematics measurement : mMeasurements) {</span>
+<span class="fc" id="L1319">            final BodyKinematics measuredKinematics = measurement.getKinematics();</span>
+<span class="fc" id="L1320">            final ECEFFrame ecefFrame = measurement.getFrame();</span>
+<span class="fc" id="L1321">            final ECEFFrame previousEcefFrame = measurement.getPreviousFrame();</span>
+<span class="fc" id="L1322">            final double timeInterval = measurement.getTimeInterval();</span>
+
+<span class="fc" id="L1324">            ECEFKinematicsEstimator.estimateKinematics(timeInterval, ecefFrame,</span>
+                    previousEcefFrame, expectedKinematics);
+
+<span class="fc" id="L1327">            final double omegaMeasX = measuredKinematics.getAngularRateX();</span>
+<span class="fc" id="L1328">            final double omegaMeasY = measuredKinematics.getAngularRateY();</span>
+<span class="fc" id="L1329">            final double omegaMeasZ = measuredKinematics.getAngularRateZ();</span>
+
+<span class="fc" id="L1331">            final double omegaTrueX = expectedKinematics.getAngularRateX();</span>
+<span class="fc" id="L1332">            final double omegaTrueY = expectedKinematics.getAngularRateY();</span>
+<span class="fc" id="L1333">            final double omegaTrueZ = expectedKinematics.getAngularRateZ();</span>
+
+<span class="fc" id="L1335">            final double fTrueX = expectedKinematics.getFx();</span>
+<span class="fc" id="L1336">            final double fTrueY = expectedKinematics.getFy();</span>
+<span class="fc" id="L1337">            final double fTrueZ = expectedKinematics.getFz();</span>
+
+<span class="fc" id="L1339">            a.setElementAt(i, 0, omegaTrueX);</span>
+<span class="fc" id="L1340">            a.setElementAt(i, 3, omegaTrueY);</span>
+<span class="fc" id="L1341">            a.setElementAt(i, 4, omegaTrueZ);</span>
+<span class="fc" id="L1342">            a.setElementAt(i, 6, fTrueX);</span>
+<span class="fc" id="L1343">            a.setElementAt(i, 7, fTrueY);</span>
+<span class="fc" id="L1344">            a.setElementAt(i, 8, fTrueZ);</span>
+
+<span class="fc" id="L1346">            b.setElementAtIndex(i, omegaMeasX - omegaTrueX - mBiasX);</span>
+<span class="fc" id="L1347">            i++;</span>
+
+<span class="fc" id="L1349">            a.setElementAt(i, 1, omegaTrueY);</span>
+<span class="fc" id="L1350">            a.setElementAt(i, 5, omegaTrueZ);</span>
+<span class="fc" id="L1351">            a.setElementAt(i, 9, fTrueX);</span>
+<span class="fc" id="L1352">            a.setElementAt(i, 10, fTrueY);</span>
+<span class="fc" id="L1353">            a.setElementAt(i, 11, fTrueZ);</span>
+
+<span class="fc" id="L1355">            b.setElementAtIndex(i, omegaMeasY - omegaTrueY - mBiasY);</span>
+<span class="fc" id="L1356">            i++;</span>
+
+<span class="fc" id="L1358">            a.setElementAt(i, 2, omegaTrueZ);</span>
+<span class="fc" id="L1359">            a.setElementAt(i, 12, fTrueX);</span>
+<span class="fc" id="L1360">            a.setElementAt(i, 13, fTrueY);</span>
+<span class="fc" id="L1361">            a.setElementAt(i, 14, fTrueZ);</span>
+
+<span class="fc" id="L1363">            b.setElementAtIndex(i, omegaMeasZ - omegaTrueZ - mBiasZ);</span>
+<span class="fc" id="L1364">            i++;</span>
+<span class="fc" id="L1365">        }</span>
+
+<span class="fc" id="L1367">        final Matrix unknowns = Utils.solve(a, b);</span>
+
+<span class="fc" id="L1369">        final double sx = unknowns.getElementAtIndex(0);</span>
+<span class="fc" id="L1370">        final double sy = unknowns.getElementAtIndex(1);</span>
+<span class="fc" id="L1371">        final double sz = unknowns.getElementAtIndex(2);</span>
+<span class="fc" id="L1372">        final double mxy = unknowns.getElementAtIndex(3);</span>
+<span class="fc" id="L1373">        final double mxz = unknowns.getElementAtIndex(4);</span>
+<span class="fc" id="L1374">        final double myz = unknowns.getElementAtIndex(5);</span>
+<span class="fc" id="L1375">        final double g11 = unknowns.getElementAtIndex(6);</span>
+<span class="fc" id="L1376">        final double g12 = unknowns.getElementAtIndex(7);</span>
+<span class="fc" id="L1377">        final double g13 = unknowns.getElementAtIndex(8);</span>
+<span class="fc" id="L1378">        final double g21 = unknowns.getElementAtIndex(9);</span>
+<span class="fc" id="L1379">        final double g22 = unknowns.getElementAtIndex(10);</span>
+<span class="fc" id="L1380">        final double g23 = unknowns.getElementAtIndex(11);</span>
+<span class="fc" id="L1381">        final double g31 = unknowns.getElementAtIndex(12);</span>
+<span class="fc" id="L1382">        final double g32 = unknowns.getElementAtIndex(13);</span>
+<span class="fc" id="L1383">        final double g33 = unknowns.getElementAtIndex(14);</span>
+
+<span class="fc" id="L1385">        fillMg(sx, sy, sz, mxy, mxz, 0.0, myz, 0.0, 0.0);</span>
+<span class="fc" id="L1386">        fillGg(g11, g12, g13, g21, g22, g23, g31, g32, g33);</span>
+<span class="fc" id="L1387">    }</span>
+
+    /**
+     * Internal method to perform general calibration.
+     *
+     * @throws AlgebraException if there are numerical errors.
+     */
+    private void calibrateGeneral() throws AlgebraException {
+        // The gyroscope model is:
+        // Ωmeas = bg + (I + Mg) * Ωtrue + Gg * ftrue + w
+
+        // Ideally a least squares solution tries to minimize noise component, so:
+        // Ωmeas = bg + (I + Mg) * Ωtrue + Gg * ftrue
+
+        // Hence:
+        // [Ωmeasx] = [bx] + ( [1   0   0] + [sx    mxy    mxz]) [Ωtruex] + [g11   g12   g13][ftruex]
+        // [Ωmeasy]   [by]     [0   1   0]   [myx   sy     myz]  [Ωtruey]   [g21   g22   g23][ftruey]
+        // [Ωmeasz]   [bz]     [0   0   1]   [mzx   mzy    sz ]  [Ωtruez]   [g31   g32   g33][ftruez]
+
+        // [Ωmeasx] = [bx] + ( [1+sx  mxy    mxz ]) [Ωtruex] + [g11   g12   g13][ftruex]
+        // [Ωmeasy]   [by]     [myx   1+sy   myz ]  [Ωtruey]   [g21   g22   g23][ftruey]
+        // [Ωmeasz]   [bz]     [mzx   mzy    1+sz]  [Ωtruez]   [g31   g32   g33][ftruez]
+
+        // Ωmeasx = bx + (1+sx) * Ωtruex + mxy * Ωtruey + mxz * Ωtruez + g11 * ftruex + g12 * ftruey + g13 * ftruez
+        // Ωmeasy = by + myx * Ωtruex + (1+sy) * Ωtruey + myz * Ωtruez + g21 * ftruex * g22 * ftruey + g23 * ftruez
+        // Ωmeasz = bz + mzx * Ωtruex + mzy * Ωtruey + (1+sz) * Ωtruez + g31 * ftruex + g32 * ftruey + g33 * ftruez
+
+        // Where the unknowns are: sx, sy, sz, mxy mxz, myx, myz, mzx, mzy, g11, g12, g13, g21, g22, g23,
+        // g31, g32, g33
+        // Reordering:
+        // Ωmeasx = bx + Ωtruex + sx * Ωtruex + mxy * Ωtruey + mxz * Ωtruez + g11 * ftruex + g12 * ftruey + g13 * ftruez
+        // Ωmeasy = by + myx * Ωtruex + Ωtruey + sy * Ωtruey + myz * Ωtruez + g21 * ftruex * g22 * ftruey + g23 * ftruez
+        // Ωmeasz = bz + mzx * Ωtruex + mzy * Ωtruey + Ωtruez + sz * Ωtruez + g31 * ftruex + g32 * ftruey + g33 * ftruez
+
+        // Ωmeasx - Ωtruex - bx = sx * Ωtruex + mxy * Ωtruey + mxz * Ωtruez + g11 * ftruex + g12 * ftruey + g13 * ftruez
+        // Ωmeasy - Ωtruey - by = myx * Ωtruex + sy * Ωtruey + myz * Ωtruez + g21 * ftruex * g22 * ftruey + g23 * ftruez
+        // Ωmeasz - Ωtruez - bz = mzx * Ωtruex + mzy * Ωtruey + sz * Ωtruez + g31 * ftruex + g32 * ftruey + g33 * ftruez
+
+        // [Ωtruex  0       0       Ωtruey  Ωtruez  0       0       0       0       ftruex  ftruey  ftruez  0       0       0       0       0       0     ][sx ] =  [Ωmeasx - Ωtruex - bx]
+        // [0       Ωtruey  0       0       0       Ωtruex  Ωtruez  0       0       0       0       0       ftruex  ftruey  ftruez  0       0       0     ][sy ]    [Ωmeasy - Ωtruey - by]
+        // [0       0       Ωtruez  0       0       0       0       Ωtruex  Ωtruey  0       0       0       0       0       0       ftruex  ftruey  ftruez][sz ]    [Ωmeasz - Ωtruez - bz]
+        //                                                                                                                                                 [mxy]
+        //                                                                                                                                                 [mxz]
+        //                                                                                                                                                 [myx]
+        //                                                                                                                                                 [myz]
+        //                                                                                                                                                 [mzx]
+        //                                                                                                                                                 [mzy]
+        //                                                                                                                                                 [g11]
+        //                                                                                                                                                 [g12]
+        //                                                                                                                                                 [g13]
+        //                                                                                                                                                 [g21]
+        //                                                                                                                                                 [g22]
+        //                                                                                                                                                 [g23]
+        //                                                                                                                                                 [g31]
+        //                                                                                                                                                 [g32]
+        //                                                                                                                                                 [g33]
+
+<span class="fc" id="L1444">        final BodyKinematics expectedKinematics = new BodyKinematics();</span>
+
+<span class="fc" id="L1446">        final int rows = EQUATIONS_PER_MEASUREMENT * mMeasurements.size();</span>
+<span class="fc" id="L1447">        final Matrix a = new Matrix(rows, GENERAL_UNKNOWNS);</span>
+<span class="fc" id="L1448">        final Matrix b = new Matrix(rows, 1);</span>
+<span class="fc" id="L1449">        int i = 0;</span>
+<span class="fc bfc" id="L1450" title="All 2 branches covered.">        for (final FrameBodyKinematics measurement : mMeasurements) {</span>
+<span class="fc" id="L1451">            final BodyKinematics measuredKinematics = measurement.getKinematics();</span>
+<span class="fc" id="L1452">            final ECEFFrame ecefFrame = measurement.getFrame();</span>
+<span class="fc" id="L1453">            final ECEFFrame previousEcefFrame = measurement.getPreviousFrame();</span>
+<span class="fc" id="L1454">            final double timeInterval = measurement.getTimeInterval();</span>
+
+<span class="fc" id="L1456">            ECEFKinematicsEstimator.estimateKinematics(timeInterval, ecefFrame,</span>
+                    previousEcefFrame, expectedKinematics);
+
+<span class="fc" id="L1459">            final double omegaMeasX = measuredKinematics.getAngularRateX();</span>
+<span class="fc" id="L1460">            final double omegaMeasY = measuredKinematics.getAngularRateY();</span>
+<span class="fc" id="L1461">            final double omegaMeasZ = measuredKinematics.getAngularRateZ();</span>
+
+<span class="fc" id="L1463">            final double omegaTrueX = expectedKinematics.getAngularRateX();</span>
+<span class="fc" id="L1464">            final double omegaTrueY = expectedKinematics.getAngularRateY();</span>
+<span class="fc" id="L1465">            final double omegaTrueZ = expectedKinematics.getAngularRateZ();</span>
+
+<span class="fc" id="L1467">            final double fTrueX = expectedKinematics.getFx();</span>
+<span class="fc" id="L1468">            final double fTrueY = expectedKinematics.getFy();</span>
+<span class="fc" id="L1469">            final double fTrueZ = expectedKinematics.getFz();</span>
+
+<span class="fc" id="L1471">            a.setElementAt(i, 0, omegaTrueX);</span>
+<span class="fc" id="L1472">            a.setElementAt(i, 3, omegaTrueY);</span>
+<span class="fc" id="L1473">            a.setElementAt(i, 4, omegaTrueZ);</span>
+<span class="fc" id="L1474">            a.setElementAt(i, 9, fTrueX);</span>
+<span class="fc" id="L1475">            a.setElementAt(i, 10, fTrueY);</span>
+<span class="fc" id="L1476">            a.setElementAt(i, 11, fTrueZ);</span>
+
+<span class="fc" id="L1478">            b.setElementAtIndex(i, omegaMeasX - omegaTrueX - mBiasX);</span>
+<span class="fc" id="L1479">            i++;</span>
+
+<span class="fc" id="L1481">            a.setElementAt(i, 1, omegaTrueY);</span>
+<span class="fc" id="L1482">            a.setElementAt(i, 5, omegaTrueX);</span>
+<span class="fc" id="L1483">            a.setElementAt(i, 6, omegaTrueZ);</span>
+<span class="fc" id="L1484">            a.setElementAt(i, 12, fTrueX);</span>
+<span class="fc" id="L1485">            a.setElementAt(i, 13, fTrueY);</span>
+<span class="fc" id="L1486">            a.setElementAt(i, 14, fTrueZ);</span>
+
+<span class="fc" id="L1488">            b.setElementAtIndex(i, omegaMeasY - omegaTrueY - mBiasY);</span>
+<span class="fc" id="L1489">            i++;</span>
+
+<span class="fc" id="L1491">            a.setElementAt(i, 2, omegaTrueZ);</span>
+<span class="fc" id="L1492">            a.setElementAt(i, 7, omegaTrueX);</span>
+<span class="fc" id="L1493">            a.setElementAt(i, 8, omegaTrueY);</span>
+<span class="fc" id="L1494">            a.setElementAt(i, 15, fTrueX);</span>
+<span class="fc" id="L1495">            a.setElementAt(i, 16, fTrueY);</span>
+<span class="fc" id="L1496">            a.setElementAt(i, 17, fTrueZ);</span>
+
+<span class="fc" id="L1498">            b.setElementAtIndex(i, omegaMeasZ - omegaTrueZ - mBiasZ);</span>
+<span class="fc" id="L1499">            i++;</span>
+<span class="fc" id="L1500">        }</span>
+
+<span class="fc" id="L1502">        final Matrix unknowns = Utils.solve(a, b);</span>
+
+<span class="fc" id="L1504">        final double sx = unknowns.getElementAtIndex(0);</span>
+<span class="fc" id="L1505">        final double sy = unknowns.getElementAtIndex(1);</span>
+<span class="fc" id="L1506">        final double sz = unknowns.getElementAtIndex(2);</span>
+<span class="fc" id="L1507">        final double mxy = unknowns.getElementAtIndex(3);</span>
+<span class="fc" id="L1508">        final double mxz = unknowns.getElementAtIndex(4);</span>
+<span class="fc" id="L1509">        final double myx = unknowns.getElementAtIndex(5);</span>
+<span class="fc" id="L1510">        final double myz = unknowns.getElementAtIndex(6);</span>
+<span class="fc" id="L1511">        final double mzx = unknowns.getElementAtIndex(7);</span>
+<span class="fc" id="L1512">        final double mzy = unknowns.getElementAtIndex(8);</span>
+<span class="fc" id="L1513">        final double g11 = unknowns.getElementAtIndex(9);</span>
+<span class="fc" id="L1514">        final double g12 = unknowns.getElementAtIndex(10);</span>
+<span class="fc" id="L1515">        final double g13 = unknowns.getElementAtIndex(11);</span>
+<span class="fc" id="L1516">        final double g21 = unknowns.getElementAtIndex(12);</span>
+<span class="fc" id="L1517">        final double g22 = unknowns.getElementAtIndex(13);</span>
+<span class="fc" id="L1518">        final double g23 = unknowns.getElementAtIndex(14);</span>
+<span class="fc" id="L1519">        final double g31 = unknowns.getElementAtIndex(15);</span>
+<span class="fc" id="L1520">        final double g32 = unknowns.getElementAtIndex(16);</span>
+<span class="fc" id="L1521">        final double g33 = unknowns.getElementAtIndex(17);</span>
+
+<span class="fc" id="L1523">        fillMg(sx, sy, sz, mxy, mxz, myx, myz, mzx, mzy);</span>
+<span class="fc" id="L1524">        fillGg(g11, g12, g13, g21, g22, g23, g31, g32, g33);</span>
+<span class="fc" id="L1525">    }</span>
+
+    /**
+     * Fills scale factor and cross coupling error matrix with estimated values.
+     *
+     * @param sx  x scale factor
+     * @param sy  y scale factor
+     * @param sz  z scale factor
+     * @param mxy x-y cross coupling
+     * @param mxz x-z cross coupling
+     * @param myx y-x cross coupling
+     * @param myz y-z cross coupling
+     * @param mzx z-x cross coupling
+     * @param mzy z-y cross coupling
+     * @throws WrongSizeException never happens.
+     */
+    private void fillMg(final double sx, final double sy, final double sz,
+                        final double mxy, final double mxz, final double myx,
+                        final double myz, final double mzx, final double mzy)
+            throws WrongSizeException {
+<span class="pc bpc" id="L1545" title="1 of 2 branches missed.">        if (mEstimatedMg == null) {</span>
+<span class="fc" id="L1546">            mEstimatedMg = new Matrix(BodyKinematics.COMPONENTS,</span>
+                    BodyKinematics.COMPONENTS);
+        }
+
+<span class="fc" id="L1550">        mEstimatedMg.setElementAt(0, 0, sx);</span>
+<span class="fc" id="L1551">        mEstimatedMg.setElementAt(1, 0, myx);</span>
+<span class="fc" id="L1552">        mEstimatedMg.setElementAt(2, 0, mzx);</span>
+
+<span class="fc" id="L1554">        mEstimatedMg.setElementAt(0, 1, mxy);</span>
+<span class="fc" id="L1555">        mEstimatedMg.setElementAt(1, 1, sy);</span>
+<span class="fc" id="L1556">        mEstimatedMg.setElementAt(2, 1, mzy);</span>
+
+<span class="fc" id="L1558">        mEstimatedMg.setElementAt(0, 2, mxz);</span>
+<span class="fc" id="L1559">        mEstimatedMg.setElementAt(1, 2, myz);</span>
+<span class="fc" id="L1560">        mEstimatedMg.setElementAt(2, 2, sz);</span>
+<span class="fc" id="L1561">    }</span>
+
+    /**
+     * Fills G-dependant cross biases.
+     *
+     * @param g11 element 1,1 of G-dependant cross biases matrix.
+     * @param g12 element 1,2 of G-dependant cross biases matrix.
+     * @param g13 element 1,3 of G-dependant cross biases matrix.
+     * @param g21 element 2,1 of G-dependant cross biases matrix.
+     * @param g22 element 2,2 of G-dependant cross biases matrix.
+     * @param g23 element 2,3 of G-dependant cross biases matrix.
+     * @param g31 element 3,1 of G-dependant cross biases matrix.
+     * @param g32 element 3,2 of G-dependant cross biases matrix.
+     * @param g33 element 3,3 of G-dependant cross biases matrix.
+     * @throws WrongSizeException never happens.
+     */
+    private void fillGg(final double g11, final double g12, final double g13,
+                        final double g21, final double g22, final double g23,
+                        final double g31, final double g32, final double g33)
+            throws WrongSizeException {
+<span class="pc bpc" id="L1581" title="1 of 2 branches missed.">        if (mEstimatedGg == null) {</span>
+<span class="fc" id="L1582">            mEstimatedGg = new Matrix(BodyKinematics.COMPONENTS,</span>
+                    BodyKinematics.COMPONENTS);
+        }
+
+<span class="fc" id="L1586">        mEstimatedGg.setElementAt(0, 0, g11);</span>
+<span class="fc" id="L1587">        mEstimatedGg.setElementAt(0, 1, g12);</span>
+<span class="fc" id="L1588">        mEstimatedGg.setElementAt(0, 2, g13);</span>
+
+<span class="fc" id="L1590">        mEstimatedGg.setElementAt(1, 0, g21);</span>
+<span class="fc" id="L1591">        mEstimatedGg.setElementAt(1, 1, g22);</span>
+<span class="fc" id="L1592">        mEstimatedGg.setElementAt(1, 2, g23);</span>
+
+<span class="fc" id="L1594">        mEstimatedGg.setElementAt(2, 0, g31);</span>
+<span class="fc" id="L1595">        mEstimatedGg.setElementAt(2, 1, g32);</span>
+<span class="fc" id="L1596">        mEstimatedGg.setElementAt(2, 2, g33);</span>
+<span class="fc" id="L1597">    }</span>
+
+    /**
+     * Converts angular speed instance to radians per second (rad/s).
+     *
+     * @param angularSpeed angular speed instance to be converted.
+     * @return converted value.
+     */
+    private static double convertAngularSpeed(final AngularSpeed angularSpeed) {
+<span class="fc" id="L1606">        return AngularSpeedConverter.convert(angularSpeed.getValue().doubleValue(),</span>
+<span class="fc" id="L1607">                angularSpeed.getUnit(), AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
