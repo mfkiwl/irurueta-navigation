@@ -1,0 +1,2088 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RANSACRobustTurntableGyroscopeCalibrator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.calibration</a> &gt; <span class="el_source">RANSACRobustTurntableGyroscopeCalibrator.java</span></div><h1>RANSACRobustTurntableGyroscopeCalibrator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2020 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.inertial.calibration;
+
+import com.irurueta.algebra.Matrix;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NotReadyException;
+import com.irurueta.navigation.inertial.ECEFPosition;
+import com.irurueta.navigation.inertial.NEDPosition;
+import com.irurueta.numerical.robust.RANSACRobustEstimator;
+import com.irurueta.numerical.robust.RANSACRobustEstimatorListener;
+import com.irurueta.numerical.robust.RobustEstimator;
+import com.irurueta.numerical.robust.RobustEstimatorException;
+import com.irurueta.numerical.robust.RobustEstimatorMethod;
+
+import java.util.List;
+
+/**
+ * Robustly estimates gyroscope biases, cross couplings and scaling factors
+ * along with G-dependent cross biases introduced on the gyroscope by the
+ * specific forces sensed by the accelerometer.
+ * &lt;p&gt;
+ * This calibrator assumes that the IMU is placed flat on a turntable spinning
+ * at constant speed, but absolute orientation or position of IMU is unknown.
+ * Turntable must rotate fast enough so that Earth rotation effects can be
+ * neglected, bus slow enough so that gyroscope readings can be properly made.
+ * &lt;p&gt;
+ * To use this calibrator at least 10 measurements are needed when common
+ * z-axis is assumed and G-dependent cross biases are ignored, otherwise
+ * at least 13 measurements are required when common z-axis is not assumed.
+ * If G-dependent cross biases are being estimated, then at least 19
+ * measurements are needed when common z-axis is assumed, otherwise at
+ * least 22 measurements are required when common z-axis is not assumed.
+ * &lt;p&gt;
+ * Measured gyroscope angular rates is assumed to follow the model shown below:
+ * &lt;pre&gt;
+ *     Ωmeas = bg + (I + Mg) * Ωtrue + Gg * ftrue + w
+ * &lt;/pre&gt;
+ * Where:
+ * - Ωmeas is the measured gyroscope angular rates. This is a 3x1 vector.
+ * - bg is the gyroscope bias. Ideally, on a perfect gyroscope, this should be a
+ * 3x1 zero vector.
+ * - I is the 3x3 identity matrix.
+ * - Mg is the 3x3 matrix containing cross-couplings and scaling factors. Ideally, on
+ * a perfect gyroscope, this should be a 3x3 zero matrix.
+ * - Ωtrue is ground-truth gyroscope angular rates.
+ * - Gg is the G-dependent cross biases introduced by the specific forces sensed
+ * by the accelerometer. Ideally, on a perfect gyroscope, this should be a 3x3
+ * zero matrix.
+ * - ftrue is ground-truth specific force. This is a 3x1 vector.
+ * - w is measurement noise. This is a 3x1 vector.
+ */
+public class RANSACRobustTurntableGyroscopeCalibrator extends RobustTurntableGyroscopeCalibrator {
+
+    /**
+     * Constant defining default threshold to determine whether samples are inliers or not.
+     */
+    public static final double DEFAULT_THRESHOLD = 5e-1;
+
+    /**
+     * Minimum value that can be set as threshold.
+     * Threshold must be strictly greater than 0.0.
+     */
+    public static final double MIN_THRESHOLD = 0.0;
+
+    /**
+     * Indicates that by default inliers will only be computed but not kept.
+     */
+    public static final boolean DEFAULT_COMPUTE_AND_KEEP_INLIERS = false;
+
+    /**
+     * Indicates that by default residuals will only be computed but not kept.
+     */
+    public static final boolean DEFAULT_COMPUTE_AND_KEEP_RESIDUALS = false;
+
+    /**
+     * Threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on distance between estimated position and
+     * distances provided for each sample.
+     */
+<span class="fc" id="L94">    private double mThreshold = DEFAULT_THRESHOLD;</span>
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     */
+<span class="fc" id="L99">    private boolean mComputeAndKeepInliers = DEFAULT_COMPUTE_AND_KEEP_INLIERS;</span>
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     */
+<span class="fc" id="L104">    private boolean mComputeAndKeepResiduals = DEFAULT_COMPUTE_AND_KEEP_RESIDUALS;</span>
+
+    /**
+     * Constructor.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator() {
+<span class="fc" id="L110">        super();</span>
+<span class="fc" id="L111">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must be 3x1 and
+     *                              is expressed in radians per second
+     *                              (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L152">        super(position, turntableRotationRate, timeInterval,</span>
+                measurements, initialBias, initialMg, initialGg);
+<span class="fc" id="L154">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must be 3x1 and
+     *                              is expressed in radians per second
+     *                              (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param listener              listener to handle events raised by this
+     *                              calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L198">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, listener);
+<span class="fc" id="L200">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must have
+     *                              length 3 and is expressed in radians
+     *                              per second (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L241">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg);
+<span class="fc" id="L243">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must have length
+     *                              3 and is expressed in radians
+     *                              per second (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param listener              listener to handle events raised by
+     *                              this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L287">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, listener);
+<span class="fc" id="L289">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must have length
+     *                              3 and is expressed in radians per
+     *                              second (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param accelerometerBias     known accelerometer bias. This must
+     *                              have length 3 and is expressed in
+     *                              meters per squared second
+     *                              (m/s^2).
+     * @param accelerometerMa       known accelerometer scale factors and
+     *                              cross coupling matrix. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L338">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, accelerometerBias,
+                accelerometerMa);
+<span class="fc" id="L341">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must have length
+     *                              3 and is expressed in radians per
+     *                              second (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param accelerometerBias     known accelerometer bias. This must
+     *                              have length 3 and is expressed in
+     *                              meters per squared second (m/s^2).
+     * @param accelerometerMa       known accelerometer scale factors and
+     *                              cross coupling matrix. Must be 3x3.
+     * @param listener              listener to handle events raised by
+     *                              this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L392">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, accelerometerBias,
+                accelerometerMa, listener);
+<span class="fc" id="L395">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must be 3x1 and
+     *                              is expressed in radians per second
+     *                              (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param accelerometerBias     known accelerometer bias. This must
+     *                              have length 3 and is expressed in
+     *                              meters per squared second
+     *                              (m/s^2).
+     * @param accelerometerMa       known accelerometer scale factors and
+     *                              cross coupling matrix. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L444">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, accelerometerBias,
+                accelerometerMa);
+<span class="fc" id="L447">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must be 3x1 and
+     *                              is expressed in radians per second
+     *                              (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param accelerometerBias     known accelerometer bias. This must
+     *                              have length 3 and is expressed in
+     *                              meters per squared second (m/s^2).
+     * @param accelerometerMa       known accelerometer scale factors and
+     *                              cross coupling matrix. Must be 3x3.
+     * @param listener              listener to handle events raised by
+     *                              this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L498">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, accelerometerBias,
+                accelerometerMa, listener);
+<span class="fc" id="L501">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity
+     *                                      and unknown different
+     *                                      orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must be 3x1 and is expressed in
+     *                                      radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors matrix.
+     *                                      Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific
+     *                                      forces sensed by the
+     *                                      accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L554">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg);
+<span class="fc" id="L557">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity and
+     *                                      unknown different orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross
+     *                                      biases will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must be 3x1 and is expressed in
+     *                                      radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors
+     *                                      matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific
+     *                                      forces sensed by the
+     *                                      accelerometer. Must be 3x3.
+     * @param listener                      listener to handle events
+     *                                      raised by this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L612">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, listener);
+<span class="fc" id="L615">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity
+     *                                      and unknown different
+     *                                      orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must have length 3 and is
+     *                                      expressed in radians per second
+     *                                      (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors matrix.
+     *                                      Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer.
+     *                                      Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L669">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg);
+<span class="fc" id="L672">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity
+     *                                      and unknown different
+     *                                      orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must have length 3 and is
+     *                                      expressed in radians per second
+     *                                      (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors
+     *                                      matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer.
+     *                                      Must be 3x3.
+     * @param listener                      listener to handle events raised
+     *                                      by this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L729">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, listener);
+<span class="fc" id="L732">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity
+     *                                      and unknown different
+     *                                      orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross
+     *                                      biases will be estimated,
+     *                                      false otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must have length 3 and is
+     *                                      expressed in radians per second
+     *                                      (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors
+     *                                      matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer.
+     *                                      Must be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L795">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, accelerometerBias, accelerometerMa);
+<span class="fc" id="L798">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity
+     *                                      and unknown different
+     *                                      orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be used
+     *                                      to find a solution. This must
+     *                                      have length 3 and is expressed
+     *                                      in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors matrix.
+     *                                      Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must
+     *                                      be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @param listener                      listener to handle events raised
+     *                                      by this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L863">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, accelerometerBias, accelerometerMa, listener);
+<span class="fc" id="L866">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity and
+     *                                      unknown different orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must be 3x1 and is expressed in
+     *                                      radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors matrix.
+     *                                      Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must
+     *                                      be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L927">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, accelerometerBias, accelerometerMa);
+<span class="fc" id="L930">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity and
+     *                                      unknown different orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be used
+     *                                      to find a solution. This must be
+     *                                      3x1 and is expressed in radians
+     *                                      per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors matrix.
+     *                                      Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must
+     *                                      be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @param listener                      listener to handle events raised
+     *                                      by this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final ECEFPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L994">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, accelerometerBias, accelerometerMa,
+                listener);
+<span class="fc" id="L998">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must be 3x1 and
+     *                              is expressed in radians per second
+     *                              (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L1039">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg);
+<span class="fc" id="L1041">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must be 3x1 and
+     *                              is expressed in radians per second
+     *                              (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param listener              listener to handle events raised by this
+     *                              calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1085">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, listener);
+<span class="fc" id="L1087">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must have
+     *                              length 3 and is expressed in radians
+     *                              per second (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L1128">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg);
+<span class="fc" id="L1130">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must have length
+     *                              3 and is expressed in radians
+     *                              per second (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param listener              listener to handle events raised by
+     *                              this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1174">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, listener);
+<span class="fc" id="L1176">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must have length
+     *                              3 and is expressed in radians per
+     *                              second (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param accelerometerBias     known accelerometer bias. This must
+     *                              have length 3 and is expressed in
+     *                              meters per squared second
+     *                              (m/s^2).
+     * @param accelerometerMa       known accelerometer scale factors and
+     *                              cross coupling matrix. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L1225">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, accelerometerBias,
+                accelerometerMa);
+<span class="fc" id="L1228">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must have length
+     *                              3 and is expressed in radians per
+     *                              second (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param accelerometerBias     known accelerometer bias. This must
+     *                              have length 3 and is expressed in
+     *                              meters per squared second (m/s^2).
+     * @param accelerometerMa       known accelerometer scale factors and
+     *                              cross coupling matrix. Must be 3x3.
+     * @param listener              listener to handle events raised by
+     *                              this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1279">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, accelerometerBias,
+                accelerometerMa, listener);
+<span class="fc" id="L1282">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must be 3x1 and
+     *                              is expressed in radians per second
+     *                              (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param accelerometerBias     known accelerometer bias. This must
+     *                              have length 3 and is expressed in
+     *                              meters per squared second
+     *                              (m/s^2).
+     * @param accelerometerMa       known accelerometer scale factors and
+     *                              cross coupling matrix. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L1331">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, accelerometerBias,
+                accelerometerMa);
+<span class="fc" id="L1334">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position              position where body kinematics measures
+     *                              have been taken.
+     * @param turntableRotationRate constant rotation rate at which the
+     *                              turntable is spinning. Must be
+     *                              expressed in radians per second (rad/s).
+     * @param timeInterval          time interval between measurements being
+     *                              captured expressed in seconds (s).
+     * @param measurements          collection of body kinematics
+     *                              measurements with standard deviations
+     *                              taken at the same position with zero
+     *                              velocity and unknown different
+     *                              orientations.
+     * @param initialBias           initial gyroscope bias to be used to
+     *                              find a solution. This must be 3x1 and
+     *                              is expressed in radians per second
+     *                              (rad/s).
+     * @param initialMg             initial gyroscope scale factors and
+     *                              cross coupling errors matrix. Must
+     *                              be 3x3.
+     * @param initialGg             initial gyroscope G-dependent cross
+     *                              biases introduced on the gyroscope by
+     *                              the specific forces sensed by the
+     *                              accelerometer. Must be 3x3.
+     * @param accelerometerBias     known accelerometer bias. This must
+     *                              have length 3 and is expressed in
+     *                              meters per squared second (m/s^2).
+     * @param accelerometerMa       known accelerometer scale factors and
+     *                              cross coupling matrix. Must be 3x3.
+     * @param listener              listener to handle events raised by
+     *                              this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1385">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                initialBias, initialMg, initialGg, accelerometerBias,
+                accelerometerMa, listener);
+<span class="fc" id="L1388">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity
+     *                                      and unknown different
+     *                                      orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must be 3x1 and is expressed in
+     *                                      radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors matrix.
+     *                                      Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific
+     *                                      forces sensed by the
+     *                                      accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L1441">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg);
+<span class="fc" id="L1444">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity and
+     *                                      unknown different orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross
+     *                                      biases will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must be 3x1 and is expressed in
+     *                                      radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors
+     *                                      matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific
+     *                                      forces sensed by the
+     *                                      accelerometer. Must be 3x3.
+     * @param listener                      listener to handle events
+     *                                      raised by this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1499">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, listener);
+<span class="fc" id="L1502">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity
+     *                                      and unknown different
+     *                                      orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must have length 3 and is
+     *                                      expressed in radians per second
+     *                                      (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors matrix.
+     *                                      Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer.
+     *                                      Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L1556">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg);
+<span class="fc" id="L1559">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity
+     *                                      and unknown different
+     *                                      orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must have length 3 and is
+     *                                      expressed in radians per second
+     *                                      (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors
+     *                                      matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer.
+     *                                      Must be 3x3.
+     * @param listener                      listener to handle events raised
+     *                                      by this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1616">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, listener);
+<span class="fc" id="L1619">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity
+     *                                      and unknown different
+     *                                      orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross
+     *                                      biases will be estimated,
+     *                                      false otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must have length 3 and is
+     *                                      expressed in radians per second
+     *                                      (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors
+     *                                      matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer.
+     *                                      Must be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L1682">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, accelerometerBias, accelerometerMa);
+<span class="fc" id="L1685">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity
+     *                                      and unknown different
+     *                                      orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be used
+     *                                      to find a solution. This must
+     *                                      have length 3 and is expressed
+     *                                      in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors matrix.
+     *                                      Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must
+     *                                      be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @param listener                      listener to handle events raised
+     *                                      by this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1750">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, accelerometerBias, accelerometerMa,
+                listener);
+<span class="fc" id="L1754">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity and
+     *                                      unknown different orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be
+     *                                      used to find a solution. This
+     *                                      must be 3x1 and is expressed in
+     *                                      radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors matrix.
+     *                                      Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must
+     *                                      be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L1815">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, accelerometerBias, accelerometerMa);
+<span class="fc" id="L1818">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param position                      position where body kinematics
+     *                                      measures have been taken.
+     * @param turntableRotationRate         constant rotation rate at which
+     *                                      the turntable is spinning. Must
+     *                                      be expressed in radians per
+     *                                      second (rad/s).
+     * @param timeInterval                  time interval between measurements
+     *                                      being captured expressed in
+     *                                      seconds (s).
+     * @param measurements                  collection of body kinematics
+     *                                      measurements with standard
+     *                                      deviations taken at the same
+     *                                      position with zero velocity and
+     *                                      unknown different orientations.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param initialBias                   initial gyroscope bias to be used
+     *                                      to find a solution. This must be
+     *                                      3x1 and is expressed in radians
+     *                                      per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors
+     *                                      and cross coupling errors matrix.
+     *                                      Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent
+     *                                      cross biases introduced on the
+     *                                      gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must
+     *                                      be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @param listener                      listener to handle events raised
+     *                                      by this calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if either
+     *                                  turntable rotation rate or
+     *                                  time interval is zero or negative.
+     */
+    public RANSACRobustTurntableGyroscopeCalibrator(
+            final NEDPosition position,
+            final double turntableRotationRate,
+            final double timeInterval,
+            final List&lt;StandardDeviationBodyKinematics&gt; measurements,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix initialBias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustTurntableGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1882">        super(position, turntableRotationRate, timeInterval, measurements,</span>
+                commonAxisUsed, estimateGDependentCrossBiases, initialBias,
+                initialMg, initialGg, accelerometerBias, accelerometerMa,
+                listener);
+<span class="fc" id="L1886">    }</span>
+
+    /**
+     * Gets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on norm between measured angular rates and the
+     * ones generated with estimated calibration parameters provided for each sample.
+     *
+     * @return threshold to determine whether samples are inliers or not.
+     */
+    public double getThreshold() {
+<span class="fc" id="L1896">        return mThreshold;</span>
+    }
+
+    /**
+     * Sets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on norm between measured angular rates and the
+     * ones generated with estimated calibration parameters provided for each sample.
+     *
+     * @param threshold threshold to determine whether samples are inliers or not.
+     * @throws IllegalArgumentException if provided value is equal or less than zero.
+     * @throws LockedException          if calibrator is currently running.
+     */
+    public void setThreshold(double threshold) throws LockedException {
+<span class="fc bfc" id="L1909" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1910">            throw new LockedException();</span>
+        }
+<span class="pc bpc" id="L1912" title="1 of 2 branches missed.">        if (threshold &lt;= MIN_THRESHOLD) {</span>
+<span class="nc" id="L1913">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L1915">        mThreshold = threshold;</span>
+<span class="fc" id="L1916">    }</span>
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     *
+     * @return true if inliers must be computed and kept, false if inliers
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepInliersEnabled() {
+<span class="fc" id="L1925">        return mComputeAndKeepInliers;</span>
+    }
+
+    /**
+     * Specifies whether inliers must be computed and kept.
+     *
+     * @param computeAndKeepInliers true if inliers must be computed and kept,
+     *                              false if inliers only need to be computed but not kept.
+     * @throws LockedException if calibrator is currently running.
+     */
+    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
+            throws LockedException {
+<span class="fc bfc" id="L1937" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1938">            throw new LockedException();</span>
+        }
+<span class="fc" id="L1940">        mComputeAndKeepInliers = computeAndKeepInliers;</span>
+<span class="fc" id="L1941">    }</span>
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     *
+     * @return true if residuals must be computed and kept, false if residuals
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepResiduals() {
+<span class="fc" id="L1950">        return mComputeAndKeepResiduals;</span>
+    }
+
+    /**
+     * Specifies whether residuals must be computed and kept.
+     *
+     * @param computeAndKeepResiduals true if residuals must be computed and kept,
+     *                                false if residuals only need to be computed but not kept.
+     * @throws LockedException if calibrator is currently running.
+     */
+    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
+            throws LockedException {
+<span class="fc bfc" id="L1962" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1963">            throw new LockedException();</span>
+        }
+<span class="fc" id="L1965">        mComputeAndKeepResiduals = computeAndKeepResiduals;</span>
+<span class="fc" id="L1966">    }</span>
+
+    /**
+     * Estimates gyroscope calibration parameters containing bias, scale factors
+     * cross-coupling errors and g-dependant cross biases.
+     *
+     * @throws LockedException      if calibrator is currently running.
+     * @throws NotReadyException    if calibrator is not ready.
+     * @throws CalibrationException if estimation fails for numerical reasons.
+     */
+    @Override
+    public void calibrate() throws LockedException, NotReadyException, CalibrationException {
+<span class="fc bfc" id="L1978" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1979">            throw new LockedException();</span>
+        }
+<span class="pc bpc" id="L1981" title="1 of 2 branches missed.">        if (!isReady()) {</span>
+<span class="nc" id="L1982">            throw new NotReadyException();</span>
+        }
+
+<span class="fc" id="L1985">        final RANSACRobustEstimator&lt;PreliminaryResult&gt; innerEstimator =</span>
+<span class="fc" id="L1986">                new RANSACRobustEstimator&lt;&gt;(new RANSACRobustEstimatorListener&lt;PreliminaryResult&gt;() {</span>
+                    @Override
+                    public double getThreshold() {
+<span class="fc" id="L1989">                        return mThreshold;</span>
+                    }
+
+                    @Override
+                    public int getTotalSamples() {
+<span class="fc" id="L1994">                        return mMeasurements.size();</span>
+                    }
+
+                    @Override
+                    public int getSubsetSize() {
+<span class="fc" id="L1999">                        return mPreliminarySubsetSize;</span>
+                    }
+
+                    @Override
+                    public void estimatePreliminarSolutions(final int[] samplesIndices,
+                                                            final List&lt;PreliminaryResult&gt; solutions) {
+<span class="fc" id="L2005">                        computePreliminarySolutions(samplesIndices, solutions);</span>
+<span class="fc" id="L2006">                    }</span>
+
+                    @Override
+                    public double computeResidual(final PreliminaryResult currentEstimation, final int i) {
+<span class="fc" id="L2010">                        return computeError(mMeasurements.get(i), currentEstimation);</span>
+                    }
+
+                    @Override
+                    public boolean isReady() {
+<span class="fc" id="L2015">                        return RANSACRobustTurntableGyroscopeCalibrator.super.isReady();</span>
+                    }
+
+                    @Override
+                    public void onEstimateStart(final RobustEstimator&lt;PreliminaryResult&gt; estimator) {
+<span class="pc bpc" id="L2020" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L2021">                            mListener.onCalibrateStart(RANSACRobustTurntableGyroscopeCalibrator.this);</span>
+                        }
+<span class="fc" id="L2023">                    }</span>
+
+                    @Override
+                    public void onEstimateEnd(final RobustEstimator&lt;PreliminaryResult&gt; estimator) {
+<span class="pc bpc" id="L2027" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L2028">                            mListener.onCalibrateEnd(RANSACRobustTurntableGyroscopeCalibrator.this);</span>
+                        }
+<span class="fc" id="L2030">                    }</span>
+
+                    @Override
+                    public void onEstimateNextIteration(
+                            final RobustEstimator&lt;PreliminaryResult&gt; estimator,
+                            final int iteration) {
+<span class="pc bpc" id="L2036" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L2037">                            mListener.onCalibrateNextIteration(</span>
+                                    RANSACRobustTurntableGyroscopeCalibrator.this, iteration);
+                        }
+<span class="fc" id="L2040">                    }</span>
+
+                    @Override
+                    public void onEstimateProgressChange(
+                            final RobustEstimator&lt;PreliminaryResult&gt; estimator, final float progress) {
+<span class="pc bpc" id="L2045" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L2046">                            mListener.onCalibrateProgressChange(</span>
+                                    RANSACRobustTurntableGyroscopeCalibrator.this, progress);
+                        }
+<span class="fc" id="L2049">                    }</span>
+                });
+
+        try {
+<span class="fc" id="L2053">            mRunning = true;</span>
+<span class="fc" id="L2054">            mInliersData = null;</span>
+<span class="pc bpc" id="L2055" title="2 of 4 branches missed.">            innerEstimator.setComputeAndKeepInliersEnabled(</span>
+                    mComputeAndKeepInliers || mRefineResult);
+<span class="pc bpc" id="L2057" title="2 of 4 branches missed.">            innerEstimator.setComputeAndKeepResidualsEnabled(</span>
+                    mComputeAndKeepResiduals || mRefineResult);
+<span class="fc" id="L2059">            innerEstimator.setConfidence(mConfidence);</span>
+<span class="fc" id="L2060">            innerEstimator.setMaxIterations(mMaxIterations);</span>
+<span class="fc" id="L2061">            innerEstimator.setProgressDelta(mProgressDelta);</span>
+<span class="fc" id="L2062">            final PreliminaryResult preliminaryResult = innerEstimator.estimate();</span>
+<span class="fc" id="L2063">            mInliersData = innerEstimator.getInliersData();</span>
+
+<span class="fc" id="L2065">            attemptRefine(preliminaryResult);</span>
+
+<span class="nc" id="L2067">        } catch (com.irurueta.numerical.LockedException e) {</span>
+<span class="nc" id="L2068">            throw new LockedException(e);</span>
+<span class="nc" id="L2069">        } catch (com.irurueta.numerical.NotReadyException e) {</span>
+<span class="nc" id="L2070">            throw new NotReadyException(e);</span>
+<span class="nc" id="L2071">        } catch (RobustEstimatorException e) {</span>
+<span class="nc" id="L2072">            throw new CalibrationException(e);</span>
+        } finally {
+<span class="fc" id="L2074">            mRunning = false;</span>
+        }
+<span class="fc" id="L2076">    }</span>
+
+    /**
+     * Returns method being used for robust estimation.
+     *
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+<span class="fc" id="L2085">        return RobustEstimatorMethod.RANSAC;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
