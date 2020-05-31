@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BodyKinematicsSequence.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.calibration</a> &gt; <span class="el_source">BodyKinematicsSequence.java</span></div><h1>BodyKinematicsSequence.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2020 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.inertial.calibration;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * Contains a collection of items containing body kinematics
+ * measurements ordered by the timestamp when the measurment was made.
+ *
+ * @param &lt;T&gt; a type of {@link TimedBodyKinematics}.
+ */
+public class BodyKinematicsSequence&lt;T extends TimedBodyKinematics&gt; {
+
+    /**
+     * List of items.
+     * If items are provided unsorted, they are reordered by timestamp
+     * on getter method.
+     */
+    private List&lt;T&gt; mItems;
+
+    /**
+     * Contains sorted list of items.
+     * This list is kept for performance reasons to reduce the amount of
+     * required sorting.
+     */
+    private List&lt;T&gt; mSortedItems;
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L48">    public BodyKinematicsSequence() { }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param items list of items containing body kinematics to be kept into
+     *              this sequence.
+     */
+<span class="fc" id="L56">    public BodyKinematicsSequence(final List&lt;T&gt; items) {</span>
+<span class="fc" id="L57">        mItems = items;</span>
+<span class="fc" id="L58">    }</span>
+
+    /**
+     * Gets items in this sequence ordered by ascending timestamp.
+     *
+     * @param result instance where sorted items will be stored.
+     * @return true if sorted items could be retrieved, false if no items
+     * are available.
+     */
+    public boolean getSortedItems(final List&lt;T&gt; result) {
+        // already sorted items are available.
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        if (mSortedItems != null) {</span>
+<span class="fc" id="L70">            result.clear();</span>
+<span class="fc" id="L71">            result.addAll(mSortedItems);</span>
+<span class="fc" id="L72">            return true;</span>
+        }
+
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (mItems != null) {</span>
+<span class="fc" id="L76">            mSortedItems = new ArrayList&lt;&gt;(mItems);</span>
+<span class="fc" id="L77">            Collections.sort(mSortedItems, new Comparator&lt;T&gt;() {</span>
+                @Override
+                public int compare(final T o1, final T o2) {
+<span class="fc" id="L80">                    final double t1 = o1.getTimestampSeconds();</span>
+<span class="fc" id="L81">                    final double t2 = o2.getTimestampSeconds();</span>
+<span class="fc" id="L82">                    return Double.compare(t1, t2);</span>
+                }
+            });
+
+<span class="fc" id="L86">            result.clear();</span>
+<span class="fc" id="L87">            result.addAll(mSortedItems);</span>
+<span class="fc" id="L88">            return true;</span>
+        }
+
+<span class="fc" id="L91">        return false;</span>
+    }
+
+    /**
+     * Gets items in this sequence ordered by ascending timestamp.
+     *
+     * @return a new list containing sorted items or null if sorted items
+     * could not be retrieved..
+     */
+    public List&lt;T&gt; getSortedItems() {
+<span class="fc" id="L101">        final List&lt;T&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L102" title="All 2 branches covered.">        if (getSortedItems(result)) {</span>
+<span class="fc" id="L103">            return result;</span>
+        } else {
+<span class="fc" id="L105">            return null;</span>
+        }
+    }
+
+    /**
+     * Sets list of items containing body kinematics to be kept into this
+     * sequence.
+     *
+     * @param items items to be kept.
+     */
+    public void setItems(final List&lt;T&gt; items) {
+<span class="fc" id="L116">        mItems = items;</span>
+<span class="fc" id="L117">        mSortedItems = null;</span>
+<span class="fc" id="L118">    }</span>
+
+    /**
+     * Gets number of items in this sequence.
+     *
+     * @return number of items in this sequence.
+     */
+    public int getItemsCount() {
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        return mItems != null ? mItems.size() : 0;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
