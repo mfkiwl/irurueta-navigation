@@ -1,0 +1,1201 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KnownFrameMagnetometerLinearLeastSquaresCalibrator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.calibration.magnetometer</a> &gt; <span class="el_source">KnownFrameMagnetometerLinearLeastSquaresCalibrator.java</span></div><h1>KnownFrameMagnetometerLinearLeastSquaresCalibrator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2020 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.inertial.calibration.magnetometer;
+
+import com.irurueta.algebra.AlgebraException;
+import com.irurueta.algebra.Matrix;
+import com.irurueta.algebra.Utils;
+import com.irurueta.algebra.WrongSizeException;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NotReadyException;
+import com.irurueta.navigation.frames.CoordinateTransformation;
+import com.irurueta.navigation.frames.ECEFFrame;
+import com.irurueta.navigation.frames.FrameType;
+import com.irurueta.navigation.frames.NEDFrame;
+import com.irurueta.navigation.frames.converters.ECEFtoNEDFrameConverter;
+import com.irurueta.navigation.geodesic.wmm.WMMEarthMagneticFluxDensityEstimator;
+import com.irurueta.navigation.geodesic.wmm.WorldMagneticModel;
+import com.irurueta.navigation.inertial.BodyMagneticFluxDensity;
+import com.irurueta.navigation.inertial.NEDMagneticFluxDensity;
+import com.irurueta.navigation.inertial.calibration.CalibrationException;
+import com.irurueta.navigation.inertial.calibration.FrameBodyMagneticFluxDensity;
+import com.irurueta.navigation.inertial.estimators.BodyMagneticFluxDensityEstimator;
+
+import java.io.IOException;
+import java.util.Collection;
+
+/**
+ * Estimates magnetometer hard-iron biases, cross couplings and scaling
+ * factors.
+ * &lt;p&gt;
+ * This calibrator uses a linear approach to find a minimum least squared error
+ * solution.
+ * &lt;p&gt;
+ * To use this calibrator at least 4 measurements at different known frames must
+ * be provided. In other words, magnetometer samples must be obtained at 4
+ * different positions or orientations.
+ * Notice that frame velocities are ignored by this calibrator.
+ * &lt;p&gt;
+ * Measured magnetic flux density is assumed to follow the model shown below:
+ * &lt;pre&gt;
+ *     mBmeas = bm + (I + Mm) * mBtrue + w
+ * &lt;/pre&gt;
+ * Where:
+ * - mBmeas is the measured magnetic flux density. This is a 3x1 vector.
+ * - bm is magnetometer hard-iron bias. Ideally, on a perfect magnetometer,
+ * this should be a 3x1 zero vector.
+ * - I is the 3x3 identity matrix.
+ * - Mm is the 3x3 soft-iron matrix containing cross-couplings and scaling
+ * factors. Ideally, on a perfect magnetometer, this should be a 3x3 zero
+ * matrix.
+ * - mBtrue is ground-truth magnetic flux density. This is a 3x1 vector.
+ * - w is measurement noise. This is a 3x1 vector.
+ */
+public class KnownFrameMagnetometerLinearLeastSquaresCalibrator implements
+        KnownFrameMagnetometerCalibrator&lt;FrameBodyMagneticFluxDensity,
+                KnownFrameMagnetometerLinearLeastSquaresCalibratorListener&gt; {
+
+    /**
+     * Indicates whether by default a common z-axis is assumed for the accelerometer,
+     * gyroscope and magnetometer.
+     */
+    public static final boolean DEFAULT_USE_COMMON_Z_AXIS = false;
+
+    /**
+     * Required minimum number of measurements.
+     */
+    public static final int MINIMUM_MEASUREMENTS = 4;
+
+    /**
+     * Number of equations generated for each measurement.
+     */
+    private static final int EQUATIONS_PER_MEASUREMENT = 3;
+
+    /**
+     * Number of unknowns when common z-axis is assumed for both the accelerometer
+     * and gyroscope.
+     */
+    private static final int COMMON_Z_AXIS_UNKNOWNS = 9;
+
+    /**
+     * Number of unknowns for the general case.
+     */
+    private static final int GENERAL_UNKNOWNS = 12;
+
+    /**
+     * Contains a collection of body magnetic flux density measurements taken
+     * at different frames (positions and orientations).
+     * If a single device magnetometer needs to be calibrated, typically all
+     * measurements are taken at the same position, with zero velocity and
+     * multiple orientations.
+     * However, if we just want to calibrate a given magnetometer model (e.g.
+     * obtain an average and less precise calibration for the magnetometer of
+     * a given phone model), we could take measurements collected throughout
+     * the planet at multiple positions while the phone remains static (e.g.
+     * while charging), hence each measurement position will change, velocity
+     * will remain zero and orientation will be typically constant at
+     * horizontal orientation while the phone remains on a
+     * flat surface.
+     */
+    private Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; mMeasurements;
+
+    /**
+     * This flag indicates whether z-axis is assumed to be common for accelerometer
+     * and gyroscope.
+     * When enabled, this eliminates 3 variables from Ma matrix.
+     */
+<span class="fc" id="L120">    private boolean mCommonAxisUsed = DEFAULT_USE_COMMON_Z_AXIS;</span>
+
+    /**
+     * Listener to handle events raised by this calibrator.
+     */
+    private KnownFrameMagnetometerLinearLeastSquaresCalibratorListener mListener;
+
+    /**
+     * Estimated magnetometer hard-iron biases for each magnetometer axis
+     * expressed in Teslas (T).
+     */
+    private double[] mEstimatedHardIron;
+
+    /**
+     * Estimated magnetometer soft-iron matrix containing scale factors
+     * and cross coupling errors.
+     * This is the product of matrix Tm containing cross coupling errors and Km
+     * containing scaling factors.
+     * So tat:
+     * &lt;pre&gt;
+     *     Mm = [sx    mxy  mxz] = Tm*Km
+     *          [myx   sy   myz]
+     *          [mzx   mzy  sz ]
+     * &lt;/pre&gt;
+     * Where:
+     * &lt;pre&gt;
+     *     Km = [sx 0   0 ]
+     *          [0  sy  0 ]
+     *          [0  0   sz]
+     * &lt;/pre&gt;
+     * and
+     * &lt;pre&gt;
+     *     Tm = [1          -alphaXy    alphaXz ]
+     *          [alphaYx    1           -alphaYz]
+     *          [-alphaZx   alphaZy     1       ]
+     * &lt;/pre&gt;
+     * Hence:
+     * &lt;pre&gt;
+     *     Mm = [sx    mxy  mxz] = Tm*Km =  [sx             -sy * alphaXy   sz * alphaXz ]
+     *          [myx   sy   myz]            [sx * alphaYx   sy              -sz * alphaYz]
+     *          [mzx   mzy  sz ]            [-sx * alphaZx  sy * alphaZy    sz           ]
+     * &lt;/pre&gt;
+     * This instance allows any 3x3 matrix however, typically alphaYx, alphaZx and alphaZy
+     * are considered to be zero if the accelerometer z-axis is assumed to be the same
+     * as the body z-axis. When this is assumed, myx = mzx = mzy = 0 and the Mm matrix
+     * becomes upper diagonal:
+     * &lt;pre&gt;
+     *     Mm = [sx    mxy  mxz]
+     *          [0     sy   myz]
+     *          [0     0    sz ]
+     * &lt;/pre&gt;
+     * Values of this matrix are unitless.
+     */
+    private Matrix mEstimatedMm;
+
+    /**
+     * Indicates whether calibrator is running.
+     */
+    private boolean mRunning;
+
+    /**
+     * Contains Earth's magnetic model.
+     */
+    private WorldMagneticModel mMagneticModel;
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L188">    public KnownFrameMagnetometerLinearLeastSquaresCalibrator() {</span>
+<span class="fc" id="L189">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param listener listener to handle events raised by this calibrator.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+<span class="fc" id="L197">            final KnownFrameMagnetometerLinearLeastSquaresCalibratorListener listener) {</span>
+<span class="fc" id="L198">        mListener = listener;</span>
+<span class="fc" id="L199">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements collection of body magnetic flux density measurements
+     *                     taken at different frames (positions and orientations).
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+<span class="fc" id="L208">            final Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; measurements) {</span>
+<span class="fc" id="L209">        mMeasurements = measurements;</span>
+<span class="fc" id="L210">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements collection of body magnetic flux density measurements
+     *                     taken at different frames (positions and orientations).
+     * @param listener     listener to handle events raised by this calibrator.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; measurements,
+            final KnownFrameMagnetometerLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L222">        this(measurements);</span>
+<span class="fc" id="L223">        mListener = listener;</span>
+<span class="fc" id="L224">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common
+     *                       for the accelerometer, gyroscope and magnetometer.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+<span class="fc" id="L233">            final boolean commonAxisUsed) {</span>
+<span class="fc" id="L234">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L235">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common
+     *                       for the accelerometer, gyroscope and magnetometer.
+     * @param listener       listener to handle events raised by this calibrator.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final boolean commonAxisUsed,
+            final KnownFrameMagnetometerLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L247">        this(commonAxisUsed);</span>
+<span class="fc" id="L248">        mListener = listener;</span>
+<span class="fc" id="L249">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements   collection of body magnetic flux density measurements
+     *                       taken at different frames (positions and orientations).
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common
+     *                       for the accelerometer, gyroscope and magnetometer.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; measurements,
+            final boolean commonAxisUsed) {
+<span class="fc" id="L262">        this(measurements);</span>
+<span class="fc" id="L263">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L264">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements   collection of body magnetic flux density measurements
+     *                       taken at different frames (positions and orientations).
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common
+     *                       for the accelerometer, gyroscope and magnetometer.
+     * @param listener       listener to handle events raised by this calibrator.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; measurements,
+            final boolean commonAxisUsed,
+            final KnownFrameMagnetometerLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L279">        this(measurements, commonAxisUsed);</span>
+<span class="fc" id="L280">        mListener = listener;</span>
+<span class="fc" id="L281">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param magneticModel Earth's magnetic model. If null, a default model
+     *                      will be used instead.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+<span class="fc" id="L290">            final WorldMagneticModel magneticModel) {</span>
+<span class="fc" id="L291">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L292">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param magneticModel Earth's magnetic model. If null, a default model
+     *                      will be used instead.
+     * @param listener      listener to handle events raised by this calibrator.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final WorldMagneticModel magneticModel,
+            final KnownFrameMagnetometerLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L304">        this(listener);</span>
+<span class="fc" id="L305">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L306">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements  collection of body magnetic flux density measurements
+     *                      taken at different frames (positions and orientations).
+     * @param magneticModel Earth's magnetic model. If null, a default model
+     *                      will be used instead.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; measurements,
+            final WorldMagneticModel magneticModel) {
+<span class="fc" id="L319">        this(measurements);</span>
+<span class="fc" id="L320">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L321">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements  collection of body magnetic flux density measurements
+     *                      taken at different frames (positions and orientations).
+     * @param magneticModel Earth's magnetic model. If null, a default model
+     *                      will be used instead.
+     * @param listener      listener to handle events raised by this calibrator.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; measurements,
+            final WorldMagneticModel magneticModel,
+            final KnownFrameMagnetometerLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L336">        this(measurements, listener);</span>
+<span class="fc" id="L337">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L338">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common
+     *                       for the accelerometer, gyroscope and magnetometer.
+     * @param magneticModel  Earth's magnetic model. If null, a default model
+     *                       will be used instead.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final boolean commonAxisUsed,
+            final WorldMagneticModel magneticModel) {
+<span class="fc" id="L351">        this(commonAxisUsed);</span>
+<span class="fc" id="L352">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L353">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common
+     *                       for the accelerometer, gyroscope and magnetometer.
+     * @param magneticModel  Earth's magnetic model. If null, a default model
+     *                       will be used instead.
+     * @param listener       listener to handle events raised by this calibrator.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final boolean commonAxisUsed,
+            final WorldMagneticModel magneticModel,
+            final KnownFrameMagnetometerLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L368">        this(commonAxisUsed, listener);</span>
+<span class="fc" id="L369">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L370">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements   collection of body magnetic flux density measurements
+     *                       taken at different frames (positions and orientations).
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common
+     *                       for the accelerometer, gyroscope and magnetometer.
+     * @param magneticModel  Earth's magnetic model. If null, a default model
+     *                       will be used instead.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; measurements,
+            final boolean commonAxisUsed,
+            final WorldMagneticModel magneticModel) {
+<span class="fc" id="L386">        this(measurements, commonAxisUsed);</span>
+<span class="fc" id="L387">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L388">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param measurements   collection of body magnetic flux density measurements
+     *                       taken at different frames (positions and orientations).
+     * @param commonAxisUsed indicates whether z-axis is assumed to be common
+     *                       for the accelerometer, gyroscope and magnetometer.
+     * @param magneticModel  Earth's magnetic model. If null, a default model
+     *                       will be used instead.
+     * @param listener       listener to handle events raised by this calibrator.
+     */
+    public KnownFrameMagnetometerLinearLeastSquaresCalibrator(
+            final Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; measurements,
+            final boolean commonAxisUsed,
+            final WorldMagneticModel magneticModel,
+            final KnownFrameMagnetometerLinearLeastSquaresCalibratorListener listener) {
+<span class="fc" id="L406">        this(measurements, commonAxisUsed, listener);</span>
+<span class="fc" id="L407">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L408">    }</span>
+
+    /**
+     * Gets a collection of body magnetic flux density measurements taken at different
+     * frames (positions, orientations and velocities).
+     * If a single device IMU needs to be calibrated, typically all measurements are
+     * taken at the same position, with zero velocity and multiple orientations.
+     * However, if we just want to calibrate a given IMU model (e.g. obtain
+     * an average and less precise calibration for the IMU of a given phone model),
+     * we could take measurements collected throughout the planet at multiple positions
+     * while the phone remains static (e.g. while charging), hence each measurement
+     * position will change, velocity will remain zero and orientation will be
+     * typically constant at horizontal orientation while the phone remains on a
+     * flat surface.
+     *
+     * @return a collection of body magnetic flux density measurements taken at different
+     * frames (positions, orientations and velocities).
+     */
+    @Override
+    public Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; getMeasurements() {
+<span class="fc" id="L428">        return mMeasurements;</span>
+    }
+
+    /**
+     * Sets a collection of body magnetic flux density measurements taken at different
+     * frames (positions, orientations and velocities).
+     * If a single device IMU needs to be calibrated, typically all measurements are
+     * taken at the same position, with zero velocity and multiple orientations.
+     * However, if we just want to calibrate the a given IMU model (e.g. obtain
+     * an average and less precise calibration for the IMU of a given phone model),
+     * we could take measurements collected throughout the planet at multiple positions
+     * while the phone remains static (e.g. while charging), hence each measurement
+     * position will change, velocity will remain zero and orientation will be
+     * typically constant at horizontal orientation while the phone remains on a
+     * flat surface.
+     *
+     * @param measurements collection of body magnetic flux density measurements
+     *                     taken at different frames (positions, orientations
+     *                     and velocities).
+     * @throws LockedException if estimator is currently running.
+     */
+    @Override
+    public void setMeasurements(
+            final Collection&lt;? extends FrameBodyMagneticFluxDensity&gt; measurements)
+            throws LockedException {
+<span class="fc bfc" id="L453" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L454">            throw new LockedException();</span>
+        }
+<span class="fc" id="L456">        mMeasurements = measurements;</span>
+<span class="fc" id="L457">    }</span>
+
+    /**
+     * Indicates whether z-axis is assumed to be common for accelerometer,
+     * gyroscope and magnetometer.
+     * When enabled, this eliminates 3 variables from Mm (soft-iron) matrix.
+     *
+     * @return true if z-axis is assumed to be common for accelerometer,
+     * gyroscope and magnetometer, false otherwise.
+     */
+    @Override
+    public boolean isCommonAxisUsed() {
+<span class="fc" id="L469">        return mCommonAxisUsed;</span>
+    }
+
+    /**
+     * Specifies whether z-axis is assumed to be common for accelerometer and
+     * gyroscope.
+     * When enabled, this eliminates 3 variables from Mm matrix.
+     *
+     * @param commonAxisUsed true if z-axis is assumed to be common for
+     *                       accelerometer, gyroscope and magnetometer, false
+     *                       otherwise.
+     * @throws LockedException if estimator is currently running.
+     */
+    @Override
+    public void setCommonAxisUsed(final boolean commonAxisUsed)
+            throws LockedException {
+<span class="fc bfc" id="L485" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L486">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L489">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L490">    }</span>
+
+    /**
+     * Gets listener to handle events raised by this calibrator.
+     *
+     * @return listener to handle events raised by this calibrator.
+     */
+    @Override
+    public KnownFrameMagnetometerLinearLeastSquaresCalibratorListener getListener() {
+<span class="fc" id="L499">        return mListener;</span>
+    }
+
+    /**
+     * Sets listener to handle events raised by this calibrator.
+     *
+     * @param listener listener to handle events raised by this calibrator.
+     * @throws LockedException if estimator is currently running.
+     */
+    @Override
+    public void setListener(
+            final KnownFrameMagnetometerLinearLeastSquaresCalibratorListener listener)
+            throws LockedException {
+<span class="fc bfc" id="L512" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L513">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L516">        mListener = listener;</span>
+<span class="fc" id="L517">    }</span>
+
+    /**
+     * Indicates whether calibrator is ready to start the estimator.
+     *
+     * @return true if calibrator is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+<span class="fc bfc" id="L526" title="All 2 branches covered.">        return mMeasurements != null</span>
+<span class="fc bfc" id="L527" title="All 2 branches covered.">                &amp;&amp; mMeasurements.size() &gt;= MINIMUM_MEASUREMENTS;</span>
+    }
+
+    /**
+     * Indicates whether calibrator is currently running or no.
+     *
+     * @return true if calibrator is running, false otherwise.
+     */
+    @Override
+    public boolean isRunning() {
+<span class="fc" id="L537">        return mRunning;</span>
+    }
+
+    /**
+     * Gets Earth's magnetic model.
+     *
+     * @return Earth's magnetic model or null if not provided.
+     */
+    @Override
+    public WorldMagneticModel getMagneticModel() {
+<span class="fc" id="L547">        return mMagneticModel;</span>
+    }
+
+    /**
+     * Sets Earth's magnetic model.
+     * If not provided a default model will be loaded internally.
+     *
+     * @param magneticModel Earth's magnetic model to be set.
+     * @throws LockedException if calibrator is currently running.
+     */
+    @Override
+    public void setMagneticModel(final WorldMagneticModel magneticModel)
+            throws LockedException {
+<span class="fc bfc" id="L560" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L561">            throw new LockedException();</span>
+        }
+<span class="fc" id="L563">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L564">    }</span>
+
+    /**
+     * Estimates accelerometer calibration parameters containing scale factors
+     * and cross-coupling errors.
+     *
+     * @throws LockedException      if calibrator is currently running.
+     * @throws NotReadyException    if calibrator is not ready.
+     * @throws CalibrationException if calibration fails for numerical reasons.
+     */
+    @Override
+    public void calibrate() throws LockedException, NotReadyException,
+            CalibrationException {
+<span class="pc bpc" id="L577" title="1 of 2 branches missed.">        if (mRunning) {</span>
+<span class="nc" id="L578">            throw new LockedException();</span>
+        }
+
+<span class="pc bpc" id="L581" title="1 of 2 branches missed.">        if (!isReady()) {</span>
+<span class="nc" id="L582">            throw new NotReadyException();</span>
+        }
+
+        try {
+<span class="fc" id="L586">            mRunning = true;</span>
+
+<span class="pc bpc" id="L588" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L589">                mListener.onCalibrateStart(this);</span>
+            }
+
+<span class="fc bfc" id="L592" title="All 2 branches covered.">            if (mCommonAxisUsed) {</span>
+<span class="fc" id="L593">                calibrateCommonAxis();</span>
+            } else {
+<span class="fc" id="L595">                calibrateGeneral();</span>
+            }
+
+<span class="pc bpc" id="L598" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L599">                mListener.onCalibrateEnd(this);</span>
+            }
+
+<span class="nc" id="L602">        } catch (final AlgebraException | IOException e) {</span>
+<span class="nc" id="L603">            throw new CalibrationException(e);</span>
+        } finally {
+<span class="fc" id="L605">            mRunning = false;</span>
+        }
+<span class="fc" id="L607">    }</span>
+
+    /**
+     * Gets array containing x,y,z components of estimated magnetometer
+     * hard-iron biases expressed in Teslas (T).
+     *
+     * @return array containing x,y,z components of estimated magnetometer
+     * hard-iron biases.
+     */
+    @Override
+    public double[] getEstimatedHardIron() {
+<span class="fc" id="L618">        return mEstimatedHardIron;</span>
+    }
+
+    /**
+     * Gets array containing x,y,z components of estimated magnetometer
+     * hard-iron biases expressed in Teslas (T).
+     *
+     * @param result instance where estimated magnetometer biases will be
+     *               stored.
+     * @return true if result instance was updated, false otherwise (when
+     * estimation is not yet available).
+     */
+    @Override
+    public boolean getEstimatedHardIron(final double[] result) {
+<span class="fc bfc" id="L632" title="All 2 branches covered.">        if (mEstimatedHardIron != null) {</span>
+<span class="fc" id="L633">            System.arraycopy(mEstimatedHardIron, 0, result,</span>
+                    0, mEstimatedHardIron.length);
+<span class="fc" id="L635">            return true;</span>
+        } else {
+<span class="fc" id="L637">            return false;</span>
+        }
+    }
+
+    /**
+     * Gets column matrix containing x,y,z components of estimated
+     * magnetometer hard-iron biases expressed in Teslas (T).
+     *
+     * @return column matrix containing x,y,z components of estimated
+     * magnetometer hard-iron biases.
+     */
+    @Override
+    public Matrix getEstimatedHardIronAsMatrix() {
+<span class="fc bfc" id="L650" title="All 2 branches covered.">        return mEstimatedHardIron != null ? Matrix.newFromArray(mEstimatedHardIron) : null;</span>
+    }
+
+    /**
+     * Gets column matrix containing x,y,z components of estimated
+     * magnetometer hard-iron biases expressed in Teslas (T).
+     *
+     * @param result instance where result data will be stored.
+     * @return true if result was updated, false otherwise.
+     * @throws WrongSizeException if provided result instance has invalid size.
+     */
+    @Override
+    public boolean getEstimatedHardIronAsMatrix(final Matrix result)
+            throws WrongSizeException {
+<span class="fc bfc" id="L664" title="All 2 branches covered.">        if (mEstimatedHardIron != null) {</span>
+<span class="fc" id="L665">            result.fromArray(mEstimatedHardIron);</span>
+<span class="fc" id="L666">            return true;</span>
+        } else {
+<span class="fc" id="L668">            return false;</span>
+        }
+    }
+
+    /**
+     * Gets x coordinate of estimated magnetometer bias expressed in
+     * Teslas (T).
+     *
+     * @return x coordinate of estimated magnetometer bias or null if not
+     * available.
+     */
+    @Override
+    public Double getEstimatedHardIronX() {
+<span class="fc bfc" id="L681" title="All 2 branches covered.">        return mEstimatedHardIron != null ? mEstimatedHardIron[0] : null;</span>
+    }
+
+    /**
+     * Gets y coordinate of estimated magnetometer bias expressed in
+     * Teslas (T).
+     *
+     * @return y coordinate of estimated magnetometer bias or null if not
+     * available.
+     */
+    @Override
+    public Double getEstimatedHardIronY() {
+<span class="fc bfc" id="L693" title="All 2 branches covered.">        return mEstimatedHardIron != null ? mEstimatedHardIron[1] : null;</span>
+    }
+
+    /**
+     * Gets z coordinate of estimated magnetometer bias expressed in
+     * Teslas (T).
+     *
+     * @return z coordinate of estimated magnetometer bias or null if not
+     * available.
+     */
+    @Override
+    public Double getEstimatedHardIronZ() {
+<span class="fc bfc" id="L705" title="All 2 branches covered.">        return mEstimatedHardIron != null ? mEstimatedHardIron[2] : null;</span>
+    }
+
+    /**
+     * Gets estimated magnetometer soft-iron matrix containing scale factors
+     * and cross coupling errors.
+     * This is the product of matrix Tm containing cross coupling errors and Km
+     * containing scaling factors.
+     * So tat:
+     * &lt;pre&gt;
+     *     Mm = [sx    mxy  mxz] = Tm*Km
+     *          [myx   sy   myz]
+     *          [mzx   mzy  sz ]
+     * &lt;/pre&gt;
+     * Where:
+     * &lt;pre&gt;
+     *     Km = [sx 0   0 ]
+     *          [0  sy  0 ]
+     *          [0  0   sz]
+     * &lt;/pre&gt;
+     * and
+     * &lt;pre&gt;
+     *     Tm = [1          -alphaXy    alphaXz ]
+     *          [alphaYx    1           -alphaYz]
+     *          [-alphaZx   alphaZy     1       ]
+     * &lt;/pre&gt;
+     * Hence:
+     * &lt;pre&gt;
+     *     Mm = [sx    mxy  mxz] = Tm*Km =  [sx             -sy * alphaXy   sz * alphaXz ]
+     *          [myx   sy   myz]            [sx * alphaYx   sy              -sz * alphaYz]
+     *          [mzx   mzy  sz ]            [-sx * alphaZx  sy * alphaZy    sz           ]
+     * &lt;/pre&gt;
+     * This instance allows any 3x3 matrix however, typically alphaYx, alphaZx and alphaZy
+     * are considered to be zero if the accelerometer z-axis is assumed to be the same
+     * as the body z-axis. When this is assumed, myx = mzx = mzy = 0 and the Mm matrix
+     * becomes upper diagonal:
+     * &lt;pre&gt;
+     *     Mm = [sx    mxy  mxz]
+     *          [0     sy   myz]
+     *          [0     0    sz ]
+     * &lt;/pre&gt;
+     * Values of this matrix are unitless.
+     *
+     * @return estimated magnetometer soft-iron scale factors and cross coupling errors,
+     * or null if not available.
+     */
+    @Override
+    public Matrix getEstimatedMm() {
+<span class="fc" id="L753">        return mEstimatedMm;</span>
+    }
+
+    /**
+     * Gets estimated x-axis scale factor.
+     *
+     * @return estimated x-axis scale factor or null if not available.
+     */
+    @Override
+    public Double getEstimatedSx() {
+<span class="fc bfc" id="L763" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L764">                mEstimatedMm.getElementAt(0, 0) : null;</span>
+    }
+
+    /**
+     * Gets estimated y-axis scale factor.
+     *
+     * @return estimated y-axis scale factor or null if not available.
+     */
+    @Override
+    public Double getEstimatedSy() {
+<span class="fc bfc" id="L774" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L775">                mEstimatedMm.getElementAt(1, 1) : null;</span>
+    }
+
+    /**
+     * Gets estimated z-axis scale factor.
+     *
+     * @return estimated z-axis scale factor or null if not available.
+     */
+    @Override
+    public Double getEstimatedSz() {
+<span class="fc bfc" id="L785" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L786">                mEstimatedMm.getElementAt(2, 2) : null;</span>
+    }
+
+    /**
+     * Gets estimated x-y cross-coupling error.
+     *
+     * @return estimated x-y cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMxy() {
+<span class="fc bfc" id="L796" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L797">                mEstimatedMm.getElementAt(0, 1) : null;</span>
+    }
+
+    /**
+     * Gets estimated x-z cross-coupling error.
+     *
+     * @return estimated x-z cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMxz() {
+<span class="fc bfc" id="L807" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L808">                mEstimatedMm.getElementAt(0, 2) : null;</span>
+    }
+
+    /**
+     * Gets estimated y-x cross-coupling error.
+     *
+     * @return estimated y-x cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMyx() {
+<span class="fc bfc" id="L818" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L819">                mEstimatedMm.getElementAt(1, 0) : null;</span>
+    }
+
+    /**
+     * Gets estimated y-z cross-coupling error.
+     *
+     * @return estimated y-z cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMyz() {
+<span class="fc bfc" id="L829" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L830">                mEstimatedMm.getElementAt(1, 2) : null;</span>
+    }
+
+    /**
+     * Gets estimated z-x cross-coupling error.
+     *
+     * @return estimated z-x cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMzx() {
+<span class="fc bfc" id="L840" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L841">                mEstimatedMm.getElementAt(2, 0) : null;</span>
+    }
+
+    /**
+     * Gets estimated z-y cross-coupling error.
+     *
+     * @return estimated z-y cross-coupling error or null if not available.
+     */
+    @Override
+    public Double getEstimatedMzy() {
+<span class="fc bfc" id="L851" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L852">                mEstimatedMm.getElementAt(2, 1) : null;</span>
+    }
+
+    /**
+     * Internal method to perform calibration when common z-axis is assumed
+     * for the accelerometer, gyroscope and magnetometer.
+     *
+     * @throws AlgebraException if there are numerical errors.
+     * @throws IOException      if world magnetic model cannot be loaded.
+     */
+    private void calibrateCommonAxis() throws AlgebraException, IOException {
+        // The magnetometer model is:
+        // mBmeas = bm + (I + Mm) * mBtrue + w
+
+        // Ideally a least squares solution tries to minimize noise component, so:
+        // mBmeas = bm + (I + Mm) * mBtrue
+
+        // Hence:
+        //  [mBmeasx] = [bx] + ( [1  0   0] + [sx    mxy mxz])   [mBtruex]
+        //  [mBmeasy] = [by]     [0  1   0]   [myx   sy  myz]    [mBtruey]
+        //  [mBmeasz] = [bz]     [0  0   1]   [mzx   mzy sz ]    [mBtruez]
+
+        // where myx = mzx = mzy = 0
+
+        // Hence:
+        //  [mBmeasx] = [bx] + ( [1  0   0] + [sx    mxy mxz])   [mBtruex]
+        //  [mBmeasy] = [by]     [0  1   0]   [0     sy  myz]    [mBtruey]
+        //  [mBmeasz] = [bz]     [0  0   1]   [0     0   sz ]    [mBtruez]
+
+        //  [mBmeasx] = [bx] +   [1+sx   mxy     mxz ][mBtruex]
+        //  [mBmeasy]   [by]     [0      1+sy    myz ][mBtruey]
+        //  [mBmeasz]   [bz]     [0      0       1+sz][mBtruez]
+
+        //  mBmeasx = bx + (1+sx) * mBtruex + mxy * mBtruey + mxz * mBtruez
+        //  mBmeasy = by + (1+sy) * mBtruey + myz * mBtruez
+        //  mBmeasz = bz + (1+sz) * mBtruez
+
+        // Where the unknowns are: bx, by, bz, sx, sy, sz, mxy mxz, myz
+        // Reordering:
+        //  mBmeasx = bx + mBtruex + sx * mBtruex + mxy * mBtruey + mxz * mBtruez
+        //  mBmeasy = by + mBtruey + sy * mBtruey + myz * mBtruez
+        //  mBmeasz = bz + mBtruez + sz * mBtruez
+
+        //  mBmeasx - mBtruex = bx + sx * mBtruex + mxy * mBtruey + mxz * mBtruez
+        //  mBmeasy - mBtruey = by + sy * mBtruey + myz * mBtruez
+        //  mBmeasz - mBtruez = bz + sz * mBtruez
+
+        // [1   0   0   mBtruex  0        0        mBtruey  mBtruez  0      ][bx ] = [mBmeasx - mBtruex]
+        // [0   1   0   0        mBtruey  0        0        0        mBtruez][by ]   [mBmeasy - mBtruey]
+        // [0   0   1   0        0        mBtruez  0        0        0      ][bz ]   [mBmeasz - mBtruez]
+        //                                                                   [sx ]
+        //                                                                   [sy ]
+        //                                                                   [sz ]
+        //                                                                   [mxy]
+        //                                                                   [mxz]
+        //                                                                   [myz]
+
+        final WMMEarthMagneticFluxDensityEstimator wmmEstimator;
+<span class="fc bfc" id="L910" title="All 2 branches covered.">        if (mMagneticModel != null) {</span>
+<span class="fc" id="L911">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator(mMagneticModel);</span>
+        } else {
+<span class="fc" id="L913">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator();</span>
+        }
+
+<span class="fc" id="L916">        final BodyMagneticFluxDensity expectedMagneticFluxDensity = new BodyMagneticFluxDensity();</span>
+<span class="fc" id="L917">        final NEDFrame nedFrame = new NEDFrame();</span>
+<span class="fc" id="L918">        final NEDMagneticFluxDensity earthB = new NEDMagneticFluxDensity();</span>
+<span class="fc" id="L919">        final CoordinateTransformation cbn = new CoordinateTransformation(</span>
+                FrameType.BODY_FRAME, FrameType.LOCAL_NAVIGATION_FRAME);
+<span class="fc" id="L921">        final CoordinateTransformation cnb = new CoordinateTransformation(</span>
+                FrameType.LOCAL_NAVIGATION_FRAME, FrameType.BODY_FRAME);
+
+<span class="fc" id="L924">        final int rows = EQUATIONS_PER_MEASUREMENT * mMeasurements.size();</span>
+<span class="fc" id="L925">        final Matrix a = new Matrix(rows, COMMON_Z_AXIS_UNKNOWNS);</span>
+<span class="fc" id="L926">        final Matrix b = new Matrix(rows, 1);</span>
+<span class="fc" id="L927">        int i = 0;</span>
+<span class="fc bfc" id="L928" title="All 2 branches covered.">        for (final FrameBodyMagneticFluxDensity measurement : mMeasurements) {</span>
+<span class="fc" id="L929">            final BodyMagneticFluxDensity measuredMagneticFluxDensity =</span>
+<span class="fc" id="L930">                    measurement.getMagneticFluxDensity();</span>
+
+            // estimate Earth magnetic flux density at frame position and
+            // timestamp using WMM
+<span class="fc" id="L934">            final ECEFFrame ecefFrame = measurement.getFrame();</span>
+<span class="fc" id="L935">            ECEFtoNEDFrameConverter.convertECEFtoNED(ecefFrame, nedFrame);</span>
+
+<span class="fc" id="L937">            final double year = measurement.getYear();</span>
+
+<span class="fc" id="L939">            final double latitude = nedFrame.getLatitude();</span>
+<span class="fc" id="L940">            final double longitude = nedFrame.getLongitude();</span>
+<span class="fc" id="L941">            final double height = nedFrame.getHeight();</span>
+
+<span class="fc" id="L943">            nedFrame.getCoordinateTransformation(cbn);</span>
+<span class="fc" id="L944">            cbn.inverse(cnb);</span>
+
+<span class="fc" id="L946">            wmmEstimator.estimate(latitude, longitude, height, year, earthB);</span>
+
+            // estimate expected body mangetic flux density taking into
+            // account body attitude (inverse of frame orientation) and
+            // estimated Earth magnetic flux density
+<span class="fc" id="L951">            BodyMagneticFluxDensityEstimator.estimate(earthB, cnb,</span>
+                    expectedMagneticFluxDensity);
+
+<span class="fc" id="L954">            final double bMeasX = measuredMagneticFluxDensity.getBx();</span>
+<span class="fc" id="L955">            final double bMeasY = measuredMagneticFluxDensity.getBy();</span>
+<span class="fc" id="L956">            final double bMeasZ = measuredMagneticFluxDensity.getBz();</span>
+
+<span class="fc" id="L958">            final double bTrueX = expectedMagneticFluxDensity.getBx();</span>
+<span class="fc" id="L959">            final double bTrueY = expectedMagneticFluxDensity.getBy();</span>
+<span class="fc" id="L960">            final double bTrueZ = expectedMagneticFluxDensity.getBz();</span>
+
+<span class="fc" id="L962">            a.setElementAt(i, 0, 1.0);</span>
+<span class="fc" id="L963">            a.setElementAt(i, 3, bTrueX);</span>
+<span class="fc" id="L964">            a.setElementAt(i, 6, bTrueY);</span>
+<span class="fc" id="L965">            a.setElementAt(i, 7, bTrueZ);</span>
+
+<span class="fc" id="L967">            b.setElementAtIndex(i, bMeasX - bTrueX);</span>
+<span class="fc" id="L968">            i++;</span>
+
+<span class="fc" id="L970">            a.setElementAt(i, 1, 1.0);</span>
+<span class="fc" id="L971">            a.setElementAt(i, 4, bTrueY);</span>
+<span class="fc" id="L972">            a.setElementAt(i, 8, bTrueZ);</span>
+
+<span class="fc" id="L974">            b.setElementAtIndex(i, bMeasY - bTrueY);</span>
+<span class="fc" id="L975">            i++;</span>
+
+<span class="fc" id="L977">            a.setElementAt(i, 2, 1.0);</span>
+<span class="fc" id="L978">            a.setElementAt(i, 5, bTrueZ);</span>
+
+<span class="fc" id="L980">            b.setElementAtIndex(i, bMeasZ - bTrueZ);</span>
+<span class="fc" id="L981">            i++;</span>
+<span class="fc" id="L982">        }</span>
+
+<span class="fc" id="L984">        final Matrix unknowns = Utils.solve(a, b);</span>
+
+<span class="fc" id="L986">        final double bx = unknowns.getElementAtIndex(0);</span>
+<span class="fc" id="L987">        final double by = unknowns.getElementAtIndex(1);</span>
+<span class="fc" id="L988">        final double bz = unknowns.getElementAtIndex(2);</span>
+<span class="fc" id="L989">        final double sx = unknowns.getElementAtIndex(3);</span>
+<span class="fc" id="L990">        final double sy = unknowns.getElementAtIndex(4);</span>
+<span class="fc" id="L991">        final double sz = unknowns.getElementAtIndex(5);</span>
+<span class="fc" id="L992">        final double mxy = unknowns.getElementAtIndex(6);</span>
+<span class="fc" id="L993">        final double mxz = unknowns.getElementAtIndex(7);</span>
+<span class="fc" id="L994">        final double myz = unknowns.getElementAtIndex(8);</span>
+
+<span class="fc" id="L996">        fillHardIronBiases(bx, by, bz);</span>
+<span class="fc" id="L997">        fillMm(sx, sy, sz, mxy, mxz, 0.0, myz, 0.0, 0.0);</span>
+<span class="fc" id="L998">    }</span>
+
+    /**
+     * Internal method to perform calibration when common z-axis is assumed
+     * for the accelerometer, gyroscope and magnetometer.
+     *
+     * @throws AlgebraException if there are numerical errors.
+     * @throws IOException      if world magnetic model cannot be loaded.
+     */
+    private void calibrateGeneral() throws AlgebraException, IOException {
+        // The magnetometer model is:
+        // mBmeas = bm + (I + Mm) * mBtrue + w
+
+        // Ideally a least squares solution tries to minimize noise component, so:
+        // mBmeas = bm + (I + Mm) * mBtrue
+
+        // Hence:
+        //  [mBmeasx] = [bx] + ( [1  0   0] + [sx    mxy mxz])   [mBtruex]
+        //  [mBmeasy] = [by]     [0  1   0]   [myx   sy  myz]    [mBtruey]
+        //  [mBmeasz] = [bz]     [0  0   1]   [mzx   mzy sz ]    [mBtruez]
+
+        //  [mBmeasx] = [bx] +   [1+sx   mxy     mxz ][mBtruex]
+        //  [mBmeasy]   [by]     [myx    1+sy    myz ][mBtruey]
+        //  [mBmeasz]   [bz]     [mzx    mzy     1+sz][mBtruez]
+
+        //  mBmeasx = bx + (1+sx) * mBtruex + mxy * mBtruey + mxz * mBtruez
+        //  mBmeasy = by + myx * mBtruex + (1+sy) * mBtruey + myz * mBtruez
+        //  mBmeasz = bz + mzx * mBtruex + mzy * mBtruey + (1+sz) * mBtruez
+
+        // Where the unknowns are: bx, by, bz, sx, sy, sz, mxy mxz, myx, myz, mzx, mzy
+        // Reordering:
+        //  mBmeasx = bx + mBtruex + sx * mBtruex + mxy * mBtruey + mxz * mBtruez
+        //  mBmeasy = by + myx * mBtruex + mBtruey + sy * mBtruey + myz * mBtruez
+        //  mBmeasz = bz + mzx * mBtruex + mzy * mBtruey + mBtruez + sz * mBtruez
+
+        //  mBmeasx - mBtruex = bx + sx * mBtruex + mxy * mBtruey + mxz * mBtruez
+        //  mBmeasy - mBtruey = by + myx * mBtruex + sy * mBtruey + myz * mBtruez
+        //  mBmeasz - mBtruez = bz + mzx * mBtruex + mzy * mBtruey + sz * mBtruez
+
+        // [1   0   0   mBtruex  0        0        mBtruey  mBtruez  0        0        0        0      ][bx ] = [mBmeasx - mBtruex]
+        // [0   1   0   0        mBtruey  0        0        0        mBtruex  mBtruez  0        0      ][by ]   [mBmeasy - mBtruey]
+        // [0   0   1   0        0        mBtruez  0        0        0        0        mBtruex  mBtruey][bz ]   [mBmeasz - mBtruez]
+        //                                                                                              [sx ]
+        //                                                                                              [sy ]
+        //                                                                                              [sz ]
+        //                                                                                              [mxy]
+        //                                                                                              [mxz]
+        //                                                                                              [myx]
+        //                                                                                              [myz]
+        //                                                                                              [mzx]
+        //                                                                                              [mzy]
+
+        final WMMEarthMagneticFluxDensityEstimator wmmEstimator;
+<span class="fc bfc" id="L1051" title="All 2 branches covered.">        if (mMagneticModel != null) {</span>
+<span class="fc" id="L1052">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator(mMagneticModel);</span>
+        } else {
+<span class="fc" id="L1054">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator();</span>
+        }
+
+<span class="fc" id="L1057">        final BodyMagneticFluxDensity expectedMagneticFluxDensity = new BodyMagneticFluxDensity();</span>
+<span class="fc" id="L1058">        final NEDFrame nedFrame = new NEDFrame();</span>
+<span class="fc" id="L1059">        final NEDMagneticFluxDensity earthB = new NEDMagneticFluxDensity();</span>
+<span class="fc" id="L1060">        final CoordinateTransformation cbn = new CoordinateTransformation(</span>
+                FrameType.BODY_FRAME, FrameType.LOCAL_NAVIGATION_FRAME);
+<span class="fc" id="L1062">        final CoordinateTransformation cnb = new CoordinateTransformation(</span>
+                FrameType.LOCAL_NAVIGATION_FRAME, FrameType.BODY_FRAME);
+
+<span class="fc" id="L1065">        final int rows = EQUATIONS_PER_MEASUREMENT * mMeasurements.size();</span>
+<span class="fc" id="L1066">        final Matrix a = new Matrix(rows, GENERAL_UNKNOWNS);</span>
+<span class="fc" id="L1067">        final Matrix b = new Matrix(rows, 1);</span>
+<span class="fc" id="L1068">        int i = 0;</span>
+<span class="fc bfc" id="L1069" title="All 2 branches covered.">        for (final FrameBodyMagneticFluxDensity measurement : mMeasurements) {</span>
+<span class="fc" id="L1070">            final BodyMagneticFluxDensity measuredMagneticFluxDensity =</span>
+<span class="fc" id="L1071">                    measurement.getMagneticFluxDensity();</span>
+
+            // estimate Earth magnetic flux density at frame position and
+            // timestamp using WMM
+<span class="fc" id="L1075">            final ECEFFrame ecefFrame = measurement.getFrame();</span>
+<span class="fc" id="L1076">            ECEFtoNEDFrameConverter.convertECEFtoNED(ecefFrame, nedFrame);</span>
+
+<span class="fc" id="L1078">            final double year = measurement.getYear();</span>
+
+<span class="fc" id="L1080">            final double latitude = nedFrame.getLatitude();</span>
+<span class="fc" id="L1081">            final double longitude = nedFrame.getLongitude();</span>
+<span class="fc" id="L1082">            final double height = nedFrame.getHeight();</span>
+
+<span class="fc" id="L1084">            nedFrame.getCoordinateTransformation(cbn);</span>
+<span class="fc" id="L1085">            cbn.inverse(cnb);</span>
+
+<span class="fc" id="L1087">            wmmEstimator.estimate(latitude, longitude, height, year, earthB);</span>
+
+            // estimate expected body mangetic flux density taking into
+            // account body attitude (inverse of frame orientation) and
+            // estimated Earth magnetic flux density
+<span class="fc" id="L1092">            BodyMagneticFluxDensityEstimator.estimate(earthB, cnb,</span>
+                    expectedMagneticFluxDensity);
+
+<span class="fc" id="L1095">            final double bMeasX = measuredMagneticFluxDensity.getBx();</span>
+<span class="fc" id="L1096">            final double bMeasY = measuredMagneticFluxDensity.getBy();</span>
+<span class="fc" id="L1097">            final double bMeasZ = measuredMagneticFluxDensity.getBz();</span>
+
+<span class="fc" id="L1099">            final double bTrueX = expectedMagneticFluxDensity.getBx();</span>
+<span class="fc" id="L1100">            final double bTrueY = expectedMagneticFluxDensity.getBy();</span>
+<span class="fc" id="L1101">            final double bTrueZ = expectedMagneticFluxDensity.getBz();</span>
+
+<span class="fc" id="L1103">            a.setElementAt(i, 0, 1.0);</span>
+<span class="fc" id="L1104">            a.setElementAt(i, 3, bTrueX);</span>
+<span class="fc" id="L1105">            a.setElementAt(i, 6, bTrueY);</span>
+<span class="fc" id="L1106">            a.setElementAt(i, 7, bTrueZ);</span>
+
+<span class="fc" id="L1108">            b.setElementAtIndex(i, bMeasX - bTrueX);</span>
+<span class="fc" id="L1109">            i++;</span>
+
+<span class="fc" id="L1111">            a.setElementAt(i, 1, 1.0);</span>
+<span class="fc" id="L1112">            a.setElementAt(i, 4, bTrueY);</span>
+<span class="fc" id="L1113">            a.setElementAt(i, 8, bTrueX);</span>
+<span class="fc" id="L1114">            a.setElementAt(i, 9, bTrueZ);</span>
+
+<span class="fc" id="L1116">            b.setElementAtIndex(i, bMeasY - bTrueY);</span>
+<span class="fc" id="L1117">            i++;</span>
+
+<span class="fc" id="L1119">            a.setElementAt(i, 2, 1.0);</span>
+<span class="fc" id="L1120">            a.setElementAt(i, 5, bTrueZ);</span>
+<span class="fc" id="L1121">            a.setElementAt(i, 10, bTrueX);</span>
+<span class="fc" id="L1122">            a.setElementAt(i, 11, bTrueY);</span>
+
+<span class="fc" id="L1124">            b.setElementAtIndex(i, bMeasZ - bTrueZ);</span>
+<span class="fc" id="L1125">            i++;</span>
+<span class="fc" id="L1126">        }</span>
+
+<span class="fc" id="L1128">        final Matrix unknowns = Utils.solve(a, b);</span>
+
+<span class="fc" id="L1130">        final double bx = unknowns.getElementAtIndex(0);</span>
+<span class="fc" id="L1131">        final double by = unknowns.getElementAtIndex(1);</span>
+<span class="fc" id="L1132">        final double bz = unknowns.getElementAtIndex(2);</span>
+<span class="fc" id="L1133">        final double sx = unknowns.getElementAtIndex(3);</span>
+<span class="fc" id="L1134">        final double sy = unknowns.getElementAtIndex(4);</span>
+<span class="fc" id="L1135">        final double sz = unknowns.getElementAtIndex(5);</span>
+<span class="fc" id="L1136">        final double mxy = unknowns.getElementAtIndex(6);</span>
+<span class="fc" id="L1137">        final double mxz = unknowns.getElementAtIndex(7);</span>
+<span class="fc" id="L1138">        final double myx = unknowns.getElementAtIndex(8);</span>
+<span class="fc" id="L1139">        final double myz = unknowns.getElementAtIndex(9);</span>
+<span class="fc" id="L1140">        final double mzx = unknowns.getElementAtIndex(10);</span>
+<span class="fc" id="L1141">        final double mzy = unknowns.getElementAtIndex(11);</span>
+
+<span class="fc" id="L1143">        fillHardIronBiases(bx, by, bz);</span>
+<span class="fc" id="L1144">        fillMm(sx, sy, sz, mxy, mxz, myx, myz, mzx, mzy);</span>
+<span class="fc" id="L1145">    }</span>
+
+    /**
+     * Fills estimated biases array with estimated values.
+     *
+     * @param bx x coordinate of bias.
+     * @param by y coordinate of bias.
+     * @param bz z coordinate of bias.
+     */
+    private void fillHardIronBiases(
+            final double bx, final double by, final double bz) {
+<span class="pc bpc" id="L1156" title="1 of 2 branches missed.">        if (mEstimatedHardIron == null) {</span>
+<span class="fc" id="L1157">            mEstimatedHardIron = new double[BodyMagneticFluxDensity.COMPONENTS];</span>
+        }
+
+<span class="fc" id="L1160">        mEstimatedHardIron[0] = bx;</span>
+<span class="fc" id="L1161">        mEstimatedHardIron[1] = by;</span>
+<span class="fc" id="L1162">        mEstimatedHardIron[2] = bz;</span>
+<span class="fc" id="L1163">    }</span>
+
+    /**
+     * Fills scale factor and cross coupling error matrix with estimated values.
+     *
+     * @param sx  x scale factor
+     * @param sy  y scale factor
+     * @param sz  z scale factor
+     * @param mxy x-y cross coupling
+     * @param mxz x-z cross coupling
+     * @param myx y-x cross coupling
+     * @param myz y-z cross coupling
+     * @param mzx z-x cross coupling
+     * @param mzy z-y cross coupling
+     * @throws WrongSizeException never happens.
+     */
+    private void fillMm(final double sx, final double sy, final double sz,
+                        final double mxy, final double mxz, final double myx,
+                        final double myz, final double mzx, final double mzy)
+            throws WrongSizeException {
+<span class="pc bpc" id="L1183" title="1 of 2 branches missed.">        if (mEstimatedMm == null) {</span>
+<span class="fc" id="L1184">            mEstimatedMm = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+                    BodyMagneticFluxDensity.COMPONENTS);
+        }
+
+<span class="fc" id="L1188">        mEstimatedMm.setElementAt(0, 0, sx);</span>
+<span class="fc" id="L1189">        mEstimatedMm.setElementAt(1, 0, myx);</span>
+<span class="fc" id="L1190">        mEstimatedMm.setElementAt(2, 0, mzx);</span>
+
+<span class="fc" id="L1192">        mEstimatedMm.setElementAt(0, 1, mxy);</span>
+<span class="fc" id="L1193">        mEstimatedMm.setElementAt(1, 1, sy);</span>
+<span class="fc" id="L1194">        mEstimatedMm.setElementAt(2, 1, mzy);</span>
+
+<span class="fc" id="L1196">        mEstimatedMm.setElementAt(0, 2, mxz);</span>
+<span class="fc" id="L1197">        mEstimatedMm.setElementAt(1, 2, myz);</span>
+<span class="fc" id="L1198">        mEstimatedMm.setElementAt(2, 2, sz);</span>
+<span class="fc" id="L1199">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
