@@ -38,8 +38,8 @@ import java.io.IOException;
 import java.util.Collection;
 
 /**
- * Estimates magnetometer hard-iron biases, cross couplings and scaling
- * factors.
+ * Estimates magnetometer hard-iron biases, soft-iron cross couplings and
+ * scaling factors.
  * &lt;p&gt;
  * This calibrator uses a linear approach to find a minimum least squared error
  * solution.
@@ -998,8 +998,7 @@ public class KnownFrameMagnetometerLinearLeastSquaresCalibrator implements
 <span class="fc" id="L998">    }</span>
 
     /**
-     * Internal method to perform calibration when common z-axis is assumed
-     * for the accelerometer, gyroscope and magnetometer.
+     * Internal method to perform general calibration.
      *
      * @throws AlgebraException if there are numerical errors.
      * @throws IOException      if world magnetic model cannot be loaded.
@@ -1048,101 +1047,101 @@ public class KnownFrameMagnetometerLinearLeastSquaresCalibrator implements
         //                                                                                              [mzy]
 
         final WMMEarthMagneticFluxDensityEstimator wmmEstimator;
-<span class="fc bfc" id="L1051" title="All 2 branches covered.">        if (mMagneticModel != null) {</span>
-<span class="fc" id="L1052">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator(mMagneticModel);</span>
+<span class="fc bfc" id="L1050" title="All 2 branches covered.">        if (mMagneticModel != null) {</span>
+<span class="fc" id="L1051">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator(mMagneticModel);</span>
         } else {
-<span class="fc" id="L1054">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator();</span>
+<span class="fc" id="L1053">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator();</span>
         }
 
-<span class="fc" id="L1057">        final BodyMagneticFluxDensity expectedMagneticFluxDensity = new BodyMagneticFluxDensity();</span>
-<span class="fc" id="L1058">        final NEDFrame nedFrame = new NEDFrame();</span>
-<span class="fc" id="L1059">        final NEDMagneticFluxDensity earthB = new NEDMagneticFluxDensity();</span>
-<span class="fc" id="L1060">        final CoordinateTransformation cbn = new CoordinateTransformation(</span>
+<span class="fc" id="L1056">        final BodyMagneticFluxDensity expectedMagneticFluxDensity = new BodyMagneticFluxDensity();</span>
+<span class="fc" id="L1057">        final NEDFrame nedFrame = new NEDFrame();</span>
+<span class="fc" id="L1058">        final NEDMagneticFluxDensity earthB = new NEDMagneticFluxDensity();</span>
+<span class="fc" id="L1059">        final CoordinateTransformation cbn = new CoordinateTransformation(</span>
                 FrameType.BODY_FRAME, FrameType.LOCAL_NAVIGATION_FRAME);
-<span class="fc" id="L1062">        final CoordinateTransformation cnb = new CoordinateTransformation(</span>
+<span class="fc" id="L1061">        final CoordinateTransformation cnb = new CoordinateTransformation(</span>
                 FrameType.LOCAL_NAVIGATION_FRAME, FrameType.BODY_FRAME);
 
-<span class="fc" id="L1065">        final int rows = EQUATIONS_PER_MEASUREMENT * mMeasurements.size();</span>
-<span class="fc" id="L1066">        final Matrix a = new Matrix(rows, GENERAL_UNKNOWNS);</span>
-<span class="fc" id="L1067">        final Matrix b = new Matrix(rows, 1);</span>
-<span class="fc" id="L1068">        int i = 0;</span>
-<span class="fc bfc" id="L1069" title="All 2 branches covered.">        for (final FrameBodyMagneticFluxDensity measurement : mMeasurements) {</span>
-<span class="fc" id="L1070">            final BodyMagneticFluxDensity measuredMagneticFluxDensity =</span>
-<span class="fc" id="L1071">                    measurement.getMagneticFluxDensity();</span>
+<span class="fc" id="L1064">        final int rows = EQUATIONS_PER_MEASUREMENT * mMeasurements.size();</span>
+<span class="fc" id="L1065">        final Matrix a = new Matrix(rows, GENERAL_UNKNOWNS);</span>
+<span class="fc" id="L1066">        final Matrix b = new Matrix(rows, 1);</span>
+<span class="fc" id="L1067">        int i = 0;</span>
+<span class="fc bfc" id="L1068" title="All 2 branches covered.">        for (final FrameBodyMagneticFluxDensity measurement : mMeasurements) {</span>
+<span class="fc" id="L1069">            final BodyMagneticFluxDensity measuredMagneticFluxDensity =</span>
+<span class="fc" id="L1070">                    measurement.getMagneticFluxDensity();</span>
 
             // estimate Earth magnetic flux density at frame position and
             // timestamp using WMM
-<span class="fc" id="L1075">            final ECEFFrame ecefFrame = measurement.getFrame();</span>
-<span class="fc" id="L1076">            ECEFtoNEDFrameConverter.convertECEFtoNED(ecefFrame, nedFrame);</span>
+<span class="fc" id="L1074">            final ECEFFrame ecefFrame = measurement.getFrame();</span>
+<span class="fc" id="L1075">            ECEFtoNEDFrameConverter.convertECEFtoNED(ecefFrame, nedFrame);</span>
 
-<span class="fc" id="L1078">            final double year = measurement.getYear();</span>
+<span class="fc" id="L1077">            final double year = measurement.getYear();</span>
 
-<span class="fc" id="L1080">            final double latitude = nedFrame.getLatitude();</span>
-<span class="fc" id="L1081">            final double longitude = nedFrame.getLongitude();</span>
-<span class="fc" id="L1082">            final double height = nedFrame.getHeight();</span>
+<span class="fc" id="L1079">            final double latitude = nedFrame.getLatitude();</span>
+<span class="fc" id="L1080">            final double longitude = nedFrame.getLongitude();</span>
+<span class="fc" id="L1081">            final double height = nedFrame.getHeight();</span>
 
-<span class="fc" id="L1084">            nedFrame.getCoordinateTransformation(cbn);</span>
-<span class="fc" id="L1085">            cbn.inverse(cnb);</span>
+<span class="fc" id="L1083">            nedFrame.getCoordinateTransformation(cbn);</span>
+<span class="fc" id="L1084">            cbn.inverse(cnb);</span>
 
-<span class="fc" id="L1087">            wmmEstimator.estimate(latitude, longitude, height, year, earthB);</span>
+<span class="fc" id="L1086">            wmmEstimator.estimate(latitude, longitude, height, year, earthB);</span>
 
             // estimate expected body mangetic flux density taking into
             // account body attitude (inverse of frame orientation) and
             // estimated Earth magnetic flux density
-<span class="fc" id="L1092">            BodyMagneticFluxDensityEstimator.estimate(earthB, cnb,</span>
+<span class="fc" id="L1091">            BodyMagneticFluxDensityEstimator.estimate(earthB, cnb,</span>
                     expectedMagneticFluxDensity);
 
-<span class="fc" id="L1095">            final double bMeasX = measuredMagneticFluxDensity.getBx();</span>
-<span class="fc" id="L1096">            final double bMeasY = measuredMagneticFluxDensity.getBy();</span>
-<span class="fc" id="L1097">            final double bMeasZ = measuredMagneticFluxDensity.getBz();</span>
+<span class="fc" id="L1094">            final double bMeasX = measuredMagneticFluxDensity.getBx();</span>
+<span class="fc" id="L1095">            final double bMeasY = measuredMagneticFluxDensity.getBy();</span>
+<span class="fc" id="L1096">            final double bMeasZ = measuredMagneticFluxDensity.getBz();</span>
 
-<span class="fc" id="L1099">            final double bTrueX = expectedMagneticFluxDensity.getBx();</span>
-<span class="fc" id="L1100">            final double bTrueY = expectedMagneticFluxDensity.getBy();</span>
-<span class="fc" id="L1101">            final double bTrueZ = expectedMagneticFluxDensity.getBz();</span>
+<span class="fc" id="L1098">            final double bTrueX = expectedMagneticFluxDensity.getBx();</span>
+<span class="fc" id="L1099">            final double bTrueY = expectedMagneticFluxDensity.getBy();</span>
+<span class="fc" id="L1100">            final double bTrueZ = expectedMagneticFluxDensity.getBz();</span>
 
-<span class="fc" id="L1103">            a.setElementAt(i, 0, 1.0);</span>
-<span class="fc" id="L1104">            a.setElementAt(i, 3, bTrueX);</span>
-<span class="fc" id="L1105">            a.setElementAt(i, 6, bTrueY);</span>
-<span class="fc" id="L1106">            a.setElementAt(i, 7, bTrueZ);</span>
+<span class="fc" id="L1102">            a.setElementAt(i, 0, 1.0);</span>
+<span class="fc" id="L1103">            a.setElementAt(i, 3, bTrueX);</span>
+<span class="fc" id="L1104">            a.setElementAt(i, 6, bTrueY);</span>
+<span class="fc" id="L1105">            a.setElementAt(i, 7, bTrueZ);</span>
 
-<span class="fc" id="L1108">            b.setElementAtIndex(i, bMeasX - bTrueX);</span>
-<span class="fc" id="L1109">            i++;</span>
+<span class="fc" id="L1107">            b.setElementAtIndex(i, bMeasX - bTrueX);</span>
+<span class="fc" id="L1108">            i++;</span>
 
-<span class="fc" id="L1111">            a.setElementAt(i, 1, 1.0);</span>
-<span class="fc" id="L1112">            a.setElementAt(i, 4, bTrueY);</span>
-<span class="fc" id="L1113">            a.setElementAt(i, 8, bTrueX);</span>
-<span class="fc" id="L1114">            a.setElementAt(i, 9, bTrueZ);</span>
+<span class="fc" id="L1110">            a.setElementAt(i, 1, 1.0);</span>
+<span class="fc" id="L1111">            a.setElementAt(i, 4, bTrueY);</span>
+<span class="fc" id="L1112">            a.setElementAt(i, 8, bTrueX);</span>
+<span class="fc" id="L1113">            a.setElementAt(i, 9, bTrueZ);</span>
 
-<span class="fc" id="L1116">            b.setElementAtIndex(i, bMeasY - bTrueY);</span>
-<span class="fc" id="L1117">            i++;</span>
+<span class="fc" id="L1115">            b.setElementAtIndex(i, bMeasY - bTrueY);</span>
+<span class="fc" id="L1116">            i++;</span>
 
-<span class="fc" id="L1119">            a.setElementAt(i, 2, 1.0);</span>
-<span class="fc" id="L1120">            a.setElementAt(i, 5, bTrueZ);</span>
-<span class="fc" id="L1121">            a.setElementAt(i, 10, bTrueX);</span>
-<span class="fc" id="L1122">            a.setElementAt(i, 11, bTrueY);</span>
+<span class="fc" id="L1118">            a.setElementAt(i, 2, 1.0);</span>
+<span class="fc" id="L1119">            a.setElementAt(i, 5, bTrueZ);</span>
+<span class="fc" id="L1120">            a.setElementAt(i, 10, bTrueX);</span>
+<span class="fc" id="L1121">            a.setElementAt(i, 11, bTrueY);</span>
 
-<span class="fc" id="L1124">            b.setElementAtIndex(i, bMeasZ - bTrueZ);</span>
-<span class="fc" id="L1125">            i++;</span>
-<span class="fc" id="L1126">        }</span>
+<span class="fc" id="L1123">            b.setElementAtIndex(i, bMeasZ - bTrueZ);</span>
+<span class="fc" id="L1124">            i++;</span>
+<span class="fc" id="L1125">        }</span>
 
-<span class="fc" id="L1128">        final Matrix unknowns = Utils.solve(a, b);</span>
+<span class="fc" id="L1127">        final Matrix unknowns = Utils.solve(a, b);</span>
 
-<span class="fc" id="L1130">        final double bx = unknowns.getElementAtIndex(0);</span>
-<span class="fc" id="L1131">        final double by = unknowns.getElementAtIndex(1);</span>
-<span class="fc" id="L1132">        final double bz = unknowns.getElementAtIndex(2);</span>
-<span class="fc" id="L1133">        final double sx = unknowns.getElementAtIndex(3);</span>
-<span class="fc" id="L1134">        final double sy = unknowns.getElementAtIndex(4);</span>
-<span class="fc" id="L1135">        final double sz = unknowns.getElementAtIndex(5);</span>
-<span class="fc" id="L1136">        final double mxy = unknowns.getElementAtIndex(6);</span>
-<span class="fc" id="L1137">        final double mxz = unknowns.getElementAtIndex(7);</span>
-<span class="fc" id="L1138">        final double myx = unknowns.getElementAtIndex(8);</span>
-<span class="fc" id="L1139">        final double myz = unknowns.getElementAtIndex(9);</span>
-<span class="fc" id="L1140">        final double mzx = unknowns.getElementAtIndex(10);</span>
-<span class="fc" id="L1141">        final double mzy = unknowns.getElementAtIndex(11);</span>
+<span class="fc" id="L1129">        final double bx = unknowns.getElementAtIndex(0);</span>
+<span class="fc" id="L1130">        final double by = unknowns.getElementAtIndex(1);</span>
+<span class="fc" id="L1131">        final double bz = unknowns.getElementAtIndex(2);</span>
+<span class="fc" id="L1132">        final double sx = unknowns.getElementAtIndex(3);</span>
+<span class="fc" id="L1133">        final double sy = unknowns.getElementAtIndex(4);</span>
+<span class="fc" id="L1134">        final double sz = unknowns.getElementAtIndex(5);</span>
+<span class="fc" id="L1135">        final double mxy = unknowns.getElementAtIndex(6);</span>
+<span class="fc" id="L1136">        final double mxz = unknowns.getElementAtIndex(7);</span>
+<span class="fc" id="L1137">        final double myx = unknowns.getElementAtIndex(8);</span>
+<span class="fc" id="L1138">        final double myz = unknowns.getElementAtIndex(9);</span>
+<span class="fc" id="L1139">        final double mzx = unknowns.getElementAtIndex(10);</span>
+<span class="fc" id="L1140">        final double mzy = unknowns.getElementAtIndex(11);</span>
 
-<span class="fc" id="L1143">        fillHardIronBiases(bx, by, bz);</span>
-<span class="fc" id="L1144">        fillMm(sx, sy, sz, mxy, mxz, myx, myz, mzx, mzy);</span>
-<span class="fc" id="L1145">    }</span>
+<span class="fc" id="L1142">        fillHardIronBiases(bx, by, bz);</span>
+<span class="fc" id="L1143">        fillMm(sx, sy, sz, mxy, mxz, myx, myz, mzx, mzy);</span>
+<span class="fc" id="L1144">    }</span>
 
     /**
      * Fills estimated biases array with estimated values.
@@ -1153,14 +1152,14 @@ public class KnownFrameMagnetometerLinearLeastSquaresCalibrator implements
      */
     private void fillHardIronBiases(
             final double bx, final double by, final double bz) {
-<span class="pc bpc" id="L1156" title="1 of 2 branches missed.">        if (mEstimatedHardIron == null) {</span>
-<span class="fc" id="L1157">            mEstimatedHardIron = new double[BodyMagneticFluxDensity.COMPONENTS];</span>
+<span class="pc bpc" id="L1155" title="1 of 2 branches missed.">        if (mEstimatedHardIron == null) {</span>
+<span class="fc" id="L1156">            mEstimatedHardIron = new double[BodyMagneticFluxDensity.COMPONENTS];</span>
         }
 
-<span class="fc" id="L1160">        mEstimatedHardIron[0] = bx;</span>
-<span class="fc" id="L1161">        mEstimatedHardIron[1] = by;</span>
-<span class="fc" id="L1162">        mEstimatedHardIron[2] = bz;</span>
-<span class="fc" id="L1163">    }</span>
+<span class="fc" id="L1159">        mEstimatedHardIron[0] = bx;</span>
+<span class="fc" id="L1160">        mEstimatedHardIron[1] = by;</span>
+<span class="fc" id="L1161">        mEstimatedHardIron[2] = bz;</span>
+<span class="fc" id="L1162">    }</span>
 
     /**
      * Fills scale factor and cross coupling error matrix with estimated values.
@@ -1180,22 +1179,22 @@ public class KnownFrameMagnetometerLinearLeastSquaresCalibrator implements
                         final double mxy, final double mxz, final double myx,
                         final double myz, final double mzx, final double mzy)
             throws WrongSizeException {
-<span class="pc bpc" id="L1183" title="1 of 2 branches missed.">        if (mEstimatedMm == null) {</span>
-<span class="fc" id="L1184">            mEstimatedMm = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="pc bpc" id="L1182" title="1 of 2 branches missed.">        if (mEstimatedMm == null) {</span>
+<span class="fc" id="L1183">            mEstimatedMm = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                     BodyMagneticFluxDensity.COMPONENTS);
         }
 
-<span class="fc" id="L1188">        mEstimatedMm.setElementAt(0, 0, sx);</span>
-<span class="fc" id="L1189">        mEstimatedMm.setElementAt(1, 0, myx);</span>
-<span class="fc" id="L1190">        mEstimatedMm.setElementAt(2, 0, mzx);</span>
+<span class="fc" id="L1187">        mEstimatedMm.setElementAt(0, 0, sx);</span>
+<span class="fc" id="L1188">        mEstimatedMm.setElementAt(1, 0, myx);</span>
+<span class="fc" id="L1189">        mEstimatedMm.setElementAt(2, 0, mzx);</span>
 
-<span class="fc" id="L1192">        mEstimatedMm.setElementAt(0, 1, mxy);</span>
-<span class="fc" id="L1193">        mEstimatedMm.setElementAt(1, 1, sy);</span>
-<span class="fc" id="L1194">        mEstimatedMm.setElementAt(2, 1, mzy);</span>
+<span class="fc" id="L1191">        mEstimatedMm.setElementAt(0, 1, mxy);</span>
+<span class="fc" id="L1192">        mEstimatedMm.setElementAt(1, 1, sy);</span>
+<span class="fc" id="L1193">        mEstimatedMm.setElementAt(2, 1, mzy);</span>
 
-<span class="fc" id="L1196">        mEstimatedMm.setElementAt(0, 2, mxz);</span>
-<span class="fc" id="L1197">        mEstimatedMm.setElementAt(1, 2, myz);</span>
-<span class="fc" id="L1198">        mEstimatedMm.setElementAt(2, 2, sz);</span>
-<span class="fc" id="L1199">    }</span>
+<span class="fc" id="L1195">        mEstimatedMm.setElementAt(0, 2, mxz);</span>
+<span class="fc" id="L1196">        mEstimatedMm.setElementAt(1, 2, myz);</span>
+<span class="fc" id="L1197">        mEstimatedMm.setElementAt(2, 2, sz);</span>
+<span class="fc" id="L1198">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

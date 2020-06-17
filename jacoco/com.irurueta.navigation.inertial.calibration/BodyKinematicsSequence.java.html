@@ -15,6 +15,10 @@
  */
 package com.irurueta.navigation.inertial.calibration;
 
+import com.irurueta.navigation.frames.CoordinateTransformation;
+import com.irurueta.navigation.frames.ECEFFrame;
+import com.irurueta.navigation.frames.InvalidSourceAndDestinationFrameTypeException;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -36,6 +40,25 @@ public class BodyKinematicsSequence&lt;T extends TimedBodyKinematics&gt; {
     private List&lt;T&gt; mItems;
 
     /**
+     * Body attitude at the start of the sequence.
+     * Must be a valid body to ECEF coordinate transformation.
+     * This can be estimated using
+     * {@link com.irurueta.navigation.inertial.estimators.AttitudeEstimator}
+     * for a known Earth position, time instant, accelerometer measure
+     * and magnetometer measure. Notice that both the accelerometer
+     * and magnetometer should be previously calibrated before estimating
+     * body attitude.
+     * Alternatively, if the gyroscope is accurate enough (aviation grade),
+     * a {@link com.irurueta.navigation.inertial.estimators.LevelingEstimator}
+     * or a {@link com.irurueta.navigation.inertial.estimators.LevelingEstimator2}
+     * can be used.
+     * However, since this class is used mainly for gyroscope calibration,
+     * leveling estimator should be discarded for initial body attitude
+     * estimation.
+     */
+    private CoordinateTransformation mStartBodyAttitude;
+
+    /**
      * Contains sorted list of items.
      * This list is kept for performance reasons to reduce the amount of
      * required sorting.
@@ -45,7 +68,8 @@ public class BodyKinematicsSequence&lt;T extends TimedBodyKinematics&gt; {
     /**
      * Constructor.
      */
-<span class="fc" id="L48">    public BodyKinematicsSequence() { }</span>
+<span class="fc" id="L71">    public BodyKinematicsSequence() {</span>
+<span class="fc" id="L72">    }</span>
 
     /**
      * Constructor.
@@ -53,9 +77,39 @@ public class BodyKinematicsSequence&lt;T extends TimedBodyKinematics&gt; {
      * @param items list of items containing body kinematics to be kept into
      *              this sequence.
      */
-<span class="fc" id="L56">    public BodyKinematicsSequence(final List&lt;T&gt; items) {</span>
-<span class="fc" id="L57">        mItems = items;</span>
-<span class="fc" id="L58">    }</span>
+<span class="fc" id="L80">    public BodyKinematicsSequence(final List&lt;T&gt; items) {</span>
+<span class="fc" id="L81">        mItems = items;</span>
+<span class="fc" id="L82">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param startBodyAttitude body attitude at the start of the sequence.
+     * @throws InvalidSourceAndDestinationFrameTypeException if provided transformation is
+     *                                                       not a body to ECEF transformation.
+     */
+    public BodyKinematicsSequence(
+            final CoordinateTransformation startBodyAttitude)
+<span class="fc" id="L93">            throws InvalidSourceAndDestinationFrameTypeException {</span>
+<span class="fc" id="L94">        setStartBodyAttitude(startBodyAttitude);</span>
+<span class="fc" id="L95">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param items             list of items containing body kinematics to be kept into
+     *                          this sequence.
+     * @param startBodyAttitude body attitude at the start of the sequence.
+     * @throws InvalidSourceAndDestinationFrameTypeException if provided transformation is
+     *                                                       not a body to ECEF transformation.
+     */
+    public BodyKinematicsSequence(
+            final List&lt;T&gt; items,
+            final CoordinateTransformation startBodyAttitude)
+            throws InvalidSourceAndDestinationFrameTypeException {
+<span class="fc" id="L110">        this(items);</span>
+<span class="fc" id="L111">        setStartBodyAttitude(startBodyAttitude);</span>
+<span class="fc" id="L112">    }</span>
 
     /**
      * Gets items in this sequence ordered by ascending timestamp.
@@ -66,29 +120,29 @@ public class BodyKinematicsSequence&lt;T extends TimedBodyKinematics&gt; {
      */
     public boolean getSortedItems(final List&lt;T&gt; result) {
         // already sorted items are available.
-<span class="fc bfc" id="L69" title="All 2 branches covered.">        if (mSortedItems != null) {</span>
-<span class="fc" id="L70">            result.clear();</span>
-<span class="fc" id="L71">            result.addAll(mSortedItems);</span>
-<span class="fc" id="L72">            return true;</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">        if (mSortedItems != null) {</span>
+<span class="fc" id="L124">            result.clear();</span>
+<span class="fc" id="L125">            result.addAll(mSortedItems);</span>
+<span class="fc" id="L126">            return true;</span>
         }
 
-<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (mItems != null) {</span>
-<span class="fc" id="L76">            mSortedItems = new ArrayList&lt;&gt;(mItems);</span>
-<span class="fc" id="L77">            Collections.sort(mSortedItems, new Comparator&lt;T&gt;() {</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (mItems != null) {</span>
+<span class="fc" id="L130">            mSortedItems = new ArrayList&lt;&gt;(mItems);</span>
+<span class="fc" id="L131">            Collections.sort(mSortedItems, new Comparator&lt;T&gt;() {</span>
                 @Override
                 public int compare(final T o1, final T o2) {
-<span class="fc" id="L80">                    final double t1 = o1.getTimestampSeconds();</span>
-<span class="fc" id="L81">                    final double t2 = o2.getTimestampSeconds();</span>
-<span class="fc" id="L82">                    return Double.compare(t1, t2);</span>
+<span class="fc" id="L134">                    final double t1 = o1.getTimestampSeconds();</span>
+<span class="fc" id="L135">                    final double t2 = o2.getTimestampSeconds();</span>
+<span class="fc" id="L136">                    return Double.compare(t1, t2);</span>
                 }
             });
 
-<span class="fc" id="L86">            result.clear();</span>
-<span class="fc" id="L87">            result.addAll(mSortedItems);</span>
-<span class="fc" id="L88">            return true;</span>
+<span class="fc" id="L140">            result.clear();</span>
+<span class="fc" id="L141">            result.addAll(mSortedItems);</span>
+<span class="fc" id="L142">            return true;</span>
         }
 
-<span class="fc" id="L91">        return false;</span>
+<span class="fc" id="L145">        return false;</span>
     }
 
     /**
@@ -98,11 +152,11 @@ public class BodyKinematicsSequence&lt;T extends TimedBodyKinematics&gt; {
      * could not be retrieved..
      */
     public List&lt;T&gt; getSortedItems() {
-<span class="fc" id="L101">        final List&lt;T&gt; result = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L102" title="All 2 branches covered.">        if (getSortedItems(result)) {</span>
-<span class="fc" id="L103">            return result;</span>
+<span class="fc" id="L155">        final List&lt;T&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L156" title="All 2 branches covered.">        if (getSortedItems(result)) {</span>
+<span class="fc" id="L157">            return result;</span>
         } else {
-<span class="fc" id="L105">            return null;</span>
+<span class="fc" id="L159">            return null;</span>
         }
     }
 
@@ -113,9 +167,9 @@ public class BodyKinematicsSequence&lt;T extends TimedBodyKinematics&gt; {
      * @param items items to be kept.
      */
     public void setItems(final List&lt;T&gt; items) {
-<span class="fc" id="L116">        mItems = items;</span>
-<span class="fc" id="L117">        mSortedItems = null;</span>
-<span class="fc" id="L118">    }</span>
+<span class="fc" id="L170">        mItems = items;</span>
+<span class="fc" id="L171">        mSortedItems = null;</span>
+<span class="fc" id="L172">    }</span>
 
     /**
      * Gets number of items in this sequence.
@@ -123,7 +177,70 @@ public class BodyKinematicsSequence&lt;T extends TimedBodyKinematics&gt; {
      * @return number of items in this sequence.
      */
     public int getItemsCount() {
-<span class="fc bfc" id="L126" title="All 2 branches covered.">        return mItems != null ? mItems.size() : 0;</span>
+<span class="fc bfc" id="L180" title="All 2 branches covered.">        return mItems != null ? mItems.size() : 0;</span>
     }
+
+    /**
+     * Checks whether provided coordinate transformation matrix is valid or not.
+     * Only body to ECEF transformation matrices are considered to be valid.
+     *
+     * @param c coordinate transformation matrix to be checked.
+     * @return true if provided value is valid, false otherwise.
+     */
+    public static boolean isValidBodyToEcefCoordinateTransformationMatrix(final CoordinateTransformation c) {
+<span class="fc" id="L191">        return ECEFFrame.isValidCoordinateTransformation(c);</span>
+    }
+
+    /**
+     * Gets body attitude at the start of the sequence.
+     * This can be estimated using
+     * {@link com.irurueta.navigation.inertial.estimators.AttitudeEstimator}
+     * for a known Earth position, time instant, accelerometer measure
+     * and magnetometer measure. Notice that both the accelerometer
+     * and magnetometer should be previously calibrated before estimating
+     * body attitude.
+     * Alternatively, if the gyroscope is accurate enough (aviation grade),
+     * a {@link com.irurueta.navigation.inertial.estimators.LevelingEstimator}
+     * or a {@link com.irurueta.navigation.inertial.estimators.LevelingEstimator2}
+     * can be used.
+     * However, since this class is used mainly for gyroscope calibration,
+     * leveling estimator should be discarded for initial body attitude
+     * estimation.
+     *
+     * @return body attitude at the start of the sequence.
+     */
+    public CoordinateTransformation getStartBodyAttitude() {
+<span class="fc" id="L213">        return mStartBodyAttitude;</span>
+    }
+
+    /**
+     * Sets body attitude at the start of the sequence.
+     * This can be estimated using
+     * {@link com.irurueta.navigation.inertial.estimators.AttitudeEstimator}
+     * for a known Earth position, time instant, accelerometer measure
+     * and magnetometer measure. Notice that both the accelerometer
+     * and magnetometer should be previously calibrated before estimating
+     * body attitude.
+     * Alternatively, if the gyroscope is accurate enough (aviation grade),
+     * a {@link com.irurueta.navigation.inertial.estimators.LevelingEstimator}
+     * or a {@link com.irurueta.navigation.inertial.estimators.LevelingEstimator2}
+     * can be used.
+     * However, since this class is used mainly for gyroscope calibration,
+     * leveling estimator should be discarded for initial body attitude
+     * estimation.
+     *
+     * @param startBodyAttitude body attitude at the start of the sequence.
+     * @throws InvalidSourceAndDestinationFrameTypeException if provided transformation is
+     *                                                       not a body to ECEF transformation.
+     */
+    public void setStartBodyAttitude(
+            final CoordinateTransformation startBodyAttitude)
+            throws InvalidSourceAndDestinationFrameTypeException {
+
+<span class="fc bfc" id="L240" title="All 2 branches covered.">        if (!isValidBodyToEcefCoordinateTransformationMatrix(startBodyAttitude)) {</span>
+<span class="fc" id="L241">            throw new InvalidSourceAndDestinationFrameTypeException();</span>
+        }
+<span class="fc" id="L243">        mStartBodyAttitude = startBodyAttitude;</span>
+<span class="fc" id="L244">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
