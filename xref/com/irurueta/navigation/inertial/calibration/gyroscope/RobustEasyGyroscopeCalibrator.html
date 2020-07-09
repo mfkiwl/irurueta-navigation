@@ -3479,189 +3479,195 @@
 <a class="jxr_linenumber" name="L3471" href="#L3471">3471</a>             result.mEstimatedMg = mInnerCalibrator.getEstimatedMg();
 <a class="jxr_linenumber" name="L3472" href="#L3472">3472</a>             result.mEstimatedGg = mInnerCalibrator.getEstimatedGg();
 <a class="jxr_linenumber" name="L3473" href="#L3473">3473</a> 
-<a class="jxr_linenumber" name="L3474" href="#L3474">3474</a>             solutions.add(result);
-<a class="jxr_linenumber" name="L3475" href="#L3475">3475</a>         } <strong class="jxr_keyword">catch</strong> (LockedException | CalibrationException | NotReadyException e) {
-<a class="jxr_linenumber" name="L3476" href="#L3476">3476</a>             solutions.clear();
-<a class="jxr_linenumber" name="L3477" href="#L3477">3477</a>         }
-<a class="jxr_linenumber" name="L3478" href="#L3478">3478</a>     }
+<a class="jxr_linenumber" name="L3474" href="#L3474">3474</a>             <strong class="jxr_keyword">if</strong> (mKeepCovariance) {
+<a class="jxr_linenumber" name="L3475" href="#L3475">3475</a>                 result.mCovariance = mInnerCalibrator.getEstimatedCovariance();
+<a class="jxr_linenumber" name="L3476" href="#L3476">3476</a>             } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L3477" href="#L3477">3477</a>                 result.mCovariance = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L3478" href="#L3478">3478</a>             }
 <a class="jxr_linenumber" name="L3479" href="#L3479">3479</a> 
-<a class="jxr_linenumber" name="L3480" href="#L3480">3480</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L3481" href="#L3481">3481</a> <em class="jxr_javadoccomment">     * Attempts to refine calibration parameters if refinement is requested.</em>
-<a class="jxr_linenumber" name="L3482" href="#L3482">3482</a> <em class="jxr_javadoccomment">     * This method returns a refined solution or provided input if refinement is not</em>
-<a class="jxr_linenumber" name="L3483" href="#L3483">3483</a> <em class="jxr_javadoccomment">     * requested or has failed.</em>
-<a class="jxr_linenumber" name="L3484" href="#L3484">3484</a> <em class="jxr_javadoccomment">     * If refinement is enabled and it is requested to keep covariance, this method</em>
-<a class="jxr_linenumber" name="L3485" href="#L3485">3485</a> <em class="jxr_javadoccomment">     * will also keep covariance of refined position.</em>
-<a class="jxr_linenumber" name="L3486" href="#L3486">3486</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L3487" href="#L3487">3487</a> <em class="jxr_javadoccomment">     * @param preliminaryResult a preliminary result.</em>
-<a class="jxr_linenumber" name="L3488" href="#L3488">3488</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L3489" href="#L3489">3489</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> attemptRefine(<strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/gyroscope/RobustTurntableGyroscopeCalibrator.html">PreliminaryResult</a> preliminaryResult) {
-<a class="jxr_linenumber" name="L3490" href="#L3490">3490</a>         <strong class="jxr_keyword">if</strong> (mRefineResult &amp;&amp; mInliersData != <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L3491" href="#L3491">3491</a>             <strong class="jxr_keyword">final</strong> BitSet inliers = mInliersData.getInliers();
-<a class="jxr_linenumber" name="L3492" href="#L3492">3492</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> nSamples = mSequences.size();
-<a class="jxr_linenumber" name="L3493" href="#L3493">3493</a> 
-<a class="jxr_linenumber" name="L3494" href="#L3494">3494</a>             <strong class="jxr_keyword">final</strong> List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; inlierSequences =
-<a class="jxr_linenumber" name="L3495" href="#L3495">3495</a>                     <strong class="jxr_keyword">new</strong> ArrayList&lt;&gt;();
-<a class="jxr_linenumber" name="L3496" href="#L3496">3496</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; nSamples; i++) {
-<a class="jxr_linenumber" name="L3497" href="#L3497">3497</a>                 <strong class="jxr_keyword">if</strong> (inliers.get(i)) {
-<a class="jxr_linenumber" name="L3498" href="#L3498">3498</a>                     <em class="jxr_comment">// sample is inlier</em>
-<a class="jxr_linenumber" name="L3499" href="#L3499">3499</a>                     inlierSequences.add(mSequences.get(i));
-<a class="jxr_linenumber" name="L3500" href="#L3500">3500</a>                 }
-<a class="jxr_linenumber" name="L3501" href="#L3501">3501</a>             }
-<a class="jxr_linenumber" name="L3502" href="#L3502">3502</a> 
-<a class="jxr_linenumber" name="L3503" href="#L3503">3503</a>             <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L3504" href="#L3504">3504</a>                 mInnerCalibrator.setGDependentCrossBiasesEstimated(mEstimateGDependentCrossBiases);
-<a class="jxr_linenumber" name="L3505" href="#L3505">3505</a>                 mInnerCalibrator.setInitialBias(preliminaryResult.mEstimatedBiases);
-<a class="jxr_linenumber" name="L3506" href="#L3506">3506</a>                 mInnerCalibrator.setInitialMg(preliminaryResult.mEstimatedMg);
-<a class="jxr_linenumber" name="L3507" href="#L3507">3507</a>                 mInnerCalibrator.setInitialGg(preliminaryResult.mEstimatedGg);
-<a class="jxr_linenumber" name="L3508" href="#L3508">3508</a>                 mInnerCalibrator.setAccelerometerBias(mAccelerometerBiasX, mAccelerometerBiasY, mAccelerometerBiasZ);
-<a class="jxr_linenumber" name="L3509" href="#L3509">3509</a>                 mInnerCalibrator.setAccelerometerScalingFactorsAndCrossCouplingErrors(
-<a class="jxr_linenumber" name="L3510" href="#L3510">3510</a>                         mAccelerometerSx, mAccelerometerSy, mAccelerometerSz,
-<a class="jxr_linenumber" name="L3511" href="#L3511">3511</a>                         mAccelerometerMxy, mAccelerometerMxz,
-<a class="jxr_linenumber" name="L3512" href="#L3512">3512</a>                         mAccelerometerMyx, mAccelerometerMyz,
-<a class="jxr_linenumber" name="L3513" href="#L3513">3513</a>                         mAccelerometerMzx, mAccelerometerMzy);
-<a class="jxr_linenumber" name="L3514" href="#L3514">3514</a>                 mInnerCalibrator.setCommonAxisUsed(mCommonAxisUsed);
-<a class="jxr_linenumber" name="L3515" href="#L3515">3515</a>                 mInnerCalibrator.setSequences(inlierSequences);
-<a class="jxr_linenumber" name="L3516" href="#L3516">3516</a>                 mInnerCalibrator.calibrate();
-<a class="jxr_linenumber" name="L3517" href="#L3517">3517</a> 
-<a class="jxr_linenumber" name="L3518" href="#L3518">3518</a>                 mEstimatedBiases = mInnerCalibrator.getEstimatedBiases();
-<a class="jxr_linenumber" name="L3519" href="#L3519">3519</a>                 mEstimatedMg = mInnerCalibrator.getEstimatedMg();
-<a class="jxr_linenumber" name="L3520" href="#L3520">3520</a>                 mEstimatedGg = mInnerCalibrator.getEstimatedGg();
-<a class="jxr_linenumber" name="L3521" href="#L3521">3521</a> 
-<a class="jxr_linenumber" name="L3522" href="#L3522">3522</a>                 <strong class="jxr_keyword">if</strong> (mKeepCovariance) {
-<a class="jxr_linenumber" name="L3523" href="#L3523">3523</a>                     mEstimatedCovariance = mInnerCalibrator.getEstimatedCovariance();
-<a class="jxr_linenumber" name="L3524" href="#L3524">3524</a>                 } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L3525" href="#L3525">3525</a>                     mEstimatedCovariance = <strong class="jxr_keyword">null</strong>;
-<a class="jxr_linenumber" name="L3526" href="#L3526">3526</a>                 }
-<a class="jxr_linenumber" name="L3527" href="#L3527">3527</a> 
-<a class="jxr_linenumber" name="L3528" href="#L3528">3528</a>             } <strong class="jxr_keyword">catch</strong> (LockedException | CalibrationException | NotReadyException e) {
-<a class="jxr_linenumber" name="L3529" href="#L3529">3529</a>                 mEstimatedCovariance = <strong class="jxr_keyword">null</strong>;
-<a class="jxr_linenumber" name="L3530" href="#L3530">3530</a>                 mEstimatedBiases = preliminaryResult.mEstimatedBiases;
-<a class="jxr_linenumber" name="L3531" href="#L3531">3531</a>                 mEstimatedMg = preliminaryResult.mEstimatedMg;
-<a class="jxr_linenumber" name="L3532" href="#L3532">3532</a>                 mEstimatedGg = preliminaryResult.mEstimatedGg;
-<a class="jxr_linenumber" name="L3533" href="#L3533">3533</a>             }
-<a class="jxr_linenumber" name="L3534" href="#L3534">3534</a>         } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L3535" href="#L3535">3535</a>             mEstimatedCovariance = <strong class="jxr_keyword">null</strong>;
-<a class="jxr_linenumber" name="L3536" href="#L3536">3536</a>             mEstimatedBiases = preliminaryResult.mEstimatedBiases;
-<a class="jxr_linenumber" name="L3537" href="#L3537">3537</a>             mEstimatedMg = preliminaryResult.mEstimatedMg;
-<a class="jxr_linenumber" name="L3538" href="#L3538">3538</a>             mEstimatedGg = preliminaryResult.mEstimatedGg;
-<a class="jxr_linenumber" name="L3539" href="#L3539">3539</a>         }
-<a class="jxr_linenumber" name="L3540" href="#L3540">3540</a>     }
-<a class="jxr_linenumber" name="L3541" href="#L3541">3541</a> 
-<a class="jxr_linenumber" name="L3542" href="#L3542">3542</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L3543" href="#L3543">3543</a> <em class="jxr_javadoccomment">     * Converts acceleration instance to meters per squared second.</em>
-<a class="jxr_linenumber" name="L3544" href="#L3544">3544</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L3545" href="#L3545">3545</a> <em class="jxr_javadoccomment">     * @param acceleration acceleration instance to be converted.</em>
-<a class="jxr_linenumber" name="L3546" href="#L3546">3546</a> <em class="jxr_javadoccomment">     * @return converted value.</em>
-<a class="jxr_linenumber" name="L3547" href="#L3547">3547</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L3548" href="#L3548">3548</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">double</strong> convertAcceleration(<strong class="jxr_keyword">final</strong> Acceleration acceleration) {
-<a class="jxr_linenumber" name="L3549" href="#L3549">3549</a>         <strong class="jxr_keyword">return</strong> AccelerationConverter.convert(acceleration.getValue().doubleValue(),
-<a class="jxr_linenumber" name="L3550" href="#L3550">3550</a>                 acceleration.getUnit(), AccelerationUnit.METERS_PER_SQUARED_SECOND);
-<a class="jxr_linenumber" name="L3551" href="#L3551">3551</a>     }
-<a class="jxr_linenumber" name="L3552" href="#L3552">3552</a> 
-<a class="jxr_linenumber" name="L3553" href="#L3553">3553</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L3554" href="#L3554">3554</a> <em class="jxr_javadoccomment">     * Converts angular speed instance to radians per second.</em>
-<a class="jxr_linenumber" name="L3555" href="#L3555">3555</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L3556" href="#L3556">3556</a> <em class="jxr_javadoccomment">     * @param angularSpeed angular speed instance to be converted.</em>
-<a class="jxr_linenumber" name="L3557" href="#L3557">3557</a> <em class="jxr_javadoccomment">     * @return converted value.</em>
-<a class="jxr_linenumber" name="L3558" href="#L3558">3558</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L3559" href="#L3559">3559</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">double</strong> convertAngularSpeed(<strong class="jxr_keyword">final</strong> AngularSpeed angularSpeed) {
-<a class="jxr_linenumber" name="L3560" href="#L3560">3560</a>         <strong class="jxr_keyword">return</strong> AngularSpeedConverter.convert(angularSpeed.getValue().doubleValue(),
-<a class="jxr_linenumber" name="L3561" href="#L3561">3561</a>                 angularSpeed.getUnit(), AngularSpeedUnit.RADIANS_PER_SECOND);
-<a class="jxr_linenumber" name="L3562" href="#L3562">3562</a>     }
-<a class="jxr_linenumber" name="L3563" href="#L3563">3563</a> 
-<a class="jxr_linenumber" name="L3564" href="#L3564">3564</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L3565" href="#L3565">3565</a> <em class="jxr_javadoccomment">     * Fixes a measured kinematics instance using current</em>
-<a class="jxr_linenumber" name="L3566" href="#L3566">3566</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L3567" href="#L3567">3567</a> <em class="jxr_javadoccomment">     * @param measuredKinematics a measured kinematics instance.</em>
-<a class="jxr_linenumber" name="L3568" href="#L3568">3568</a> <em class="jxr_javadoccomment">     * @param result             instance where fixed values will be stored.</em>
-<a class="jxr_linenumber" name="L3569" href="#L3569">3569</a> <em class="jxr_javadoccomment">     * @throws AlgebraException if accelerometer or gyroscope parameters</em>
-<a class="jxr_linenumber" name="L3570" href="#L3570">3570</a> <em class="jxr_javadoccomment">     *                          contain numerical instabilities.</em>
-<a class="jxr_linenumber" name="L3571" href="#L3571">3571</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L3572" href="#L3572">3572</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> fixKinematics(
-<a class="jxr_linenumber" name="L3573" href="#L3573">3573</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/BodyKinematics.html">BodyKinematics</a> measuredKinematics,
-<a class="jxr_linenumber" name="L3574" href="#L3574">3574</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/BodyKinematics.html">BodyKinematics</a> result) <strong class="jxr_keyword">throws</strong> AlgebraException {
-<a class="jxr_linenumber" name="L3575" href="#L3575">3575</a> 
-<a class="jxr_linenumber" name="L3576" href="#L3576">3576</a>         mMeasuredSpecificForce[0] = measuredKinematics.getFx();
-<a class="jxr_linenumber" name="L3577" href="#L3577">3577</a>         mMeasuredSpecificForce[1] = measuredKinematics.getFy();
-<a class="jxr_linenumber" name="L3578" href="#L3578">3578</a>         mMeasuredSpecificForce[2] = measuredKinematics.getFz();
-<a class="jxr_linenumber" name="L3579" href="#L3579">3579</a>         mAccelerationFixer.fix(mMeasuredSpecificForce,
-<a class="jxr_linenumber" name="L3580" href="#L3580">3580</a>                 mFixedSpecificForce);
-<a class="jxr_linenumber" name="L3581" href="#L3581">3581</a> 
-<a class="jxr_linenumber" name="L3582" href="#L3582">3582</a>         mMeasuredAngularRate[0] = measuredKinematics.getAngularRateX();
-<a class="jxr_linenumber" name="L3583" href="#L3583">3583</a>         mMeasuredAngularRate[1] = measuredKinematics.getAngularRateY();
-<a class="jxr_linenumber" name="L3584" href="#L3584">3584</a>         mMeasuredAngularRate[2] = measuredKinematics.getAngularRateZ();
-<a class="jxr_linenumber" name="L3585" href="#L3585">3585</a>         mAngularRateFixer.fix(mMeasuredAngularRate,
-<a class="jxr_linenumber" name="L3586" href="#L3586">3586</a>                 mFixedSpecificForce, mFixedAngularRate);
-<a class="jxr_linenumber" name="L3587" href="#L3587">3587</a> 
-<a class="jxr_linenumber" name="L3588" href="#L3588">3588</a>         result.setSpecificForceCoordinates(
-<a class="jxr_linenumber" name="L3589" href="#L3589">3589</a>                 mFixedSpecificForce[0],
-<a class="jxr_linenumber" name="L3590" href="#L3590">3590</a>                 mFixedSpecificForce[1],
-<a class="jxr_linenumber" name="L3591" href="#L3591">3591</a>                 mFixedSpecificForce[2]);
-<a class="jxr_linenumber" name="L3592" href="#L3592">3592</a>         result.setAngularRateCoordinates(
-<a class="jxr_linenumber" name="L3593" href="#L3593">3593</a>                 mFixedAngularRate[0],
-<a class="jxr_linenumber" name="L3594" href="#L3594">3594</a>                 mFixedAngularRate[1],
-<a class="jxr_linenumber" name="L3595" href="#L3595">3595</a>                 mFixedAngularRate[2]);
-<a class="jxr_linenumber" name="L3596" href="#L3596">3596</a>     }
-<a class="jxr_linenumber" name="L3597" href="#L3597">3597</a> 
-<a class="jxr_linenumber" name="L3598" href="#L3598">3598</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L3599" href="#L3599">3599</a> <em class="jxr_javadoccomment">     * Internal class containing estimated preliminary result.</em>
-<a class="jxr_linenumber" name="L3600" href="#L3600">3600</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L3601" href="#L3601">3601</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/gyroscope/RobustTurntableGyroscopeCalibrator.html">PreliminaryResult</a> {
-<a class="jxr_linenumber" name="L3602" href="#L3602">3602</a>         <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L3603" href="#L3603">3603</a> <em class="jxr_javadoccomment">         * Estimated gyroscope biases for each IMU axis expressed in radians per second</em>
-<a class="jxr_linenumber" name="L3604" href="#L3604">3604</a> <em class="jxr_javadoccomment">         * (rad/s).</em>
-<a class="jxr_linenumber" name="L3605" href="#L3605">3605</a> <em class="jxr_javadoccomment">         */</em>
-<a class="jxr_linenumber" name="L3606" href="#L3606">3606</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">double</strong>[] mEstimatedBiases;
-<a class="jxr_linenumber" name="L3607" href="#L3607">3607</a> 
-<a class="jxr_linenumber" name="L3608" href="#L3608">3608</a>         <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L3609" href="#L3609">3609</a> <em class="jxr_javadoccomment">         * Estimated gyroscope scale factors and cross coupling errors.</em>
-<a class="jxr_linenumber" name="L3610" href="#L3610">3610</a> <em class="jxr_javadoccomment">         * This is the product of matrix Tg containing cross coupling errors and Kg</em>
-<a class="jxr_linenumber" name="L3611" href="#L3611">3611</a> <em class="jxr_javadoccomment">         * containing scaling factors.</em>
-<a class="jxr_linenumber" name="L3612" href="#L3612">3612</a> <em class="jxr_javadoccomment">         * So that:</em>
-<a class="jxr_linenumber" name="L3613" href="#L3613">3613</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
-<a class="jxr_linenumber" name="L3614" href="#L3614">3614</a> <em class="jxr_javadoccomment">         *     Mg = [sx    mxy  mxz] = Tg*Kg</em>
-<a class="jxr_linenumber" name="L3615" href="#L3615">3615</a> <em class="jxr_javadoccomment">         *          [myx   sy   myz]</em>
-<a class="jxr_linenumber" name="L3616" href="#L3616">3616</a> <em class="jxr_javadoccomment">         *          [mzx   mzy  sz ]</em>
-<a class="jxr_linenumber" name="L3617" href="#L3617">3617</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
-<a class="jxr_linenumber" name="L3618" href="#L3618">3618</a> <em class="jxr_javadoccomment">         * Where:</em>
-<a class="jxr_linenumber" name="L3619" href="#L3619">3619</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
-<a class="jxr_linenumber" name="L3620" href="#L3620">3620</a> <em class="jxr_javadoccomment">         *     Kg = [sx 0   0 ]</em>
-<a class="jxr_linenumber" name="L3621" href="#L3621">3621</a> <em class="jxr_javadoccomment">         *          [0  sy  0 ]</em>
-<a class="jxr_linenumber" name="L3622" href="#L3622">3622</a> <em class="jxr_javadoccomment">         *          [0  0   sz]</em>
-<a class="jxr_linenumber" name="L3623" href="#L3623">3623</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
-<a class="jxr_linenumber" name="L3624" href="#L3624">3624</a> <em class="jxr_javadoccomment">         * and</em>
-<a class="jxr_linenumber" name="L3625" href="#L3625">3625</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
-<a class="jxr_linenumber" name="L3626" href="#L3626">3626</a> <em class="jxr_javadoccomment">         *     Tg = [1          -alphaXy    alphaXz ]</em>
-<a class="jxr_linenumber" name="L3627" href="#L3627">3627</a> <em class="jxr_javadoccomment">         *          [alphaYx    1           -alphaYz]</em>
-<a class="jxr_linenumber" name="L3628" href="#L3628">3628</a> <em class="jxr_javadoccomment">         *          [-alphaZx   alphaZy     1       ]</em>
-<a class="jxr_linenumber" name="L3629" href="#L3629">3629</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
-<a class="jxr_linenumber" name="L3630" href="#L3630">3630</a> <em class="jxr_javadoccomment">         * Hence:</em>
-<a class="jxr_linenumber" name="L3631" href="#L3631">3631</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
-<a class="jxr_linenumber" name="L3632" href="#L3632">3632</a> <em class="jxr_javadoccomment">         *     Mg = [sx    mxy  mxz] = Tg*Kg =  [sx             -sy * alphaXy   sz * alphaXz ]</em>
-<a class="jxr_linenumber" name="L3633" href="#L3633">3633</a> <em class="jxr_javadoccomment">         *          [myx   sy   myz]            [sx * alphaYx   sy              -sz * alphaYz]</em>
-<a class="jxr_linenumber" name="L3634" href="#L3634">3634</a> <em class="jxr_javadoccomment">         *          [mzx   mzy  sz ]            [-sx * alphaZx  sy * alphaZy    sz           ]</em>
-<a class="jxr_linenumber" name="L3635" href="#L3635">3635</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
-<a class="jxr_linenumber" name="L3636" href="#L3636">3636</a> <em class="jxr_javadoccomment">         * This instance allows any 3x3 matrix however, typically alphaYx, alphaZx and alphaZy</em>
-<a class="jxr_linenumber" name="L3637" href="#L3637">3637</a> <em class="jxr_javadoccomment">         * are considered to be zero if the gyroscope z-axis is assumed to be the same</em>
-<a class="jxr_linenumber" name="L3638" href="#L3638">3638</a> <em class="jxr_javadoccomment">         * as the body z-axis. When this is assumed, myx = mzx = mzy = 0 and the Mg matrix</em>
-<a class="jxr_linenumber" name="L3639" href="#L3639">3639</a> <em class="jxr_javadoccomment">         * becomes upper diagonal:</em>
-<a class="jxr_linenumber" name="L3640" href="#L3640">3640</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
-<a class="jxr_linenumber" name="L3641" href="#L3641">3641</a> <em class="jxr_javadoccomment">         *     Mg = [sx    mxy  mxz]</em>
-<a class="jxr_linenumber" name="L3642" href="#L3642">3642</a> <em class="jxr_javadoccomment">         *          [0     sy   myz]</em>
-<a class="jxr_linenumber" name="L3643" href="#L3643">3643</a> <em class="jxr_javadoccomment">         *          [0     0    sz ]</em>
-<a class="jxr_linenumber" name="L3644" href="#L3644">3644</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
-<a class="jxr_linenumber" name="L3645" href="#L3645">3645</a> <em class="jxr_javadoccomment">         * Values of this matrix are unitless.</em>
-<a class="jxr_linenumber" name="L3646" href="#L3646">3646</a> <em class="jxr_javadoccomment">         */</em>
-<a class="jxr_linenumber" name="L3647" href="#L3647">3647</a>         <strong class="jxr_keyword">private</strong> Matrix mEstimatedMg;
-<a class="jxr_linenumber" name="L3648" href="#L3648">3648</a> 
-<a class="jxr_linenumber" name="L3649" href="#L3649">3649</a>         <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L3650" href="#L3650">3650</a> <em class="jxr_javadoccomment">         * Estimated G-dependent cross biases introduced on the gyroscope by the</em>
-<a class="jxr_linenumber" name="L3651" href="#L3651">3651</a> <em class="jxr_javadoccomment">         * specific forces sensed by the accelerometer.</em>
-<a class="jxr_linenumber" name="L3652" href="#L3652">3652</a> <em class="jxr_javadoccomment">         * This instance allows any 3x3 matrix.</em>
-<a class="jxr_linenumber" name="L3653" href="#L3653">3653</a> <em class="jxr_javadoccomment">         */</em>
-<a class="jxr_linenumber" name="L3654" href="#L3654">3654</a>         <strong class="jxr_keyword">private</strong> Matrix mEstimatedGg;
-<a class="jxr_linenumber" name="L3655" href="#L3655">3655</a>     }
-<a class="jxr_linenumber" name="L3656" href="#L3656">3656</a> }
+<a class="jxr_linenumber" name="L3480" href="#L3480">3480</a>             solutions.add(result);
+<a class="jxr_linenumber" name="L3481" href="#L3481">3481</a>         } <strong class="jxr_keyword">catch</strong> (LockedException | CalibrationException | NotReadyException e) {
+<a class="jxr_linenumber" name="L3482" href="#L3482">3482</a>             solutions.clear();
+<a class="jxr_linenumber" name="L3483" href="#L3483">3483</a>         }
+<a class="jxr_linenumber" name="L3484" href="#L3484">3484</a>     }
+<a class="jxr_linenumber" name="L3485" href="#L3485">3485</a> 
+<a class="jxr_linenumber" name="L3486" href="#L3486">3486</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L3487" href="#L3487">3487</a> <em class="jxr_javadoccomment">     * Attempts to refine calibration parameters if refinement is requested.</em>
+<a class="jxr_linenumber" name="L3488" href="#L3488">3488</a> <em class="jxr_javadoccomment">     * This method returns a refined solution or provided input if refinement is not</em>
+<a class="jxr_linenumber" name="L3489" href="#L3489">3489</a> <em class="jxr_javadoccomment">     * requested or has failed.</em>
+<a class="jxr_linenumber" name="L3490" href="#L3490">3490</a> <em class="jxr_javadoccomment">     * If refinement is enabled and it is requested to keep covariance, this method</em>
+<a class="jxr_linenumber" name="L3491" href="#L3491">3491</a> <em class="jxr_javadoccomment">     * will also keep covariance of refined position.</em>
+<a class="jxr_linenumber" name="L3492" href="#L3492">3492</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L3493" href="#L3493">3493</a> <em class="jxr_javadoccomment">     * @param preliminaryResult a preliminary result.</em>
+<a class="jxr_linenumber" name="L3494" href="#L3494">3494</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L3495" href="#L3495">3495</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> attemptRefine(<strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/gyroscope/RobustTurntableGyroscopeCalibrator.html">PreliminaryResult</a> preliminaryResult) {
+<a class="jxr_linenumber" name="L3496" href="#L3496">3496</a>         <strong class="jxr_keyword">if</strong> (mRefineResult &amp;&amp; mInliersData != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L3497" href="#L3497">3497</a>             <strong class="jxr_keyword">final</strong> BitSet inliers = mInliersData.getInliers();
+<a class="jxr_linenumber" name="L3498" href="#L3498">3498</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> nSamples = mSequences.size();
+<a class="jxr_linenumber" name="L3499" href="#L3499">3499</a> 
+<a class="jxr_linenumber" name="L3500" href="#L3500">3500</a>             <strong class="jxr_keyword">final</strong> List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; inlierSequences =
+<a class="jxr_linenumber" name="L3501" href="#L3501">3501</a>                     <strong class="jxr_keyword">new</strong> ArrayList&lt;&gt;();
+<a class="jxr_linenumber" name="L3502" href="#L3502">3502</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; nSamples; i++) {
+<a class="jxr_linenumber" name="L3503" href="#L3503">3503</a>                 <strong class="jxr_keyword">if</strong> (inliers.get(i)) {
+<a class="jxr_linenumber" name="L3504" href="#L3504">3504</a>                     <em class="jxr_comment">// sample is inlier</em>
+<a class="jxr_linenumber" name="L3505" href="#L3505">3505</a>                     inlierSequences.add(mSequences.get(i));
+<a class="jxr_linenumber" name="L3506" href="#L3506">3506</a>                 }
+<a class="jxr_linenumber" name="L3507" href="#L3507">3507</a>             }
+<a class="jxr_linenumber" name="L3508" href="#L3508">3508</a> 
+<a class="jxr_linenumber" name="L3509" href="#L3509">3509</a>             <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L3510" href="#L3510">3510</a>                 mInnerCalibrator.setGDependentCrossBiasesEstimated(mEstimateGDependentCrossBiases);
+<a class="jxr_linenumber" name="L3511" href="#L3511">3511</a>                 mInnerCalibrator.setInitialBias(preliminaryResult.mEstimatedBiases);
+<a class="jxr_linenumber" name="L3512" href="#L3512">3512</a>                 mInnerCalibrator.setInitialMg(preliminaryResult.mEstimatedMg);
+<a class="jxr_linenumber" name="L3513" href="#L3513">3513</a>                 mInnerCalibrator.setInitialGg(preliminaryResult.mEstimatedGg);
+<a class="jxr_linenumber" name="L3514" href="#L3514">3514</a>                 mInnerCalibrator.setAccelerometerBias(mAccelerometerBiasX, mAccelerometerBiasY, mAccelerometerBiasZ);
+<a class="jxr_linenumber" name="L3515" href="#L3515">3515</a>                 mInnerCalibrator.setAccelerometerScalingFactorsAndCrossCouplingErrors(
+<a class="jxr_linenumber" name="L3516" href="#L3516">3516</a>                         mAccelerometerSx, mAccelerometerSy, mAccelerometerSz,
+<a class="jxr_linenumber" name="L3517" href="#L3517">3517</a>                         mAccelerometerMxy, mAccelerometerMxz,
+<a class="jxr_linenumber" name="L3518" href="#L3518">3518</a>                         mAccelerometerMyx, mAccelerometerMyz,
+<a class="jxr_linenumber" name="L3519" href="#L3519">3519</a>                         mAccelerometerMzx, mAccelerometerMzy);
+<a class="jxr_linenumber" name="L3520" href="#L3520">3520</a>                 mInnerCalibrator.setCommonAxisUsed(mCommonAxisUsed);
+<a class="jxr_linenumber" name="L3521" href="#L3521">3521</a>                 mInnerCalibrator.setSequences(inlierSequences);
+<a class="jxr_linenumber" name="L3522" href="#L3522">3522</a>                 mInnerCalibrator.calibrate();
+<a class="jxr_linenumber" name="L3523" href="#L3523">3523</a> 
+<a class="jxr_linenumber" name="L3524" href="#L3524">3524</a>                 mEstimatedBiases = mInnerCalibrator.getEstimatedBiases();
+<a class="jxr_linenumber" name="L3525" href="#L3525">3525</a>                 mEstimatedMg = mInnerCalibrator.getEstimatedMg();
+<a class="jxr_linenumber" name="L3526" href="#L3526">3526</a>                 mEstimatedGg = mInnerCalibrator.getEstimatedGg();
+<a class="jxr_linenumber" name="L3527" href="#L3527">3527</a>                 mEstimatedCovariance = mInnerCalibrator.getEstimatedCovariance();
+<a class="jxr_linenumber" name="L3528" href="#L3528">3528</a> 
+<a class="jxr_linenumber" name="L3529" href="#L3529">3529</a>             } <strong class="jxr_keyword">catch</strong> (LockedException | CalibrationException | NotReadyException e) {
+<a class="jxr_linenumber" name="L3530" href="#L3530">3530</a>                 mEstimatedCovariance = preliminaryResult.mCovariance;
+<a class="jxr_linenumber" name="L3531" href="#L3531">3531</a>                 mEstimatedBiases = preliminaryResult.mEstimatedBiases;
+<a class="jxr_linenumber" name="L3532" href="#L3532">3532</a>                 mEstimatedMg = preliminaryResult.mEstimatedMg;
+<a class="jxr_linenumber" name="L3533" href="#L3533">3533</a>                 mEstimatedGg = preliminaryResult.mEstimatedGg;
+<a class="jxr_linenumber" name="L3534" href="#L3534">3534</a>             }
+<a class="jxr_linenumber" name="L3535" href="#L3535">3535</a>         } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L3536" href="#L3536">3536</a>             mEstimatedCovariance = preliminaryResult.mCovariance;
+<a class="jxr_linenumber" name="L3537" href="#L3537">3537</a>             mEstimatedBiases = preliminaryResult.mEstimatedBiases;
+<a class="jxr_linenumber" name="L3538" href="#L3538">3538</a>             mEstimatedMg = preliminaryResult.mEstimatedMg;
+<a class="jxr_linenumber" name="L3539" href="#L3539">3539</a>             mEstimatedGg = preliminaryResult.mEstimatedGg;
+<a class="jxr_linenumber" name="L3540" href="#L3540">3540</a>         }
+<a class="jxr_linenumber" name="L3541" href="#L3541">3541</a>     }
+<a class="jxr_linenumber" name="L3542" href="#L3542">3542</a> 
+<a class="jxr_linenumber" name="L3543" href="#L3543">3543</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L3544" href="#L3544">3544</a> <em class="jxr_javadoccomment">     * Converts acceleration instance to meters per squared second.</em>
+<a class="jxr_linenumber" name="L3545" href="#L3545">3545</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L3546" href="#L3546">3546</a> <em class="jxr_javadoccomment">     * @param acceleration acceleration instance to be converted.</em>
+<a class="jxr_linenumber" name="L3547" href="#L3547">3547</a> <em class="jxr_javadoccomment">     * @return converted value.</em>
+<a class="jxr_linenumber" name="L3548" href="#L3548">3548</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L3549" href="#L3549">3549</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">double</strong> convertAcceleration(<strong class="jxr_keyword">final</strong> Acceleration acceleration) {
+<a class="jxr_linenumber" name="L3550" href="#L3550">3550</a>         <strong class="jxr_keyword">return</strong> AccelerationConverter.convert(acceleration.getValue().doubleValue(),
+<a class="jxr_linenumber" name="L3551" href="#L3551">3551</a>                 acceleration.getUnit(), AccelerationUnit.METERS_PER_SQUARED_SECOND);
+<a class="jxr_linenumber" name="L3552" href="#L3552">3552</a>     }
+<a class="jxr_linenumber" name="L3553" href="#L3553">3553</a> 
+<a class="jxr_linenumber" name="L3554" href="#L3554">3554</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L3555" href="#L3555">3555</a> <em class="jxr_javadoccomment">     * Converts angular speed instance to radians per second.</em>
+<a class="jxr_linenumber" name="L3556" href="#L3556">3556</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L3557" href="#L3557">3557</a> <em class="jxr_javadoccomment">     * @param angularSpeed angular speed instance to be converted.</em>
+<a class="jxr_linenumber" name="L3558" href="#L3558">3558</a> <em class="jxr_javadoccomment">     * @return converted value.</em>
+<a class="jxr_linenumber" name="L3559" href="#L3559">3559</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L3560" href="#L3560">3560</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">double</strong> convertAngularSpeed(<strong class="jxr_keyword">final</strong> AngularSpeed angularSpeed) {
+<a class="jxr_linenumber" name="L3561" href="#L3561">3561</a>         <strong class="jxr_keyword">return</strong> AngularSpeedConverter.convert(angularSpeed.getValue().doubleValue(),
+<a class="jxr_linenumber" name="L3562" href="#L3562">3562</a>                 angularSpeed.getUnit(), AngularSpeedUnit.RADIANS_PER_SECOND);
+<a class="jxr_linenumber" name="L3563" href="#L3563">3563</a>     }
+<a class="jxr_linenumber" name="L3564" href="#L3564">3564</a> 
+<a class="jxr_linenumber" name="L3565" href="#L3565">3565</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L3566" href="#L3566">3566</a> <em class="jxr_javadoccomment">     * Fixes a measured kinematics instance using current</em>
+<a class="jxr_linenumber" name="L3567" href="#L3567">3567</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L3568" href="#L3568">3568</a> <em class="jxr_javadoccomment">     * @param measuredKinematics a measured kinematics instance.</em>
+<a class="jxr_linenumber" name="L3569" href="#L3569">3569</a> <em class="jxr_javadoccomment">     * @param result             instance where fixed values will be stored.</em>
+<a class="jxr_linenumber" name="L3570" href="#L3570">3570</a> <em class="jxr_javadoccomment">     * @throws AlgebraException if accelerometer or gyroscope parameters</em>
+<a class="jxr_linenumber" name="L3571" href="#L3571">3571</a> <em class="jxr_javadoccomment">     *                          contain numerical instabilities.</em>
+<a class="jxr_linenumber" name="L3572" href="#L3572">3572</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L3573" href="#L3573">3573</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> fixKinematics(
+<a class="jxr_linenumber" name="L3574" href="#L3574">3574</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/BodyKinematics.html">BodyKinematics</a> measuredKinematics,
+<a class="jxr_linenumber" name="L3575" href="#L3575">3575</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/BodyKinematics.html">BodyKinematics</a> result) <strong class="jxr_keyword">throws</strong> AlgebraException {
+<a class="jxr_linenumber" name="L3576" href="#L3576">3576</a> 
+<a class="jxr_linenumber" name="L3577" href="#L3577">3577</a>         mMeasuredSpecificForce[0] = measuredKinematics.getFx();
+<a class="jxr_linenumber" name="L3578" href="#L3578">3578</a>         mMeasuredSpecificForce[1] = measuredKinematics.getFy();
+<a class="jxr_linenumber" name="L3579" href="#L3579">3579</a>         mMeasuredSpecificForce[2] = measuredKinematics.getFz();
+<a class="jxr_linenumber" name="L3580" href="#L3580">3580</a>         mAccelerationFixer.fix(mMeasuredSpecificForce,
+<a class="jxr_linenumber" name="L3581" href="#L3581">3581</a>                 mFixedSpecificForce);
+<a class="jxr_linenumber" name="L3582" href="#L3582">3582</a> 
+<a class="jxr_linenumber" name="L3583" href="#L3583">3583</a>         mMeasuredAngularRate[0] = measuredKinematics.getAngularRateX();
+<a class="jxr_linenumber" name="L3584" href="#L3584">3584</a>         mMeasuredAngularRate[1] = measuredKinematics.getAngularRateY();
+<a class="jxr_linenumber" name="L3585" href="#L3585">3585</a>         mMeasuredAngularRate[2] = measuredKinematics.getAngularRateZ();
+<a class="jxr_linenumber" name="L3586" href="#L3586">3586</a>         mAngularRateFixer.fix(mMeasuredAngularRate,
+<a class="jxr_linenumber" name="L3587" href="#L3587">3587</a>                 mFixedSpecificForce, mFixedAngularRate);
+<a class="jxr_linenumber" name="L3588" href="#L3588">3588</a> 
+<a class="jxr_linenumber" name="L3589" href="#L3589">3589</a>         result.setSpecificForceCoordinates(
+<a class="jxr_linenumber" name="L3590" href="#L3590">3590</a>                 mFixedSpecificForce[0],
+<a class="jxr_linenumber" name="L3591" href="#L3591">3591</a>                 mFixedSpecificForce[1],
+<a class="jxr_linenumber" name="L3592" href="#L3592">3592</a>                 mFixedSpecificForce[2]);
+<a class="jxr_linenumber" name="L3593" href="#L3593">3593</a>         result.setAngularRateCoordinates(
+<a class="jxr_linenumber" name="L3594" href="#L3594">3594</a>                 mFixedAngularRate[0],
+<a class="jxr_linenumber" name="L3595" href="#L3595">3595</a>                 mFixedAngularRate[1],
+<a class="jxr_linenumber" name="L3596" href="#L3596">3596</a>                 mFixedAngularRate[2]);
+<a class="jxr_linenumber" name="L3597" href="#L3597">3597</a>     }
+<a class="jxr_linenumber" name="L3598" href="#L3598">3598</a> 
+<a class="jxr_linenumber" name="L3599" href="#L3599">3599</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L3600" href="#L3600">3600</a> <em class="jxr_javadoccomment">     * Internal class containing estimated preliminary result.</em>
+<a class="jxr_linenumber" name="L3601" href="#L3601">3601</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L3602" href="#L3602">3602</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/gyroscope/RobustTurntableGyroscopeCalibrator.html">PreliminaryResult</a> {
+<a class="jxr_linenumber" name="L3603" href="#L3603">3603</a>         <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L3604" href="#L3604">3604</a> <em class="jxr_javadoccomment">         * Estimated gyroscope biases for each IMU axis expressed in radians per second</em>
+<a class="jxr_linenumber" name="L3605" href="#L3605">3605</a> <em class="jxr_javadoccomment">         * (rad/s).</em>
+<a class="jxr_linenumber" name="L3606" href="#L3606">3606</a> <em class="jxr_javadoccomment">         */</em>
+<a class="jxr_linenumber" name="L3607" href="#L3607">3607</a>         <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">double</strong>[] mEstimatedBiases;
+<a class="jxr_linenumber" name="L3608" href="#L3608">3608</a> 
+<a class="jxr_linenumber" name="L3609" href="#L3609">3609</a>         <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L3610" href="#L3610">3610</a> <em class="jxr_javadoccomment">         * Estimated gyroscope scale factors and cross coupling errors.</em>
+<a class="jxr_linenumber" name="L3611" href="#L3611">3611</a> <em class="jxr_javadoccomment">         * This is the product of matrix Tg containing cross coupling errors and Kg</em>
+<a class="jxr_linenumber" name="L3612" href="#L3612">3612</a> <em class="jxr_javadoccomment">         * containing scaling factors.</em>
+<a class="jxr_linenumber" name="L3613" href="#L3613">3613</a> <em class="jxr_javadoccomment">         * So that:</em>
+<a class="jxr_linenumber" name="L3614" href="#L3614">3614</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
+<a class="jxr_linenumber" name="L3615" href="#L3615">3615</a> <em class="jxr_javadoccomment">         *     Mg = [sx    mxy  mxz] = Tg*Kg</em>
+<a class="jxr_linenumber" name="L3616" href="#L3616">3616</a> <em class="jxr_javadoccomment">         *          [myx   sy   myz]</em>
+<a class="jxr_linenumber" name="L3617" href="#L3617">3617</a> <em class="jxr_javadoccomment">         *          [mzx   mzy  sz ]</em>
+<a class="jxr_linenumber" name="L3618" href="#L3618">3618</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
+<a class="jxr_linenumber" name="L3619" href="#L3619">3619</a> <em class="jxr_javadoccomment">         * Where:</em>
+<a class="jxr_linenumber" name="L3620" href="#L3620">3620</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
+<a class="jxr_linenumber" name="L3621" href="#L3621">3621</a> <em class="jxr_javadoccomment">         *     Kg = [sx 0   0 ]</em>
+<a class="jxr_linenumber" name="L3622" href="#L3622">3622</a> <em class="jxr_javadoccomment">         *          [0  sy  0 ]</em>
+<a class="jxr_linenumber" name="L3623" href="#L3623">3623</a> <em class="jxr_javadoccomment">         *          [0  0   sz]</em>
+<a class="jxr_linenumber" name="L3624" href="#L3624">3624</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
+<a class="jxr_linenumber" name="L3625" href="#L3625">3625</a> <em class="jxr_javadoccomment">         * and</em>
+<a class="jxr_linenumber" name="L3626" href="#L3626">3626</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
+<a class="jxr_linenumber" name="L3627" href="#L3627">3627</a> <em class="jxr_javadoccomment">         *     Tg = [1          -alphaXy    alphaXz ]</em>
+<a class="jxr_linenumber" name="L3628" href="#L3628">3628</a> <em class="jxr_javadoccomment">         *          [alphaYx    1           -alphaYz]</em>
+<a class="jxr_linenumber" name="L3629" href="#L3629">3629</a> <em class="jxr_javadoccomment">         *          [-alphaZx   alphaZy     1       ]</em>
+<a class="jxr_linenumber" name="L3630" href="#L3630">3630</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
+<a class="jxr_linenumber" name="L3631" href="#L3631">3631</a> <em class="jxr_javadoccomment">         * Hence:</em>
+<a class="jxr_linenumber" name="L3632" href="#L3632">3632</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
+<a class="jxr_linenumber" name="L3633" href="#L3633">3633</a> <em class="jxr_javadoccomment">         *     Mg = [sx    mxy  mxz] = Tg*Kg =  [sx             -sy * alphaXy   sz * alphaXz ]</em>
+<a class="jxr_linenumber" name="L3634" href="#L3634">3634</a> <em class="jxr_javadoccomment">         *          [myx   sy   myz]            [sx * alphaYx   sy              -sz * alphaYz]</em>
+<a class="jxr_linenumber" name="L3635" href="#L3635">3635</a> <em class="jxr_javadoccomment">         *          [mzx   mzy  sz ]            [-sx * alphaZx  sy * alphaZy    sz           ]</em>
+<a class="jxr_linenumber" name="L3636" href="#L3636">3636</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
+<a class="jxr_linenumber" name="L3637" href="#L3637">3637</a> <em class="jxr_javadoccomment">         * This instance allows any 3x3 matrix however, typically alphaYx, alphaZx and alphaZy</em>
+<a class="jxr_linenumber" name="L3638" href="#L3638">3638</a> <em class="jxr_javadoccomment">         * are considered to be zero if the gyroscope z-axis is assumed to be the same</em>
+<a class="jxr_linenumber" name="L3639" href="#L3639">3639</a> <em class="jxr_javadoccomment">         * as the body z-axis. When this is assumed, myx = mzx = mzy = 0 and the Mg matrix</em>
+<a class="jxr_linenumber" name="L3640" href="#L3640">3640</a> <em class="jxr_javadoccomment">         * becomes upper diagonal:</em>
+<a class="jxr_linenumber" name="L3641" href="#L3641">3641</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
+<a class="jxr_linenumber" name="L3642" href="#L3642">3642</a> <em class="jxr_javadoccomment">         *     Mg = [sx    mxy  mxz]</em>
+<a class="jxr_linenumber" name="L3643" href="#L3643">3643</a> <em class="jxr_javadoccomment">         *          [0     sy   myz]</em>
+<a class="jxr_linenumber" name="L3644" href="#L3644">3644</a> <em class="jxr_javadoccomment">         *          [0     0    sz ]</em>
+<a class="jxr_linenumber" name="L3645" href="#L3645">3645</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
+<a class="jxr_linenumber" name="L3646" href="#L3646">3646</a> <em class="jxr_javadoccomment">         * Values of this matrix are unitless.</em>
+<a class="jxr_linenumber" name="L3647" href="#L3647">3647</a> <em class="jxr_javadoccomment">         */</em>
+<a class="jxr_linenumber" name="L3648" href="#L3648">3648</a>         <strong class="jxr_keyword">private</strong> Matrix mEstimatedMg;
+<a class="jxr_linenumber" name="L3649" href="#L3649">3649</a> 
+<a class="jxr_linenumber" name="L3650" href="#L3650">3650</a>         <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L3651" href="#L3651">3651</a> <em class="jxr_javadoccomment">         * Estimated G-dependent cross biases introduced on the gyroscope by the</em>
+<a class="jxr_linenumber" name="L3652" href="#L3652">3652</a> <em class="jxr_javadoccomment">         * specific forces sensed by the accelerometer.</em>
+<a class="jxr_linenumber" name="L3653" href="#L3653">3653</a> <em class="jxr_javadoccomment">         * This instance allows any 3x3 matrix.</em>
+<a class="jxr_linenumber" name="L3654" href="#L3654">3654</a> <em class="jxr_javadoccomment">         */</em>
+<a class="jxr_linenumber" name="L3655" href="#L3655">3655</a>         <strong class="jxr_keyword">private</strong> Matrix mEstimatedGg;
+<a class="jxr_linenumber" name="L3656" href="#L3656">3656</a> 
+<a class="jxr_linenumber" name="L3657" href="#L3657">3657</a>         <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L3658" href="#L3658">3658</a> <em class="jxr_javadoccomment">         * Covariance matrix for estimated result.</em>
+<a class="jxr_linenumber" name="L3659" href="#L3659">3659</a> <em class="jxr_javadoccomment">         */</em>
+<a class="jxr_linenumber" name="L3660" href="#L3660">3660</a>         <strong class="jxr_keyword">private</strong> Matrix mCovariance;
+<a class="jxr_linenumber" name="L3661" href="#L3661">3661</a>     }
+<a class="jxr_linenumber" name="L3662" href="#L3662">3662</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2018&#x2013;2020. All rights reserved.</div>
