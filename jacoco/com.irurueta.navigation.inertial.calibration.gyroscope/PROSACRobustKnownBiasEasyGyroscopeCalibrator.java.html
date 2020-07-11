@@ -1,0 +1,1574 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PROSACRobustKnownBiasEasyGyroscopeCalibrator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.calibration.gyroscope</a> &gt; <span class="el_source">PROSACRobustKnownBiasEasyGyroscopeCalibrator.java</span></div><h1>PROSACRobustKnownBiasEasyGyroscopeCalibrator.java</h1><pre class="source lang-java linenums">package com.irurueta.navigation.inertial.calibration.gyroscope;
+
+import com.irurueta.algebra.AlgebraException;
+import com.irurueta.algebra.Matrix;
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.NotReadyException;
+import com.irurueta.navigation.inertial.calibration.BodyKinematicsSequence;
+import com.irurueta.navigation.inertial.calibration.CalibrationException;
+import com.irurueta.navigation.inertial.calibration.StandardDeviationTimedBodyKinematics;
+import com.irurueta.numerical.robust.PROSACRobustEstimator;
+import com.irurueta.numerical.robust.PROSACRobustEstimatorListener;
+import com.irurueta.numerical.robust.RobustEstimator;
+import com.irurueta.numerical.robust.RobustEstimatorException;
+import com.irurueta.numerical.robust.RobustEstimatorMethod;
+
+import java.util.List;
+
+/**
+ * Robustly estimates gyroscope cross couplings and scaling factors
+ * along with G-dependent cross biases introduced on the gyroscope by the
+ * specific forces sensed by the accelerometer using PROSAC robust estimator.
+ * &lt;p&gt;
+ * This calibrator assumes that the IMU is at a more or less fixed location on
+ * Earth, and evaluates sequences of measured body kinematics to perform
+ * calibration for unknown orientations on those provided sequences.
+ * Each provided sequence will be preceded by a static period where mean
+ * specific force will be measured to determine gravity (and hence partial
+ * body attitude).
+ * &lt;p&gt;
+ * Measured gyroscope angular rates is assumed to follow the model shown below:
+ * &lt;pre&gt;
+ *     Ωmeas = bg + (I + Mg) * Ωtrue + Gg * ftrue + w
+ * &lt;/pre&gt;
+ * Where:
+ * - Ωmeas is the measured gyroscope angular rates. This is a 3x1 vector.
+ * - bg is the gyroscope bias. Ideally, on a perfect gyroscope, this should be a
+ * 3x1 zero vector.
+ * - I is the 3x3 identity matrix.
+ * - Mg is the 3x3 matrix containing cross-couplings and scaling factors. Ideally, on
+ * a perfect gyroscope, this should be a 3x3 zero matrix.
+ * - Ωtrue is ground-truth gyroscope angular rates.
+ * - Gg is the G-dependent cross biases introduced by the specific forces sensed
+ * by the accelerometer. Ideally, on a perfect gyroscope, this should be a 3x3
+ * zero matrix.
+ * - ftrue is ground-truth specific force. This is a 3x1 vector.
+ * - w is measurement noise. This is a 3x1 vector.
+ */
+public class PROSACRobustKnownBiasEasyGyroscopeCalibrator extends
+        RobustKnownBiasEasyGyroscopeCalibrator {
+
+    /**
+     * Constant defining default threshold to determine whether samples are inliers or not.
+     */
+    public static final double DEFAULT_THRESHOLD = 1e-3;
+
+    /**
+     * Minimum value that can be set as threshold.
+     * Threshold must be strictly greater than 0.0.
+     */
+    public static final double MIN_THRESHOLD = 0.0;
+
+    /**
+     * Indicates that by default inliers will only be computed but not kept.
+     */
+    public static final boolean DEFAULT_COMPUTE_AND_KEEP_INLIERS = false;
+
+    /**
+     * Indicates that by default residuals will only be computed but not kept.
+     */
+    public static final boolean DEFAULT_COMPUTE_AND_KEEP_RESIDUALS = false;
+
+    /**
+     * Threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error between integrated rotations
+     * of sequences.
+     */
+<span class="fc" id="L77">    private double mThreshold = DEFAULT_THRESHOLD;</span>
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     */
+<span class="fc" id="L82">    private boolean mComputeAndKeepInliers = DEFAULT_COMPUTE_AND_KEEP_INLIERS;</span>
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     */
+<span class="fc" id="L87">    private boolean mComputeAndKeepResiduals = DEFAULT_COMPUTE_AND_KEEP_RESIDUALS;</span>
+
+    /**
+     * Quality scores corresponding to each provided sample.
+     * The larger the score value the better the quality of the sample.
+     */
+    private double[] mQualityScores;
+
+    /**
+     * Constructor.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator() {
+<span class="fc" id="L99">        super();</span>
+<span class="fc" id="L100">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences   collection of sequences containing timestamped body
+     *                    kinematics measurements.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg   initial gyroscope scale factors and cross coupling
+     *                    errors matrix. Must be 3x3.
+     * @param initialGg   initial gyroscope G-dependent cross biases
+     *                    introduced on the gyroscope by the specific forces
+     *                    sensed by the accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L122">        super(sequences, bias, initialMg, initialGg);</span>
+<span class="fc" id="L123">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences   collection of sequences containing timestamped body
+     *                    kinematics measurements.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg   initial gyroscope scale factors and cross coupling
+     *                    errors matrix. Must be 3x3.
+     * @param initialGg   initial gyroscope G-dependent cross biases
+     *                    introduced on the gyroscope by the specific forces
+     *                    sensed by the accelerometer. Must be 3x3.
+     * @param listener    listener to handle events raised by this
+     *                    calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L148">        super(sequences, bias, initialMg, initialGg, listener);</span>
+<span class="fc" id="L149">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences   collection of sequences containing timestamped body
+     *                    kinematics measurements.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg   initial gyroscope scale factors and cross coupling
+     *                    errors matrix. Must be 3x3.
+     * @param initialGg   initial gyroscope G-dependent cross biases
+     *                    introduced on the gyroscope by the specific forces
+     *                    sensed by the accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L171">        super(sequences, bias, initialMg, initialGg);</span>
+<span class="fc" id="L172">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences   collection of sequences containing timestamped body
+     *                    kinematics measurements.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg   initial gyroscope scale factors and cross coupling
+     *                    errors matrix. Must be 3x3.
+     * @param initialGg   initial gyroscope G-dependent cross biases
+     *                    introduced on the gyroscope by the specific forces
+     *                    sensed by the accelerometer. Must be 3x3.
+     * @param listener    listener to handle events raised by this
+     *                    calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L197">        super(sequences, bias, initialMg, initialGg, listener);</span>
+<span class="fc" id="L198">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences         collection of sequences containing timestamped body
+     *                          kinematics measurements.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg         initial gyroscope scale factors and cross coupling
+     *                          errors matrix. Must be 3x3.
+     * @param initialGg         initial gyroscope G-dependent cross biases
+     *                          introduced on the gyroscope by the specific forces
+     *                          sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias known accelerometer bias. This must
+     *                          have length 3 and is expressed in
+     *                          meters per squared second
+     *                          (m/s^2).
+     * @param accelerometerMa   known accelerometer scale factors and
+     *                          cross coupling matrix. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L228">        super(sequences, bias, initialMg, initialGg,</span>
+                accelerometerBias, accelerometerMa);
+<span class="fc" id="L230">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences         collection of sequences containing timestamped body
+     *                          kinematics measurements.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg         initial gyroscope scale factors and cross coupling
+     *                          errors matrix. Must be 3x3.
+     * @param initialGg         initial gyroscope G-dependent cross biases
+     *                          introduced on the gyroscope by the specific forces
+     *                          sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias known accelerometer bias. This must
+     *                          have length 3 and is expressed in
+     *                          meters per squared second
+     *                          (m/s^2).
+     * @param accelerometerMa   known accelerometer scale factors and
+     *                          cross coupling matrix. Must be 3x3.
+     * @param listener          listener to handle events raised by this
+     *                          calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L263">        super(sequences, bias, initialMg, initialGg,</span>
+                accelerometerBias, accelerometerMa, listener);
+<span class="fc" id="L265">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences         collection of sequences containing timestamped body
+     *                          kinematics measurements.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg         initial gyroscope scale factors and cross coupling
+     *                          errors matrix. Must be 3x3.
+     * @param initialGg         initial gyroscope G-dependent cross biases
+     *                          introduced on the gyroscope by the specific forces
+     *                          sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias known accelerometer bias. This must be 3x1
+     *                          and is expressed in meters per squared
+     *                          second (m/s^2).
+     * @param accelerometerMa   known accelerometer scale factors and
+     *                          cross coupling matrix. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L294">        super(sequences, bias, initialMg, initialGg,</span>
+                accelerometerBias, accelerometerMa);
+<span class="fc" id="L296">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences         collection of sequences containing timestamped body
+     *                          kinematics measurements.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg         initial gyroscope scale factors and cross coupling
+     *                          errors matrix. Must be 3x3.
+     * @param initialGg         initial gyroscope G-dependent cross biases
+     *                          introduced on the gyroscope by the specific forces
+     *                          sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias known accelerometer bias. This must be 3x1
+     *                          and is expressed in meters per squared
+     *                          second (m/s^2).
+     * @param accelerometerMa   known accelerometer scale factors and
+     *                          cross coupling matrix. Must be 3x3.
+     * @param listener          listener to handle events raised by this
+     *                          calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L328">        super(sequences, bias, initialMg, initialGg,</span>
+                accelerometerBias, accelerometerMa, listener);
+<span class="fc" id="L330">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L360">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg);
+<span class="fc" id="L362">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param listener                      listener to handle events raised by this
+     *                                      calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L395">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg, listener);
+<span class="fc" id="L397">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L427">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg);
+<span class="fc" id="L429">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param listener                      listener to handle events raised by this
+     *                                      calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L462">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg, listener);
+<span class="fc" id="L464">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L503">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg,
+                accelerometerBias, accelerometerMa);
+<span class="fc" id="L506">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @param listener                      listener to handle events raised by this
+     *                                      calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L548">        super(sequences, commonAxisUsed,</span>
+                estimateGDependentCrossBiases, bias, initialMg,
+                initialGg, accelerometerBias, accelerometerMa, listener);
+<span class="fc" id="L551">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L590">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg,
+                accelerometerBias, accelerometerMa);
+<span class="fc" id="L593">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @param listener                      listener to handle events raised by this
+     *                                      calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L635">        super(sequences, commonAxisUsed,</span>
+                estimateGDependentCrossBiases, bias, initialMg,
+                initialGg, accelerometerBias, accelerometerMa, listener);
+<span class="fc" id="L638">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores quality scores corresponding to each provided
+     *                      sequence. The larger the score value the better
+     *                      the quality of the sequence.
+     * @throws IllegalArgumentException if provided quality scores length
+     *                                  is smaller than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores) {
+<span class="fc" id="L651">        super();</span>
+<span class="fc" id="L652">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L653">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores quality scores corresponding to each provided
+     *                      sequence. The larger the score value the better
+     *                      the quality of the sequence.
+     * @param sequences     collection of sequences containing timestamped body
+     *                      kinematics measurements.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg     initial gyroscope scale factors and cross coupling
+     *                      errors matrix. Must be 3x3.
+     * @param initialGg     initial gyroscope G-dependent cross biases
+     *                      introduced on the gyroscope by the specific forces
+     *                      sensed by the accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L681">        super(sequences, bias, initialMg, initialGg);</span>
+<span class="fc" id="L682">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L683">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores quality scores corresponding to each provided
+     *                      sequence. The larger the score value the better
+     *                      the quality of the sequence.
+     * @param sequences     collection of sequences containing timestamped body
+     *                      kinematics measurements.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg     initial gyroscope scale factors and cross coupling
+     *                      errors matrix. Must be 3x3.
+     * @param initialGg     initial gyroscope G-dependent cross biases
+     *                      introduced on the gyroscope by the specific forces
+     *                      sensed by the accelerometer. Must be 3x3.
+     * @param listener      listener to handle events raised by this
+     *                      calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L714">        super(sequences, bias, initialMg, initialGg, listener);</span>
+<span class="fc" id="L715">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L716">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores quality scores corresponding to each provided
+     *                      sequence. The larger the score value the better
+     *                      the quality of the sequence.
+     * @param sequences     collection of sequences containing timestamped body
+     *                      kinematics measurements.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg     initial gyroscope scale factors and cross coupling
+     *                      errors matrix. Must be 3x3.
+     * @param initialGg     initial gyroscope G-dependent cross biases
+     *                      introduced on the gyroscope by the specific forces
+     *                      sensed by the accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L744">        super(sequences, bias, initialMg, initialGg);</span>
+<span class="fc" id="L745">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L746">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores quality scores corresponding to each provided
+     *                      sequence. The larger the score value the better
+     *                      the quality of the sequence.
+     * @param sequences     collection of sequences containing timestamped body
+     *                      kinematics measurements.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg     initial gyroscope scale factors and cross coupling
+     *                      errors matrix. Must be 3x3.
+     * @param initialGg     initial gyroscope G-dependent cross biases
+     *                      introduced on the gyroscope by the specific forces
+     *                      sensed by the accelerometer. Must be 3x3.
+     * @param listener      listener to handle events raised by this
+     *                      calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L777">        super(sequences, bias, initialMg, initialGg, listener);</span>
+<span class="fc" id="L778">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L779">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores     quality scores corresponding to each provided
+     *                          sequence. The larger the score value the better
+     *                          the quality of the sequence.
+     * @param sequences         collection of sequences containing timestamped body
+     *                          kinematics measurements.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg         initial gyroscope scale factors and cross coupling
+     *                          errors matrix. Must be 3x3.
+     * @param initialGg         initial gyroscope G-dependent cross biases
+     *                          introduced on the gyroscope by the specific forces
+     *                          sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias known accelerometer bias. This must
+     *                          have length 3 and is expressed in
+     *                          meters per squared second
+     *                          (m/s^2).
+     * @param accelerometerMa   known accelerometer scale factors and
+     *                          cross coupling matrix. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L815">        super(sequences, bias, initialMg, initialGg,</span>
+                accelerometerBias, accelerometerMa);
+<span class="fc" id="L817">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L818">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores     quality scores corresponding to each provided
+     *                          sequence. The larger the score value the better
+     *                          the quality of the sequence.
+     * @param sequences         collection of sequences containing timestamped body
+     *                          kinematics measurements.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg         initial gyroscope scale factors and cross coupling
+     *                          errors matrix. Must be 3x3.
+     * @param initialGg         initial gyroscope G-dependent cross biases
+     *                          introduced on the gyroscope by the specific forces
+     *                          sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias known accelerometer bias. This must
+     *                          have length 3 and is expressed in
+     *                          meters per squared second
+     *                          (m/s^2).
+     * @param accelerometerMa   known accelerometer scale factors and
+     *                          cross coupling matrix. Must be 3x3.
+     * @param listener          listener to handle events raised by this
+     *                          calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L857">        super(sequences, bias, initialMg, initialGg,</span>
+                accelerometerBias, accelerometerMa, listener);
+<span class="fc" id="L859">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L860">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores     quality scores corresponding to each provided
+     *                          sequence. The larger the score value the better
+     *                          the quality of the sequence.
+     * @param sequences         collection of sequences containing timestamped body
+     *                          kinematics measurements.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg         initial gyroscope scale factors and cross coupling
+     *                          errors matrix. Must be 3x3.
+     * @param initialGg         initial gyroscope G-dependent cross biases
+     *                          introduced on the gyroscope by the specific forces
+     *                          sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias known accelerometer bias. This must be 3x1
+     *                          and is expressed in meters per squared
+     *                          second (m/s^2).
+     * @param accelerometerMa   known accelerometer scale factors and
+     *                          cross coupling matrix. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L895">        super(sequences, bias, initialMg, initialGg,</span>
+                accelerometerBias, accelerometerMa);
+<span class="fc" id="L897">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L898">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores     quality scores corresponding to each provided
+     *                          sequence. The larger the score value the better
+     *                          the quality of the sequence.
+     * @param sequences         collection of sequences containing timestamped body
+     *                          kinematics measurements.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg         initial gyroscope scale factors and cross coupling
+     *                          errors matrix. Must be 3x3.
+     * @param initialGg         initial gyroscope G-dependent cross biases
+     *                          introduced on the gyroscope by the specific forces
+     *                          sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias known accelerometer bias. This must be 3x1
+     *                          and is expressed in meters per squared
+     *                          second (m/s^2).
+     * @param accelerometerMa   known accelerometer scale factors and
+     *                          cross coupling matrix. Must be 3x3.
+     * @param listener          listener to handle events raised by this
+     *                          calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L936">        super(sequences, bias, initialMg, initialGg,</span>
+                accelerometerBias, accelerometerMa, listener);
+<span class="fc" id="L938">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L939">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores                 quality scores corresponding to each provided
+     *                                      sequence. The larger the score value the better
+     *                                      the quality of the sequence.
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L975">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg);
+<span class="fc" id="L977">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L978">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores                 quality scores corresponding to each provided
+     *                                      sequence. The larger the score value the better
+     *                                      the quality of the sequence.
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param listener                      listener to handle events raised by this
+     *                                      calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1017">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg, listener);
+<span class="fc" id="L1019">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L1020">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores                 quality scores corresponding to each provided
+     *                                      sequence. The larger the score value the better
+     *                                      the quality of the sequence.
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg) {
+<span class="fc" id="L1056">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg);
+<span class="fc" id="L1058">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L1059">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores                 quality scores corresponding to each provided
+     *                                      sequence. The larger the score value the better
+     *                                      the quality of the sequence.
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param listener                      listener to handle events raised by this
+     *                                      calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1098">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg, listener);
+<span class="fc" id="L1100">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L1101">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores                 quality scores corresponding to each provided
+     *                                      sequence. The larger the score value the better
+     *                                      the quality of the sequence.
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L1146">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg,
+                accelerometerBias, accelerometerMa);
+<span class="fc" id="L1149">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L1150">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores                 quality scores corresponding to each provided
+     *                                      sequence. The larger the score value the better
+     *                                      the quality of the sequence.
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must have length 3 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @param listener                      listener to handle events raised by this
+     *                                      calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final double[] bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final double[] accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1198">        super(sequences, commonAxisUsed,</span>
+                estimateGDependentCrossBiases, bias, initialMg,
+                initialGg, accelerometerBias, accelerometerMa, listener);
+<span class="fc" id="L1201">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L1202">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores                 quality scores corresponding to each provided
+     *                                      sequence. The larger the score value the better
+     *                                      the quality of the sequence.
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa) {
+<span class="fc" id="L1247">        super(sequences, commonAxisUsed, estimateGDependentCrossBiases,</span>
+                bias, initialMg, initialGg,
+                accelerometerBias, accelerometerMa);
+<span class="fc" id="L1250">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L1251">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param qualityScores                 quality scores corresponding to each provided
+     *                                      sequence. The larger the score value the better
+     *                                      the quality of the sequence.
+     * @param sequences                     collection of sequences containing timestamped body
+     *                                      kinematics measurements.
+     * @param commonAxisUsed                indicates whether z-axis is
+     *                                      assumed to be common for
+     *                                      accelerometer and gyroscope.
+     * @param estimateGDependentCrossBiases true if G-dependent cross biases
+     *                                      will be estimated, false
+     *                                      otherwise.
+     * @param bias      gyroscope known bias. This must be 3x1 and is
+     *                  expressed in radians per second (rad/s).
+     * @param initialMg                     initial gyroscope scale factors and cross coupling
+     *                                      errors matrix. Must be 3x3.
+     * @param initialGg                     initial gyroscope G-dependent cross biases
+     *                                      introduced on the gyroscope by the specific forces
+     *                                      sensed by the accelerometer. Must be 3x3.
+     * @param accelerometerBias             known accelerometer bias. This
+     *                                      must have length 3 and is
+     *                                      expressed in meters per squared
+     *                                      second (m/s^2).
+     * @param accelerometerMa               known accelerometer scale factors
+     *                                      and cross coupling matrix. Must
+     *                                      be 3x3.
+     * @param listener                      listener to handle events raised by this
+     *                                      calibrator.
+     * @throws IllegalArgumentException if any of the provided values does
+     *                                  not have proper size or if provided
+     *                                  quality scores length is smaller
+     *                                  than 10.
+     */
+    public PROSACRobustKnownBiasEasyGyroscopeCalibrator(
+            final double[] qualityScores,
+            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences,
+            final boolean commonAxisUsed,
+            final boolean estimateGDependentCrossBiases,
+            final Matrix bias,
+            final Matrix initialMg,
+            final Matrix initialGg,
+            final Matrix accelerometerBias,
+            final Matrix accelerometerMa,
+            final RobustKnownBiasEasyGyroscopeCalibratorListener listener) {
+<span class="fc" id="L1299">        super(sequences, commonAxisUsed,</span>
+                estimateGDependentCrossBiases, bias, initialMg,
+                initialGg, accelerometerBias, accelerometerMa, listener);
+<span class="fc" id="L1302">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L1303">    }</span>
+
+    /**
+     * Gets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on norm between measured specific forces and the
+     * ones generated with estimated calibration parameters provided for each sample.
+     *
+     * @return threshold to determine whether samples are inliers or not.
+     */
+    public double getThreshold() {
+<span class="fc" id="L1313">        return mThreshold;</span>
+    }
+
+    /**
+     * Sets threshold to determine whether samples are inliers or not when testing possible solutions.
+     * The threshold refers to the amount of error on norm between measured specific forces and the
+     * ones generated with estimated calibration parameters provided for each sample.
+     *
+     * @param threshold threshold to determine whether samples are inliers or not.
+     * @throws IllegalArgumentException if provided value is equal or less than zero.
+     * @throws LockedException          if calibrator is currently running.
+     */
+    public void setThreshold(double threshold) throws LockedException {
+<span class="fc bfc" id="L1326" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1327">            throw new LockedException();</span>
+        }
+<span class="fc bfc" id="L1329" title="All 2 branches covered.">        if (threshold &lt;= MIN_THRESHOLD) {</span>
+<span class="fc" id="L1330">            throw new IllegalArgumentException();</span>
+        }
+<span class="fc" id="L1332">        mThreshold = threshold;</span>
+<span class="fc" id="L1333">    }</span>
+
+    /**
+     * Returns quality scores corresponding to each provided sequence.
+     * The larger the score value the better the quality of the sequence.
+     *
+     * @return quality scores corresponding to each sample.
+     */
+    @Override
+    public double[] getQualityScores() {
+<span class="fc" id="L1343">        return mQualityScores;</span>
+    }
+
+    /**
+     * Sets quality scores corresponding to each provided sequence.
+     * The larger the score value the better the quality of the sequence.
+     *
+     * @param qualityScores quality scores corresponding to each sequence.
+     * @throws IllegalArgumentException if provided quality scores length
+     *                                  is smaller than minimum required samples.
+     * @throws LockedException          if calibrator is currently running.
+     */
+    @Override
+    public void setQualityScores(double[] qualityScores)
+            throws LockedException {
+<span class="fc bfc" id="L1358" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1359">            throw new LockedException();</span>
+        }
+<span class="fc" id="L1361">        internalSetQualityScores(qualityScores);</span>
+<span class="fc" id="L1362">    }</span>
+
+    /**
+     * Indicates whether calibrator is ready to find a solution.
+     *
+     * @return true if calibrator is ready, false otherwise.
+     */
+    @Override
+    public boolean isReady() {
+<span class="fc bfc" id="L1371" title="All 4 branches covered.">        return super.isReady() &amp;&amp; mQualityScores != null &amp;&amp;</span>
+<span class="fc bfc" id="L1372" title="All 2 branches covered.">                mQualityScores.length == mSequences.size();</span>
+    }
+
+    /**
+     * Indicates whether inliers must be computed and kept.
+     *
+     * @return true if inliers must be computed and kept, false if inliers
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepInliersEnabled() {
+<span class="fc" id="L1382">        return mComputeAndKeepInliers;</span>
+    }
+
+    /**
+     * Specifies whether inliers must be computed and kept.
+     *
+     * @param computeAndKeepInliers true if inliers must be computed and kept,
+     *                              false if inliers only need to be computed but not kept.
+     * @throws LockedException if calibrator is currently running.
+     */
+    public void setComputeAndKeepInliersEnabled(boolean computeAndKeepInliers)
+            throws LockedException {
+<span class="fc bfc" id="L1394" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1395">            throw new LockedException();</span>
+        }
+<span class="fc" id="L1397">        mComputeAndKeepInliers = computeAndKeepInliers;</span>
+<span class="fc" id="L1398">    }</span>
+
+    /**
+     * Indicates whether residuals must be computed and kept.
+     *
+     * @return true if residuals must be computed and kept, false if residuals
+     * only need to be computed but not kept.
+     */
+    public boolean isComputeAndKeepResiduals() {
+<span class="fc" id="L1407">        return mComputeAndKeepResiduals;</span>
+    }
+
+    /**
+     * Specifies whether residuals must be computed and kept.
+     *
+     * @param computeAndKeepResiduals true if residuals must be computed and kept,
+     *                                false if residuals only need to be computed but not kept.
+     * @throws LockedException if calibrator is currently running.
+     */
+    public void setComputeAndKeepResidualsEnabled(boolean computeAndKeepResiduals)
+            throws LockedException {
+<span class="fc bfc" id="L1419" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1420">            throw new LockedException();</span>
+        }
+<span class="fc" id="L1422">        mComputeAndKeepResiduals = computeAndKeepResiduals;</span>
+<span class="fc" id="L1423">    }</span>
+
+    /**
+     * Estimates gyroscope calibration parameters containing scale factors,
+     * cross-coupling errors and G-dependent coupling.
+     *
+     * @throws LockedException      if calibrator is currently running.
+     * @throws NotReadyException    if calibrator is not ready.
+     * @throws CalibrationException if estimation fails for numerical reasons.
+     */
+    @Override
+    public void calibrate() throws LockedException, NotReadyException, CalibrationException {
+<span class="fc bfc" id="L1435" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1436">            throw new LockedException();</span>
+        }
+<span class="pc bpc" id="L1438" title="1 of 2 branches missed.">        if (!isReady()) {</span>
+<span class="nc" id="L1439">            throw new NotReadyException();</span>
+        }
+
+<span class="fc" id="L1442">        final PROSACRobustEstimator&lt;PreliminaryResult&gt; innerEstimator =</span>
+<span class="fc" id="L1443">                new PROSACRobustEstimator&lt;&gt;(new PROSACRobustEstimatorListener&lt;PreliminaryResult&gt;() {</span>
+                    @Override
+                    public double[] getQualityScores() {
+<span class="fc" id="L1446">                        return mQualityScores;</span>
+                    }
+
+                    @Override
+                    public double getThreshold() {
+<span class="fc" id="L1451">                        return mThreshold;</span>
+                    }
+
+                    @Override
+                    public int getTotalSamples() {
+<span class="fc" id="L1456">                        return mSequences.size();</span>
+                    }
+
+                    @Override
+                    public int getSubsetSize() {
+<span class="fc" id="L1461">                        return mPreliminarySubsetSize;</span>
+                    }
+
+                    @Override
+                    public void estimatePreliminarSolutions(
+                            final int[] samplesIndices, final List&lt;PreliminaryResult&gt; solutions) {
+<span class="fc" id="L1467">                        computePreliminarySolutions(samplesIndices, solutions);</span>
+<span class="fc" id="L1468">                    }</span>
+
+                    @Override
+                    public double computeResidual(
+                            final PreliminaryResult currentEstimation, final int i) {
+<span class="fc" id="L1473">                        return computeError(mSequences.get(i), currentEstimation);</span>
+                    }
+
+                    @Override
+                    public boolean isReady() {
+<span class="fc" id="L1478">                        return PROSACRobustKnownBiasEasyGyroscopeCalibrator.this.isReady();</span>
+                    }
+
+                    @Override
+                    public void onEstimateStart(final RobustEstimator&lt;PreliminaryResult&gt; estimator) {
+<span class="pc bpc" id="L1483" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L1484">                            mListener.onCalibrateStart(</span>
+                                    PROSACRobustKnownBiasEasyGyroscopeCalibrator.this);
+                        }
+<span class="fc" id="L1487">                    }</span>
+
+                    @Override
+                    public void onEstimateEnd(final RobustEstimator&lt;PreliminaryResult&gt; estimator) {
+<span class="pc bpc" id="L1491" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L1492">                            mListener.onCalibrateEnd(</span>
+                                    PROSACRobustKnownBiasEasyGyroscopeCalibrator.this);
+                        }
+<span class="fc" id="L1495">                    }</span>
+
+                    @Override
+                    public void onEstimateNextIteration(
+                            final RobustEstimator&lt;PreliminaryResult&gt; estimator, final int iteration) {
+<span class="pc bpc" id="L1500" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L1501">                            mListener.onCalibrateNextIteration(</span>
+                                    PROSACRobustKnownBiasEasyGyroscopeCalibrator.this,
+                                    iteration);
+                        }
+<span class="fc" id="L1505">                    }</span>
+
+                    @Override
+                    public void onEstimateProgressChange(
+                            final RobustEstimator&lt;PreliminaryResult&gt; estimator, final float progress) {
+<span class="nc bnc" id="L1510" title="All 2 branches missed.">                        if (mListener != null) {</span>
+<span class="nc" id="L1511">                            mListener.onCalibrateProgressChange(</span>
+                                    PROSACRobustKnownBiasEasyGyroscopeCalibrator.this, progress);
+                        }
+<span class="nc" id="L1514">                    }</span>
+                });
+
+        try {
+<span class="fc" id="L1518">            mRunning = true;</span>
+
+<span class="fc" id="L1520">            setupAccelerationFixer();</span>
+
+<span class="fc" id="L1522">            mInliersData = null;</span>
+<span class="pc bpc" id="L1523" title="2 of 4 branches missed.">            innerEstimator.setComputeAndKeepInliersEnabled(</span>
+                    mComputeAndKeepInliers || mRefineResult);
+<span class="pc bpc" id="L1525" title="2 of 4 branches missed.">            innerEstimator.setComputeAndKeepResidualsEnabled(</span>
+                    mComputeAndKeepResiduals || mRefineResult);
+<span class="fc" id="L1527">            innerEstimator.setConfidence(mConfidence);</span>
+<span class="fc" id="L1528">            innerEstimator.setMaxIterations(mMaxIterations);</span>
+<span class="fc" id="L1529">            innerEstimator.setProgressDelta(mProgressDelta);</span>
+<span class="fc" id="L1530">            final PreliminaryResult preliminaryResult = innerEstimator.estimate();</span>
+<span class="fc" id="L1531">            mInliersData = innerEstimator.getInliersData();</span>
+
+<span class="fc" id="L1533">            attemptRefine(preliminaryResult);</span>
+
+<span class="nc" id="L1535">        } catch (com.irurueta.numerical.LockedException e) {</span>
+<span class="nc" id="L1536">            throw new LockedException(e);</span>
+<span class="nc" id="L1537">        } catch (com.irurueta.numerical.NotReadyException e) {</span>
+<span class="nc" id="L1538">            throw new NotReadyException(e);</span>
+<span class="nc" id="L1539">        } catch (RobustEstimatorException | AlgebraException e) {</span>
+<span class="nc" id="L1540">            throw new CalibrationException(e);</span>
+        } finally {
+<span class="fc" id="L1542">            mRunning = false;</span>
+        }
+<span class="fc" id="L1544">    }</span>
+
+    /**
+     * Returns method being used for robust estimation.
+     *
+     * @return method being used for robust estimation.
+     */
+    @Override
+    public RobustEstimatorMethod getMethod() {
+<span class="fc" id="L1553">        return RobustEstimatorMethod.PROSAC;</span>
+    }
+
+    /**
+     * Sets quality scores corresponding to each provided sample.
+     * This method is used internally and does not check whether instance is
+     * locked or not.
+     *
+     * @param qualityScores quality scores to be set.
+     * @throws IllegalArgumentException if provided quality scores length
+     *                                  is smaller than 4 samples.
+     */
+    private void internalSetQualityScores(final double[] qualityScores) {
+<span class="pc bpc" id="L1566" title="1 of 4 branches missed.">        if (qualityScores == null ||</span>
+                qualityScores.length &lt; EasyGyroscopeCalibrator.MINIMUM_SEQUENCES_COMMON_Z_AXIS) {
+<span class="fc" id="L1568">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L1571">        mQualityScores = qualityScores;</span>
+<span class="fc" id="L1572">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
