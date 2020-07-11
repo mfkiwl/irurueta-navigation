@@ -6060,6 +6060,17 @@ public abstract class RobustEasyGyroscopeCalibrator {
     }
 
     /**
+     * Configures acceleration fixer
+     *
+     * @throws AlgebraException if provided accelerometer parameters
+     *                          are numerically unstable.
+     */
+    protected void setupAccelerationFixer() throws AlgebraException {
+<span class="fc" id="L6069">        mAccelerationFixer.setBias(getAccelerometerBias());</span>
+<span class="fc" id="L6070">        mAccelerationFixer.setCrossCouplingErrors(getAccelerometerMa());</span>
+<span class="fc" id="L6071">    }</span>
+
+    /**
      * Computes error of a preliminary result respect a given sequence.
      *
      * @param sequence          a sequence.
@@ -6071,72 +6082,68 @@ public abstract class RobustEasyGyroscopeCalibrator {
             final PreliminaryResult preliminaryResult) {
 
         try {
-            // TODO: for efficiency, accelerometer fixer parameters should be set at start
-<span class="fc" id="L6075">            mAccelerationFixer.setBias(getAccelerometerBias());</span>
-<span class="fc" id="L6076">            mAccelerationFixer.setCrossCouplingErrors(getAccelerometerMa());</span>
-
-<span class="fc" id="L6078">            mAngularRateFixer.setBias(preliminaryResult.mEstimatedBiases);</span>
-<span class="fc" id="L6079">            mAngularRateFixer.setCrossCouplingErrors(</span>
-<span class="fc" id="L6080">                    preliminaryResult.mEstimatedMg);</span>
-<span class="fc" id="L6081">            mAngularRateFixer.setGDependantCrossBias(</span>
-<span class="fc" id="L6082">                    preliminaryResult.mEstimatedGg);</span>
+<span class="fc" id="L6085">            mAngularRateFixer.setBias(preliminaryResult.mEstimatedBiases);</span>
+<span class="fc" id="L6086">            mAngularRateFixer.setCrossCouplingErrors(</span>
+<span class="fc" id="L6087">                    preliminaryResult.mEstimatedMg);</span>
+<span class="fc" id="L6088">            mAngularRateFixer.setGDependantCrossBias(</span>
+<span class="fc" id="L6089">                    preliminaryResult.mEstimatedGg);</span>
 
             // copy measured sequence as it will be used to fix kinematics values
             // using preliminary gyroscope parameters
-<span class="fc" id="L6086">            final BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt; fixedSequence =</span>
+<span class="fc" id="L6093">            final BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt; fixedSequence =</span>
                     new BodyKinematicsSequence&lt;&gt;(sequence);
 
             // fix body kinematic measurements of provided sequence
-<span class="fc" id="L6090">            int numItems = sequence.getItemsCount();</span>
-<span class="fc" id="L6091">            final List&lt;StandardDeviationTimedBodyKinematics&gt; measuredItems = sequence.getSortedItems();</span>
-<span class="fc" id="L6092">            final List&lt;StandardDeviationTimedBodyKinematics&gt; fixedItems = fixedSequence.getSortedItems();</span>
-<span class="fc bfc" id="L6093" title="All 2 branches covered.">            for (int j = 0; j &lt; numItems; j++) {</span>
-<span class="fc" id="L6094">                final StandardDeviationTimedBodyKinematics measuredItem = measuredItems.get(j);</span>
-<span class="fc" id="L6095">                final StandardDeviationTimedBodyKinematics fixedItem = fixedItems.get(j);</span>
+<span class="fc" id="L6097">            int numItems = sequence.getItemsCount();</span>
+<span class="fc" id="L6098">            final List&lt;StandardDeviationTimedBodyKinematics&gt; measuredItems = sequence.getSortedItems();</span>
+<span class="fc" id="L6099">            final List&lt;StandardDeviationTimedBodyKinematics&gt; fixedItems = fixedSequence.getSortedItems();</span>
+<span class="fc bfc" id="L6100" title="All 2 branches covered.">            for (int j = 0; j &lt; numItems; j++) {</span>
+<span class="fc" id="L6101">                final StandardDeviationTimedBodyKinematics measuredItem = measuredItems.get(j);</span>
+<span class="fc" id="L6102">                final StandardDeviationTimedBodyKinematics fixedItem = fixedItems.get(j);</span>
 
-<span class="fc" id="L6097">                final BodyKinematics measuredKinematics = measuredItem</span>
-<span class="fc" id="L6098">                        .getKinematics();</span>
-<span class="fc" id="L6099">                final BodyKinematics fixedKinematics = fixedItem</span>
-<span class="fc" id="L6100">                        .getKinematics();</span>
-<span class="fc" id="L6101">                fixKinematics(measuredKinematics, fixedKinematics);</span>
+<span class="fc" id="L6104">                final BodyKinematics measuredKinematics = measuredItem</span>
+<span class="fc" id="L6105">                        .getKinematics();</span>
+<span class="fc" id="L6106">                final BodyKinematics fixedKinematics = fixedItem</span>
+<span class="fc" id="L6107">                        .getKinematics();</span>
+<span class="fc" id="L6108">                fixKinematics(measuredKinematics, fixedKinematics);</span>
             }
 
             // integrate fixed sequence to obtain attitude change
-<span class="fc" id="L6105">            QuaternionIntegrator.integrateGyroSequence(fixedSequence, mQ);</span>
+<span class="fc" id="L6112">            QuaternionIntegrator.integrateGyroSequence(fixedSequence, mQ);</span>
 
             // fix before coordinates
-<span class="fc" id="L6108">            mMeasuredSpecificForce[0] = sequence.getBeforeMeanFx();</span>
-<span class="fc" id="L6109">            mMeasuredSpecificForce[1] = sequence.getBeforeMeanFy();</span>
-<span class="fc" id="L6110">            mMeasuredSpecificForce[2] = sequence.getBeforeMeanFz();</span>
-<span class="fc" id="L6111">            mAccelerationFixer.fix(mMeasuredSpecificForce,</span>
+<span class="fc" id="L6115">            mMeasuredSpecificForce[0] = sequence.getBeforeMeanFx();</span>
+<span class="fc" id="L6116">            mMeasuredSpecificForce[1] = sequence.getBeforeMeanFy();</span>
+<span class="fc" id="L6117">            mMeasuredSpecificForce[2] = sequence.getBeforeMeanFz();</span>
+<span class="fc" id="L6118">            mAccelerationFixer.fix(mMeasuredSpecificForce,</span>
                     mFixedSpecificForce);
 
             // normalize coordinates
-<span class="fc" id="L6115">            ArrayUtils.normalize(mFixedSpecificForce);</span>
+<span class="fc" id="L6122">            ArrayUtils.normalize(mFixedSpecificForce);</span>
 
             // compute estimated normalized end coordinates
-<span class="fc" id="L6118">            mStartPoint.setCoordinates(mFixedSpecificForce);</span>
-<span class="fc" id="L6119">            mQ.inverse();</span>
-<span class="fc" id="L6120">            mQ.rotate(mStartPoint, mEndPoint);</span>
+<span class="fc" id="L6125">            mStartPoint.setCoordinates(mFixedSpecificForce);</span>
+<span class="fc" id="L6126">            mQ.inverse();</span>
+<span class="fc" id="L6127">            mQ.rotate(mStartPoint, mEndPoint);</span>
 
             // fix after coordinates
-<span class="fc" id="L6123">            mMeasuredSpecificForce[0] = sequence.getAfterMeanFx();</span>
-<span class="fc" id="L6124">            mMeasuredSpecificForce[1] = sequence.getAfterMeanFy();</span>
-<span class="fc" id="L6125">            mMeasuredSpecificForce[2] = sequence.getAfterMeanFz();</span>
-<span class="fc" id="L6126">            mAccelerationFixer.fix(mMeasuredSpecificForce,</span>
+<span class="fc" id="L6130">            mMeasuredSpecificForce[0] = sequence.getAfterMeanFx();</span>
+<span class="fc" id="L6131">            mMeasuredSpecificForce[1] = sequence.getAfterMeanFy();</span>
+<span class="fc" id="L6132">            mMeasuredSpecificForce[2] = sequence.getAfterMeanFz();</span>
+<span class="fc" id="L6133">            mAccelerationFixer.fix(mMeasuredSpecificForce,</span>
                     mFixedSpecificForce);
 
             // normalize coordinates
-<span class="fc" id="L6130">            ArrayUtils.normalize(mFixedSpecificForce);</span>
+<span class="fc" id="L6137">            ArrayUtils.normalize(mFixedSpecificForce);</span>
 
-<span class="fc" id="L6132">            mExpectedEndPoint.setCoordinates(mFixedSpecificForce);</span>
+<span class="fc" id="L6139">            mExpectedEndPoint.setCoordinates(mFixedSpecificForce);</span>
 
             // compare estimated normalized end coordinates with expected
             // ones
-<span class="fc" id="L6136">            return mExpectedEndPoint.distanceTo(mEndPoint);</span>
+<span class="fc" id="L6143">            return mExpectedEndPoint.distanceTo(mEndPoint);</span>
 
-<span class="nc" id="L6138">        } catch (final AlgebraException e) {</span>
-<span class="nc" id="L6139">            return Double.MAX_VALUE;</span>
+<span class="nc" id="L6145">        } catch (final AlgebraException e) {</span>
+<span class="nc" id="L6146">            return Double.MAX_VALUE;</span>
         }
     }
 
@@ -6148,48 +6155,48 @@ public abstract class RobustEasyGyroscopeCalibrator {
      */
     protected void computePreliminarySolutions(final int[] samplesIndices,
                                                final List&lt;PreliminaryResult&gt; solutions) {
-<span class="fc" id="L6151">        final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences =</span>
+<span class="fc" id="L6158">        final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; sequences =</span>
                 new ArrayList&lt;&gt;();
 
-<span class="fc bfc" id="L6154" title="All 2 branches covered.">        for (int samplesIndex : samplesIndices) {</span>
-<span class="fc" id="L6155">            sequences.add(mSequences.get(samplesIndex));</span>
+<span class="fc bfc" id="L6161" title="All 2 branches covered.">        for (int samplesIndex : samplesIndices) {</span>
+<span class="fc" id="L6162">            sequences.add(mSequences.get(samplesIndex));</span>
         }
 
         try {
-<span class="fc" id="L6159">            final PreliminaryResult result = new PreliminaryResult();</span>
-<span class="fc" id="L6160">            result.mEstimatedBiases = getInitialBias();</span>
-<span class="fc" id="L6161">            result.mEstimatedMg = getInitialMg();</span>
-<span class="fc" id="L6162">            result.mEstimatedGg = getInitialGg();</span>
+<span class="fc" id="L6166">            final PreliminaryResult result = new PreliminaryResult();</span>
+<span class="fc" id="L6167">            result.mEstimatedBiases = getInitialBias();</span>
+<span class="fc" id="L6168">            result.mEstimatedMg = getInitialMg();</span>
+<span class="fc" id="L6169">            result.mEstimatedGg = getInitialGg();</span>
 
-<span class="fc" id="L6164">            mInnerCalibrator.setGDependentCrossBiasesEstimated(mEstimateGDependentCrossBiases);</span>
-<span class="fc" id="L6165">            mInnerCalibrator.setInitialBias(result.mEstimatedBiases);</span>
-<span class="fc" id="L6166">            mInnerCalibrator.setInitialMg(result.mEstimatedMg);</span>
-<span class="fc" id="L6167">            mInnerCalibrator.setInitialGg(result.mEstimatedGg);</span>
-<span class="fc" id="L6168">            mInnerCalibrator.setAccelerometerBias(mAccelerometerBiasX, mAccelerometerBiasY, mAccelerometerBiasZ);</span>
-<span class="fc" id="L6169">            mInnerCalibrator.setAccelerometerScalingFactorsAndCrossCouplingErrors(</span>
+<span class="fc" id="L6171">            mInnerCalibrator.setGDependentCrossBiasesEstimated(mEstimateGDependentCrossBiases);</span>
+<span class="fc" id="L6172">            mInnerCalibrator.setInitialBias(result.mEstimatedBiases);</span>
+<span class="fc" id="L6173">            mInnerCalibrator.setInitialMg(result.mEstimatedMg);</span>
+<span class="fc" id="L6174">            mInnerCalibrator.setInitialGg(result.mEstimatedGg);</span>
+<span class="fc" id="L6175">            mInnerCalibrator.setAccelerometerBias(mAccelerometerBiasX, mAccelerometerBiasY, mAccelerometerBiasZ);</span>
+<span class="fc" id="L6176">            mInnerCalibrator.setAccelerometerScalingFactorsAndCrossCouplingErrors(</span>
                     mAccelerometerSx, mAccelerometerSy, mAccelerometerSz,
                     mAccelerometerMxy, mAccelerometerMxz,
                     mAccelerometerMyx, mAccelerometerMyz,
                     mAccelerometerMzx, mAccelerometerMzy);
-<span class="fc" id="L6174">            mInnerCalibrator.setCommonAxisUsed(mCommonAxisUsed);</span>
-<span class="fc" id="L6175">            mInnerCalibrator.setSequences(sequences);</span>
-<span class="fc" id="L6176">            mInnerCalibrator.calibrate();</span>
+<span class="fc" id="L6181">            mInnerCalibrator.setCommonAxisUsed(mCommonAxisUsed);</span>
+<span class="fc" id="L6182">            mInnerCalibrator.setSequences(sequences);</span>
+<span class="fc" id="L6183">            mInnerCalibrator.calibrate();</span>
 
-<span class="fc" id="L6178">            mInnerCalibrator.getEstimatedBiases(result.mEstimatedBiases);</span>
-<span class="fc" id="L6179">            result.mEstimatedMg = mInnerCalibrator.getEstimatedMg();</span>
-<span class="fc" id="L6180">            result.mEstimatedGg = mInnerCalibrator.getEstimatedGg();</span>
+<span class="fc" id="L6185">            mInnerCalibrator.getEstimatedBiases(result.mEstimatedBiases);</span>
+<span class="fc" id="L6186">            result.mEstimatedMg = mInnerCalibrator.getEstimatedMg();</span>
+<span class="fc" id="L6187">            result.mEstimatedGg = mInnerCalibrator.getEstimatedGg();</span>
 
-<span class="pc bpc" id="L6182" title="1 of 2 branches missed.">            if (mKeepCovariance) {</span>
-<span class="fc" id="L6183">                result.mCovariance = mInnerCalibrator.getEstimatedCovariance();</span>
+<span class="pc bpc" id="L6189" title="1 of 2 branches missed.">            if (mKeepCovariance) {</span>
+<span class="fc" id="L6190">                result.mCovariance = mInnerCalibrator.getEstimatedCovariance();</span>
             } else {
-<span class="nc" id="L6185">                result.mCovariance = null;</span>
+<span class="nc" id="L6192">                result.mCovariance = null;</span>
             }
 
-<span class="fc" id="L6188">            solutions.add(result);</span>
-<span class="nc" id="L6189">        } catch (LockedException | CalibrationException | NotReadyException e) {</span>
-<span class="nc" id="L6190">            solutions.clear();</span>
-<span class="fc" id="L6191">        }</span>
-<span class="fc" id="L6192">    }</span>
+<span class="fc" id="L6195">            solutions.add(result);</span>
+<span class="nc" id="L6196">        } catch (LockedException | CalibrationException | NotReadyException e) {</span>
+<span class="nc" id="L6197">            solutions.clear();</span>
+<span class="fc" id="L6198">        }</span>
+<span class="fc" id="L6199">    }</span>
 
     /**
      * Attempts to refine calibration parameters if refinement is requested.
@@ -6201,52 +6208,52 @@ public abstract class RobustEasyGyroscopeCalibrator {
      * @param preliminaryResult a preliminary result.
      */
     protected void attemptRefine(final PreliminaryResult preliminaryResult) {
-<span class="pc bpc" id="L6204" title="2 of 4 branches missed.">        if (mRefineResult &amp;&amp; mInliersData != null) {</span>
-<span class="fc" id="L6205">            final BitSet inliers = mInliersData.getInliers();</span>
-<span class="fc" id="L6206">            final int nSamples = mSequences.size();</span>
+<span class="pc bpc" id="L6211" title="2 of 4 branches missed.">        if (mRefineResult &amp;&amp; mInliersData != null) {</span>
+<span class="fc" id="L6212">            final BitSet inliers = mInliersData.getInliers();</span>
+<span class="fc" id="L6213">            final int nSamples = mSequences.size();</span>
 
-<span class="fc" id="L6208">            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; inlierSequences =</span>
+<span class="fc" id="L6215">            final List&lt;BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt;&gt; inlierSequences =</span>
                     new ArrayList&lt;&gt;();
-<span class="fc bfc" id="L6210" title="All 2 branches covered.">            for (int i = 0; i &lt; nSamples; i++) {</span>
-<span class="fc bfc" id="L6211" title="All 2 branches covered.">                if (inliers.get(i)) {</span>
+<span class="fc bfc" id="L6217" title="All 2 branches covered.">            for (int i = 0; i &lt; nSamples; i++) {</span>
+<span class="fc bfc" id="L6218" title="All 2 branches covered.">                if (inliers.get(i)) {</span>
                     // sample is inlier
-<span class="fc" id="L6213">                    inlierSequences.add(mSequences.get(i));</span>
+<span class="fc" id="L6220">                    inlierSequences.add(mSequences.get(i));</span>
                 }
             }
 
             try {
-<span class="fc" id="L6218">                mInnerCalibrator.setGDependentCrossBiasesEstimated(mEstimateGDependentCrossBiases);</span>
-<span class="fc" id="L6219">                mInnerCalibrator.setInitialBias(preliminaryResult.mEstimatedBiases);</span>
-<span class="fc" id="L6220">                mInnerCalibrator.setInitialMg(preliminaryResult.mEstimatedMg);</span>
-<span class="fc" id="L6221">                mInnerCalibrator.setInitialGg(preliminaryResult.mEstimatedGg);</span>
-<span class="fc" id="L6222">                mInnerCalibrator.setAccelerometerBias(mAccelerometerBiasX, mAccelerometerBiasY, mAccelerometerBiasZ);</span>
-<span class="fc" id="L6223">                mInnerCalibrator.setAccelerometerScalingFactorsAndCrossCouplingErrors(</span>
+<span class="fc" id="L6225">                mInnerCalibrator.setGDependentCrossBiasesEstimated(mEstimateGDependentCrossBiases);</span>
+<span class="fc" id="L6226">                mInnerCalibrator.setInitialBias(preliminaryResult.mEstimatedBiases);</span>
+<span class="fc" id="L6227">                mInnerCalibrator.setInitialMg(preliminaryResult.mEstimatedMg);</span>
+<span class="fc" id="L6228">                mInnerCalibrator.setInitialGg(preliminaryResult.mEstimatedGg);</span>
+<span class="fc" id="L6229">                mInnerCalibrator.setAccelerometerBias(mAccelerometerBiasX, mAccelerometerBiasY, mAccelerometerBiasZ);</span>
+<span class="fc" id="L6230">                mInnerCalibrator.setAccelerometerScalingFactorsAndCrossCouplingErrors(</span>
                         mAccelerometerSx, mAccelerometerSy, mAccelerometerSz,
                         mAccelerometerMxy, mAccelerometerMxz,
                         mAccelerometerMyx, mAccelerometerMyz,
                         mAccelerometerMzx, mAccelerometerMzy);
-<span class="fc" id="L6228">                mInnerCalibrator.setCommonAxisUsed(mCommonAxisUsed);</span>
-<span class="fc" id="L6229">                mInnerCalibrator.setSequences(inlierSequences);</span>
-<span class="fc" id="L6230">                mInnerCalibrator.calibrate();</span>
+<span class="fc" id="L6235">                mInnerCalibrator.setCommonAxisUsed(mCommonAxisUsed);</span>
+<span class="fc" id="L6236">                mInnerCalibrator.setSequences(inlierSequences);</span>
+<span class="fc" id="L6237">                mInnerCalibrator.calibrate();</span>
 
-<span class="fc" id="L6232">                mEstimatedBiases = mInnerCalibrator.getEstimatedBiases();</span>
-<span class="fc" id="L6233">                mEstimatedMg = mInnerCalibrator.getEstimatedMg();</span>
-<span class="fc" id="L6234">                mEstimatedGg = mInnerCalibrator.getEstimatedGg();</span>
-<span class="fc" id="L6235">                mEstimatedCovariance = mInnerCalibrator.getEstimatedCovariance();</span>
+<span class="fc" id="L6239">                mEstimatedBiases = mInnerCalibrator.getEstimatedBiases();</span>
+<span class="fc" id="L6240">                mEstimatedMg = mInnerCalibrator.getEstimatedMg();</span>
+<span class="fc" id="L6241">                mEstimatedGg = mInnerCalibrator.getEstimatedGg();</span>
+<span class="fc" id="L6242">                mEstimatedCovariance = mInnerCalibrator.getEstimatedCovariance();</span>
 
-<span class="fc" id="L6237">            } catch (LockedException | CalibrationException | NotReadyException e) {</span>
-<span class="fc" id="L6238">                mEstimatedCovariance = preliminaryResult.mCovariance;</span>
-<span class="fc" id="L6239">                mEstimatedBiases = preliminaryResult.mEstimatedBiases;</span>
-<span class="fc" id="L6240">                mEstimatedMg = preliminaryResult.mEstimatedMg;</span>
-<span class="fc" id="L6241">                mEstimatedGg = preliminaryResult.mEstimatedGg;</span>
-<span class="fc" id="L6242">            }</span>
-<span class="fc" id="L6243">        } else {</span>
-<span class="nc" id="L6244">            mEstimatedCovariance = preliminaryResult.mCovariance;</span>
-<span class="nc" id="L6245">            mEstimatedBiases = preliminaryResult.mEstimatedBiases;</span>
-<span class="nc" id="L6246">            mEstimatedMg = preliminaryResult.mEstimatedMg;</span>
-<span class="nc" id="L6247">            mEstimatedGg = preliminaryResult.mEstimatedGg;</span>
+<span class="nc" id="L6244">            } catch (LockedException | CalibrationException | NotReadyException e) {</span>
+<span class="nc" id="L6245">                mEstimatedCovariance = preliminaryResult.mCovariance;</span>
+<span class="nc" id="L6246">                mEstimatedBiases = preliminaryResult.mEstimatedBiases;</span>
+<span class="nc" id="L6247">                mEstimatedMg = preliminaryResult.mEstimatedMg;</span>
+<span class="nc" id="L6248">                mEstimatedGg = preliminaryResult.mEstimatedGg;</span>
+<span class="fc" id="L6249">            }</span>
+<span class="fc" id="L6250">        } else {</span>
+<span class="nc" id="L6251">            mEstimatedCovariance = preliminaryResult.mCovariance;</span>
+<span class="nc" id="L6252">            mEstimatedBiases = preliminaryResult.mEstimatedBiases;</span>
+<span class="nc" id="L6253">            mEstimatedMg = preliminaryResult.mEstimatedMg;</span>
+<span class="nc" id="L6254">            mEstimatedGg = preliminaryResult.mEstimatedGg;</span>
         }
-<span class="fc" id="L6249">    }</span>
+<span class="fc" id="L6256">    }</span>
 
     /**
      * Converts acceleration instance to meters per squared second.
@@ -6255,8 +6262,8 @@ public abstract class RobustEasyGyroscopeCalibrator {
      * @return converted value.
      */
     private static double convertAcceleration(final Acceleration acceleration) {
-<span class="fc" id="L6258">        return AccelerationConverter.convert(acceleration.getValue().doubleValue(),</span>
-<span class="fc" id="L6259">                acceleration.getUnit(), AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
+<span class="fc" id="L6265">        return AccelerationConverter.convert(acceleration.getValue().doubleValue(),</span>
+<span class="fc" id="L6266">                acceleration.getUnit(), AccelerationUnit.METERS_PER_SQUARED_SECOND);</span>
     }
 
     /**
@@ -6266,8 +6273,8 @@ public abstract class RobustEasyGyroscopeCalibrator {
      * @return converted value.
      */
     private static double convertAngularSpeed(final AngularSpeed angularSpeed) {
-<span class="fc" id="L6269">        return AngularSpeedConverter.convert(angularSpeed.getValue().doubleValue(),</span>
-<span class="fc" id="L6270">                angularSpeed.getUnit(), AngularSpeedUnit.RADIANS_PER_SECOND);</span>
+<span class="fc" id="L6276">        return AngularSpeedConverter.convert(angularSpeed.getValue().doubleValue(),</span>
+<span class="fc" id="L6277">                angularSpeed.getUnit(), AngularSpeedUnit.RADIANS_PER_SECOND);</span>
     }
 
     /**
@@ -6282,32 +6289,32 @@ public abstract class RobustEasyGyroscopeCalibrator {
             final BodyKinematics measuredKinematics,
             final BodyKinematics result) throws AlgebraException {
 
-<span class="fc" id="L6285">        mMeasuredSpecificForce[0] = measuredKinematics.getFx();</span>
-<span class="fc" id="L6286">        mMeasuredSpecificForce[1] = measuredKinematics.getFy();</span>
-<span class="fc" id="L6287">        mMeasuredSpecificForce[2] = measuredKinematics.getFz();</span>
-<span class="fc" id="L6288">        mAccelerationFixer.fix(mMeasuredSpecificForce,</span>
+<span class="fc" id="L6292">        mMeasuredSpecificForce[0] = measuredKinematics.getFx();</span>
+<span class="fc" id="L6293">        mMeasuredSpecificForce[1] = measuredKinematics.getFy();</span>
+<span class="fc" id="L6294">        mMeasuredSpecificForce[2] = measuredKinematics.getFz();</span>
+<span class="fc" id="L6295">        mAccelerationFixer.fix(mMeasuredSpecificForce,</span>
                 mFixedSpecificForce);
 
-<span class="fc" id="L6291">        mMeasuredAngularRate[0] = measuredKinematics.getAngularRateX();</span>
-<span class="fc" id="L6292">        mMeasuredAngularRate[1] = measuredKinematics.getAngularRateY();</span>
-<span class="fc" id="L6293">        mMeasuredAngularRate[2] = measuredKinematics.getAngularRateZ();</span>
-<span class="fc" id="L6294">        mAngularRateFixer.fix(mMeasuredAngularRate,</span>
+<span class="fc" id="L6298">        mMeasuredAngularRate[0] = measuredKinematics.getAngularRateX();</span>
+<span class="fc" id="L6299">        mMeasuredAngularRate[1] = measuredKinematics.getAngularRateY();</span>
+<span class="fc" id="L6300">        mMeasuredAngularRate[2] = measuredKinematics.getAngularRateZ();</span>
+<span class="fc" id="L6301">        mAngularRateFixer.fix(mMeasuredAngularRate,</span>
                 mFixedSpecificForce, mFixedAngularRate);
 
-<span class="fc" id="L6297">        result.setSpecificForceCoordinates(</span>
+<span class="fc" id="L6304">        result.setSpecificForceCoordinates(</span>
                 mFixedSpecificForce[0],
                 mFixedSpecificForce[1],
                 mFixedSpecificForce[2]);
-<span class="fc" id="L6301">        result.setAngularRateCoordinates(</span>
+<span class="fc" id="L6308">        result.setAngularRateCoordinates(</span>
                 mFixedAngularRate[0],
                 mFixedAngularRate[1],
                 mFixedAngularRate[2]);
-<span class="fc" id="L6305">    }</span>
+<span class="fc" id="L6312">    }</span>
 
     /**
      * Internal class containing estimated preliminary result.
      */
-<span class="fc" id="L6310">    protected static class PreliminaryResult {</span>
+<span class="fc" id="L6317">    protected static class PreliminaryResult {</span>
         /**
          * Estimated gyroscope biases for each IMU axis expressed in radians per second
          * (rad/s).
