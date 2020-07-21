@@ -72,6 +72,9 @@ import java.util.List;
  * matrix.
  * - mBtrue is ground-truth magnetic flux density. This is a 3x1 vector.
  * - w is measurement noise. This is a 3x1 vector.
+ * Notice that this calibrator assumes that all measurements are taken in
+ * a short span of time where Earth magnetic field can be assumed to be
+ * constant at provided location and instant.
  */
 public class KnownPositionAndInstantMagnetometerCalibrator {
 
@@ -105,7 +108,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
     /**
      * Levenberg-Marquardt fitter to find a non-linear solution.
      */
-<span class="fc" id="L108">    private final LevenbergMarquardtMultiDimensionFitter mFitter =</span>
+<span class="fc" id="L111">    private final LevenbergMarquardtMultiDimensionFitter mFitter =</span>
             new LevenbergMarquardtMultiDimensionFitter();
 
     /**
@@ -181,7 +184,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * Timestamp expressed as decimal year where magnetic flux density
      * measurements have been measured.
      */
-<span class="fc" id="L184">    private Double mYear = convertTime(System.currentTimeMillis());</span>
+<span class="fc" id="L187">    private Double mYear = convertTime(System.currentTimeMillis());</span>
 
     /**
      * Contains a collection of body magnetic flux density measurements taken
@@ -195,7 +198,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * gyroscope and magnetometer.
      * When enabled, this eliminates 3 variables from Mm matrix.
      */
-<span class="fc" id="L198">    private boolean mCommonAxisUsed = DEFAULT_USE_COMMON_Z_AXIS;</span>
+<span class="fc" id="L201">    private boolean mCommonAxisUsed = DEFAULT_USE_COMMON_Z_AXIS;</span>
 
     /**
      * Listener to handle events raised by this calibrator.
@@ -318,8 +321,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
     /**
      * Constructor.
      */
-<span class="fc" id="L321">    public KnownPositionAndInstantMagnetometerCalibrator() {</span>
-<span class="fc" id="L322">    }</span>
+<span class="fc" id="L324">    public KnownPositionAndInstantMagnetometerCalibrator() {</span>
+<span class="fc" id="L325">    }</span>
 
     /**
      * Constructor.
@@ -327,9 +330,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @param listener listener to handle events raised by this calibrator.
      */
     public KnownPositionAndInstantMagnetometerCalibrator(
-<span class="fc" id="L330">            final KnownPositionAndInstantMagnetometerCalibratorListener listener) {</span>
-<span class="fc" id="L331">        mListener = listener;</span>
-<span class="fc" id="L332">    }</span>
+<span class="fc" id="L333">            final KnownPositionAndInstantMagnetometerCalibratorListener listener) {</span>
+<span class="fc" id="L334">        mListener = listener;</span>
+<span class="fc" id="L335">    }</span>
 
     /**
      * Constructor.
@@ -341,9 +344,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      *                     orientations.
      */
     public KnownPositionAndInstantMagnetometerCalibrator(
-<span class="fc" id="L344">            final Collection&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements) {</span>
-<span class="fc" id="L345">        mMeasurements = measurements;</span>
-<span class="fc" id="L346">    }</span>
+<span class="fc" id="L347">            final Collection&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements) {</span>
+<span class="fc" id="L348">        mMeasurements = measurements;</span>
+<span class="fc" id="L349">    }</span>
 
     /**
      * Constructor.
@@ -352,9 +355,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      *                       for the accelerometer, gyroscope and magnetometer.
      */
     public KnownPositionAndInstantMagnetometerCalibrator(
-<span class="fc" id="L355">            final boolean commonAxisUsed) {</span>
-<span class="fc" id="L356">        mCommonAxisUsed = commonAxisUsed;</span>
-<span class="fc" id="L357">    }</span>
+<span class="fc" id="L358">            final boolean commonAxisUsed) {</span>
+<span class="fc" id="L359">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L360">    }</span>
 
     /**
      * Constructor.
@@ -363,9 +366,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      *                      will be used instead.
      */
     public KnownPositionAndInstantMagnetometerCalibrator(
-<span class="fc" id="L366">            final WorldMagneticModel magneticModel) {</span>
-<span class="fc" id="L367">        mMagneticModel = magneticModel;</span>
-<span class="fc" id="L368">    }</span>
+<span class="fc" id="L369">            final WorldMagneticModel magneticModel) {</span>
+<span class="fc" id="L370">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L371">    }</span>
 
     /**
      * Constructor.
@@ -375,13 +378,13 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      *                                  not have length 3.
      */
     public KnownPositionAndInstantMagnetometerCalibrator(
-<span class="fc" id="L378">            final double[] initialHardIron) {</span>
+<span class="fc" id="L381">            final double[] initialHardIron) {</span>
         try {
-<span class="fc" id="L380">            setInitialHardIron(initialHardIron);</span>
-<span class="nc" id="L381">        } catch (final LockedException ignore) {</span>
+<span class="fc" id="L383">            setInitialHardIron(initialHardIron);</span>
+<span class="nc" id="L384">        } catch (final LockedException ignore) {</span>
             // never happens
-<span class="fc" id="L383">        }</span>
-<span class="fc" id="L384">    }</span>
+<span class="fc" id="L386">        }</span>
+<span class="fc" id="L387">    }</span>
 
     /**
      * Constructor.
@@ -391,13 +394,13 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      *                                  3x1.
      */
     public KnownPositionAndInstantMagnetometerCalibrator(
-<span class="fc" id="L394">            final Matrix initialHardIron) {</span>
+<span class="fc" id="L397">            final Matrix initialHardIron) {</span>
         try {
-<span class="fc" id="L396">            setInitialHardIron(initialHardIron);</span>
-<span class="nc" id="L397">        } catch (final LockedException ignore) {</span>
+<span class="fc" id="L399">            setInitialHardIron(initialHardIron);</span>
+<span class="nc" id="L400">        } catch (final LockedException ignore) {</span>
             // never happens
-<span class="fc" id="L399">        }</span>
-<span class="fc" id="L400">    }</span>
+<span class="fc" id="L402">        }</span>
+<span class="fc" id="L403">    }</span>
 
     /**
      * Constructor.
@@ -411,13 +414,13 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public KnownPositionAndInstantMagnetometerCalibrator(
             final Matrix initialHardIron, final Matrix initialMm) {
-<span class="fc" id="L414">        this(initialHardIron);</span>
+<span class="fc" id="L417">        this(initialHardIron);</span>
         try {
-<span class="fc" id="L416">            setInitialMm(initialMm);</span>
-<span class="nc" id="L417">        } catch (final LockedException ignore) {</span>
+<span class="fc" id="L419">            setInitialMm(initialMm);</span>
+<span class="nc" id="L420">        } catch (final LockedException ignore) {</span>
             // never happens
-<span class="fc" id="L419">        }</span>
-<span class="fc" id="L420">    }</span>
+<span class="fc" id="L422">        }</span>
+<span class="fc" id="L423">    }</span>
 
     /**
      * Constructor.
@@ -426,9 +429,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      *                 have been taken.
      */
     public KnownPositionAndInstantMagnetometerCalibrator(
-<span class="fc" id="L429">            final NEDPosition position) {</span>
-<span class="fc" id="L430">        mPosition = position;</span>
-<span class="fc" id="L431">    }</span>
+<span class="fc" id="L432">            final NEDPosition position) {</span>
+<span class="fc" id="L433">        mPosition = position;</span>
+<span class="fc" id="L434">    }</span>
 
     /**
      * Constructor.
@@ -444,9 +447,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
     public KnownPositionAndInstantMagnetometerCalibrator(
             final NEDPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements) {
-<span class="fc" id="L447">        this(position);</span>
-<span class="fc" id="L448">        mMeasurements = measurements;</span>
-<span class="fc" id="L449">    }</span>
+<span class="fc" id="L450">        this(position);</span>
+<span class="fc" id="L451">        mMeasurements = measurements;</span>
+<span class="fc" id="L452">    }</span>
 
     /**
      * Constructor.
@@ -464,9 +467,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final NEDPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L467">        this(position, measurements);</span>
-<span class="fc" id="L468">        mListener = listener;</span>
-<span class="fc" id="L469">    }</span>
+<span class="fc" id="L470">        this(position, measurements);</span>
+<span class="fc" id="L471">        mListener = listener;</span>
+<span class="fc" id="L472">    }</span>
 
     /**
      * Constructor.
@@ -485,9 +488,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final NEDPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed) {
-<span class="fc" id="L488">        this(position, measurements);</span>
-<span class="fc" id="L489">        mCommonAxisUsed = commonAxisUsed;</span>
-<span class="fc" id="L490">    }</span>
+<span class="fc" id="L491">        this(position, measurements);</span>
+<span class="fc" id="L492">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L493">    }</span>
 
     /**
      * Constructor.
@@ -508,9 +511,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L511">        this(position, measurements, commonAxisUsed);</span>
-<span class="fc" id="L512">        mListener = listener;</span>
-<span class="fc" id="L513">    }</span>
+<span class="fc" id="L514">        this(position, measurements, commonAxisUsed);</span>
+<span class="fc" id="L515">        mListener = listener;</span>
+<span class="fc" id="L516">    }</span>
 
     /**
      * Constructor.
@@ -530,10 +533,10 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final NEDPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final double[] initialHardIron) {
-<span class="fc" id="L533">        this(initialHardIron);</span>
-<span class="fc" id="L534">        mPosition = position;</span>
-<span class="fc" id="L535">        mMeasurements = measurements;</span>
-<span class="fc" id="L536">    }</span>
+<span class="fc" id="L536">        this(initialHardIron);</span>
+<span class="fc" id="L537">        mPosition = position;</span>
+<span class="fc" id="L538">        mMeasurements = measurements;</span>
+<span class="fc" id="L539">    }</span>
 
     /**
      * Constructor.
@@ -555,9 +558,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final double[] initialHardIron,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L558">        this(position, measurements, initialHardIron);</span>
-<span class="fc" id="L559">        mListener = listener;</span>
-<span class="fc" id="L560">    }</span>
+<span class="fc" id="L561">        this(position, measurements, initialHardIron);</span>
+<span class="fc" id="L562">        mListener = listener;</span>
+<span class="fc" id="L563">    }</span>
 
     /**
      * Constructor.
@@ -579,9 +582,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final NEDPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed, final double[] initialHardIron) {
-<span class="fc" id="L582">        this(position, measurements, initialHardIron);</span>
-<span class="fc" id="L583">        mCommonAxisUsed = commonAxisUsed;</span>
-<span class="fc" id="L584">    }</span>
+<span class="fc" id="L585">        this(position, measurements, initialHardIron);</span>
+<span class="fc" id="L586">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L587">    }</span>
 
     /**
      * Constructor.
@@ -605,9 +608,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed, final double[] initialHardIron,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L608">        this(position, measurements, commonAxisUsed, initialHardIron);</span>
-<span class="fc" id="L609">        mListener = listener;</span>
-<span class="fc" id="L610">    }</span>
+<span class="fc" id="L611">        this(position, measurements, commonAxisUsed, initialHardIron);</span>
+<span class="fc" id="L612">        mListener = listener;</span>
+<span class="fc" id="L613">    }</span>
 
     /**
      * Constructor.
@@ -627,10 +630,10 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final NEDPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final Matrix initialHardIron) {
-<span class="fc" id="L630">        this(initialHardIron);</span>
-<span class="fc" id="L631">        mPosition = position;</span>
-<span class="fc" id="L632">        mMeasurements = measurements;</span>
-<span class="fc" id="L633">    }</span>
+<span class="fc" id="L633">        this(initialHardIron);</span>
+<span class="fc" id="L634">        mPosition = position;</span>
+<span class="fc" id="L635">        mMeasurements = measurements;</span>
+<span class="fc" id="L636">    }</span>
 
     /**
      * Constructor.
@@ -652,9 +655,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final Matrix initialHardIron,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L655">        this(position, measurements, initialHardIron);</span>
-<span class="fc" id="L656">        mListener = listener;</span>
-<span class="fc" id="L657">    }</span>
+<span class="fc" id="L658">        this(position, measurements, initialHardIron);</span>
+<span class="fc" id="L659">        mListener = listener;</span>
+<span class="fc" id="L660">    }</span>
 
     /**
      * Constructor.
@@ -676,9 +679,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final NEDPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed, final Matrix initialHardIron) {
-<span class="fc" id="L679">        this(position, measurements, initialHardIron);</span>
-<span class="fc" id="L680">        mCommonAxisUsed = commonAxisUsed;</span>
-<span class="fc" id="L681">    }</span>
+<span class="fc" id="L682">        this(position, measurements, initialHardIron);</span>
+<span class="fc" id="L683">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L684">    }</span>
 
     /**
      * Constructor.
@@ -702,9 +705,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed, final Matrix initialHardIron,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L705">        this(position, measurements, commonAxisUsed, initialHardIron);</span>
-<span class="fc" id="L706">        mListener = listener;</span>
-<span class="fc" id="L707">    }</span>
+<span class="fc" id="L708">        this(position, measurements, commonAxisUsed, initialHardIron);</span>
+<span class="fc" id="L709">        mListener = listener;</span>
+<span class="fc" id="L710">    }</span>
 
     /**
      * Constructor.
@@ -727,10 +730,10 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final NEDPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final Matrix initialHardIron, final Matrix initialMm) {
-<span class="fc" id="L730">        this(initialHardIron, initialMm);</span>
-<span class="fc" id="L731">        mPosition = position;</span>
-<span class="fc" id="L732">        mMeasurements = measurements;</span>
-<span class="fc" id="L733">    }</span>
+<span class="fc" id="L733">        this(initialHardIron, initialMm);</span>
+<span class="fc" id="L734">        mPosition = position;</span>
+<span class="fc" id="L735">        mMeasurements = measurements;</span>
+<span class="fc" id="L736">    }</span>
 
     /**
      * Constructor.
@@ -755,9 +758,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final Matrix initialHardIron, final Matrix initialMm,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L758">        this(position, measurements, initialHardIron, initialMm);</span>
-<span class="fc" id="L759">        mListener = listener;</span>
-<span class="fc" id="L760">    }</span>
+<span class="fc" id="L761">        this(position, measurements, initialHardIron, initialMm);</span>
+<span class="fc" id="L762">        mListener = listener;</span>
+<span class="fc" id="L763">    }</span>
 
     /**
      * Constructor.
@@ -783,9 +786,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed, final Matrix initialHardIron,
             final Matrix initialMm) {
-<span class="fc" id="L786">        this(position, measurements, initialHardIron, initialMm);</span>
-<span class="fc" id="L787">        mCommonAxisUsed = commonAxisUsed;</span>
-<span class="fc" id="L788">    }</span>
+<span class="fc" id="L789">        this(position, measurements, initialHardIron, initialMm);</span>
+<span class="fc" id="L790">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L791">    }</span>
 
     /**
      * Constructor.
@@ -813,10 +816,10 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final boolean commonAxisUsed, final Matrix initialHardIron,
             final Matrix initialMm,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L816">        this(position, measurements, commonAxisUsed, initialHardIron,</span>
+<span class="fc" id="L819">        this(position, measurements, commonAxisUsed, initialHardIron,</span>
                 initialMm);
-<span class="fc" id="L818">        mListener = listener;</span>
-<span class="fc" id="L819">    }</span>
+<span class="fc" id="L821">        mListener = listener;</span>
+<span class="fc" id="L822">    }</span>
 
     /**
      * Constructor.
@@ -826,8 +829,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public KnownPositionAndInstantMagnetometerCalibrator(
             final ECEFPosition position) {
-<span class="fc" id="L829">        this(convertPosition(position));</span>
-<span class="fc" id="L830">    }</span>
+<span class="fc" id="L832">        this(convertPosition(position));</span>
+<span class="fc" id="L833">    }</span>
 
     /**
      * Constructor.
@@ -843,8 +846,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
     public KnownPositionAndInstantMagnetometerCalibrator(
             final ECEFPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements) {
-<span class="fc" id="L846">        this(convertPosition(position), measurements);</span>
-<span class="fc" id="L847">    }</span>
+<span class="fc" id="L849">        this(convertPosition(position), measurements);</span>
+<span class="fc" id="L850">    }</span>
 
     /**
      * Constructor.
@@ -862,8 +865,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final ECEFPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L865">        this(convertPosition(position), measurements, listener);</span>
-<span class="fc" id="L866">    }</span>
+<span class="fc" id="L868">        this(convertPosition(position), measurements, listener);</span>
+<span class="fc" id="L869">    }</span>
 
     /**
      * Constructor.
@@ -882,8 +885,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final ECEFPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed) {
-<span class="fc" id="L885">        this(convertPosition(position), measurements, commonAxisUsed);</span>
-<span class="fc" id="L886">    }</span>
+<span class="fc" id="L888">        this(convertPosition(position), measurements, commonAxisUsed);</span>
+<span class="fc" id="L889">    }</span>
 
     /**
      * Constructor.
@@ -904,9 +907,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L907">        this(convertPosition(position), measurements, commonAxisUsed,</span>
+<span class="fc" id="L910">        this(convertPosition(position), measurements, commonAxisUsed,</span>
                 listener);
-<span class="fc" id="L909">    }</span>
+<span class="fc" id="L912">    }</span>
 
     /**
      * Constructor.
@@ -926,9 +929,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final ECEFPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final double[] initialHardIron) {
-<span class="fc" id="L929">        this(convertPosition(position), measurements,</span>
+<span class="fc" id="L932">        this(convertPosition(position), measurements,</span>
                 initialHardIron);
-<span class="fc" id="L931">    }</span>
+<span class="fc" id="L934">    }</span>
 
     /**
      * Constructor.
@@ -950,9 +953,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final double[] initialHardIron,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L953">        this(convertPosition(position), measurements, initialHardIron,</span>
+<span class="fc" id="L956">        this(convertPosition(position), measurements, initialHardIron,</span>
                 listener);
-<span class="fc" id="L955">    }</span>
+<span class="fc" id="L958">    }</span>
 
     /**
      * Constructor.
@@ -974,9 +977,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final ECEFPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed, final double[] initialHardIron) {
-<span class="fc" id="L977">        this(convertPosition(position), measurements, commonAxisUsed,</span>
+<span class="fc" id="L980">        this(convertPosition(position), measurements, commonAxisUsed,</span>
                 initialHardIron);
-<span class="fc" id="L979">    }</span>
+<span class="fc" id="L982">    }</span>
 
     /**
      * Constructor.
@@ -1000,9 +1003,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed, final double[] initialHardIron,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L1003">        this(convertPosition(position), measurements, commonAxisUsed,</span>
+<span class="fc" id="L1006">        this(convertPosition(position), measurements, commonAxisUsed,</span>
                 initialHardIron, listener);
-<span class="fc" id="L1005">    }</span>
+<span class="fc" id="L1008">    }</span>
 
     /**
      * Constructor.
@@ -1022,8 +1025,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final ECEFPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final Matrix initialHardIron) {
-<span class="fc" id="L1025">        this(convertPosition(position), measurements, initialHardIron);</span>
-<span class="fc" id="L1026">    }</span>
+<span class="fc" id="L1028">        this(convertPosition(position), measurements, initialHardIron);</span>
+<span class="fc" id="L1029">    }</span>
 
     /**
      * Constructor.
@@ -1045,9 +1048,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final Matrix initialHardIron,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L1048">        this(convertPosition(position), measurements, initialHardIron,</span>
+<span class="fc" id="L1051">        this(convertPosition(position), measurements, initialHardIron,</span>
                 listener);
-<span class="fc" id="L1050">    }</span>
+<span class="fc" id="L1053">    }</span>
 
     /**
      * Constructor.
@@ -1069,9 +1072,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final ECEFPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed, final Matrix initialHardIron) {
-<span class="fc" id="L1072">        this(convertPosition(position), measurements, commonAxisUsed,</span>
+<span class="fc" id="L1075">        this(convertPosition(position), measurements, commonAxisUsed,</span>
                 initialHardIron);
-<span class="fc" id="L1074">    }</span>
+<span class="fc" id="L1077">    }</span>
 
     /**
      * Constructor.
@@ -1095,9 +1098,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed, final Matrix initialHardIron,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L1098">        this(convertPosition(position), measurements, commonAxisUsed,</span>
+<span class="fc" id="L1101">        this(convertPosition(position), measurements, commonAxisUsed,</span>
                 initialHardIron, listener);
-<span class="fc" id="L1100">    }</span>
+<span class="fc" id="L1103">    }</span>
 
     /**
      * Constructor.
@@ -1120,9 +1123,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final ECEFPosition position,
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final Matrix initialHardIron, final Matrix initialMm) {
-<span class="fc" id="L1123">        this(convertPosition(position), measurements, initialHardIron,</span>
+<span class="fc" id="L1126">        this(convertPosition(position), measurements, initialHardIron,</span>
                 initialMm);
-<span class="fc" id="L1125">    }</span>
+<span class="fc" id="L1128">    }</span>
 
     /**
      * Constructor.
@@ -1147,9 +1150,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final Matrix initialHardIron, final Matrix initialMm,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L1150">        this(convertPosition(position), measurements, initialHardIron,</span>
+<span class="fc" id="L1153">        this(convertPosition(position), measurements, initialHardIron,</span>
                 initialMm, listener);
-<span class="fc" id="L1152">    }</span>
+<span class="fc" id="L1155">    }</span>
 
     /**
      * Constructor.
@@ -1175,9 +1178,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final List&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements,
             final boolean commonAxisUsed, final Matrix initialHardIron,
             final Matrix initialMm) {
-<span class="fc" id="L1178">        this(convertPosition(position), measurements, commonAxisUsed,</span>
+<span class="fc" id="L1181">        this(convertPosition(position), measurements, commonAxisUsed,</span>
                 initialHardIron, initialMm);
-<span class="fc" id="L1180">    }</span>
+<span class="fc" id="L1183">    }</span>
 
     /**
      * Constructor.
@@ -1205,9 +1208,9 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final boolean commonAxisUsed, final Matrix initialHardIron,
             final Matrix initialMm,
             final KnownPositionAndInstantMagnetometerCalibratorListener listener) {
-<span class="fc" id="L1208">        this(convertPosition(position), measurements, commonAxisUsed,</span>
+<span class="fc" id="L1211">        this(convertPosition(position), measurements, commonAxisUsed,</span>
                 initialHardIron, initialMm, listener);
-<span class="fc" id="L1210">    }</span>
+<span class="fc" id="L1213">    }</span>
 
     /**
      * Gets initial x-coordinate of magnetometer hard-iron bias to be used
@@ -1217,7 +1220,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial x-coordinate of magnetometer hard-iron bias.
      */
     public double getInitialHardIronX() {
-<span class="fc" id="L1220">        return mInitialHardIronX;</span>
+<span class="fc" id="L1223">        return mInitialHardIronX;</span>
     }
 
     /**
@@ -1231,11 +1234,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialHardIronX(final double initialHardIronX)
             throws LockedException {
-<span class="fc bfc" id="L1234" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1235">            throw new LockedException();</span>
+<span class="fc bfc" id="L1237" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1238">            throw new LockedException();</span>
         }
-<span class="fc" id="L1237">        mInitialHardIronX = initialHardIronX;</span>
-<span class="fc" id="L1238">    }</span>
+<span class="fc" id="L1240">        mInitialHardIronX = initialHardIronX;</span>
+<span class="fc" id="L1241">    }</span>
 
     /**
      * Gets initial y-coordinate of magnetometer hard-iron bias to be used
@@ -1245,7 +1248,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial y-coordinate of magnetometer hard-iron bias.
      */
     public double getInitialHardIronY() {
-<span class="fc" id="L1248">        return mInitialHardIronY;</span>
+<span class="fc" id="L1251">        return mInitialHardIronY;</span>
     }
 
     /**
@@ -1259,11 +1262,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialHardIronY(final double initialHardIronY)
             throws LockedException {
-<span class="fc bfc" id="L1262" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1263">            throw new LockedException();</span>
+<span class="fc bfc" id="L1265" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1266">            throw new LockedException();</span>
         }
-<span class="fc" id="L1265">        mInitialHardIronY = initialHardIronY;</span>
-<span class="fc" id="L1266">    }</span>
+<span class="fc" id="L1268">        mInitialHardIronY = initialHardIronY;</span>
+<span class="fc" id="L1269">    }</span>
 
     /**
      * Gets initial z-coordinate of magnetometer hard-iron bias to be used
@@ -1273,7 +1276,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial z-coordinate of magnetometer hard-iron bias.
      */
     public double getInitialHardIronZ() {
-<span class="fc" id="L1276">        return mInitialHardIronZ;</span>
+<span class="fc" id="L1279">        return mInitialHardIronZ;</span>
     }
 
     /**
@@ -1287,11 +1290,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialHardIronZ(final double initialHardIronZ)
             throws LockedException {
-<span class="fc bfc" id="L1290" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1291">            throw new LockedException();</span>
+<span class="fc bfc" id="L1293" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1294">            throw new LockedException();</span>
         }
-<span class="fc" id="L1293">        mInitialHardIronZ = initialHardIronZ;</span>
-<span class="fc" id="L1294">    }</span>
+<span class="fc" id="L1296">        mInitialHardIronZ = initialHardIronZ;</span>
+<span class="fc" id="L1297">    }</span>
 
     /**
      * Sets initial hard-iron bias coordinates of magnetometer used to find
@@ -1308,13 +1311,13 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
     public void setInitialHardIron(
             final double initialHardIronX, final double initialHardIronY,
             final double initialHardIronZ) throws LockedException {
-<span class="fc bfc" id="L1311" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1312">            throw new LockedException();</span>
+<span class="fc bfc" id="L1314" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1315">            throw new LockedException();</span>
         }
-<span class="fc" id="L1314">        mInitialHardIronX = initialHardIronX;</span>
-<span class="fc" id="L1315">        mInitialHardIronY = initialHardIronY;</span>
-<span class="fc" id="L1316">        mInitialHardIronZ = initialHardIronZ;</span>
-<span class="fc" id="L1317">    }</span>
+<span class="fc" id="L1317">        mInitialHardIronX = initialHardIronX;</span>
+<span class="fc" id="L1318">        mInitialHardIronY = initialHardIronY;</span>
+<span class="fc" id="L1319">        mInitialHardIronZ = initialHardIronZ;</span>
+<span class="fc" id="L1320">    }</span>
 
     /**
      * Gets initial x scaling factor.
@@ -1322,7 +1325,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial x scaling factor.
      */
     public double getInitialSx() {
-<span class="fc" id="L1325">        return mInitialSx;</span>
+<span class="fc" id="L1328">        return mInitialSx;</span>
     }
 
     /**
@@ -1333,11 +1336,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialSx(final double initialSx)
             throws LockedException {
-<span class="fc bfc" id="L1336" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1337">            throw new LockedException();</span>
+<span class="fc bfc" id="L1339" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1340">            throw new LockedException();</span>
         }
-<span class="fc" id="L1339">        mInitialSx = initialSx;</span>
-<span class="fc" id="L1340">    }</span>
+<span class="fc" id="L1342">        mInitialSx = initialSx;</span>
+<span class="fc" id="L1343">    }</span>
 
     /**
      * Gets initial y scaling factor.
@@ -1345,7 +1348,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial y scaling factor.
      */
     public double getInitialSy() {
-<span class="fc" id="L1348">        return mInitialSy;</span>
+<span class="fc" id="L1351">        return mInitialSy;</span>
     }
 
     /**
@@ -1356,11 +1359,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialSy(final double initialSy)
             throws LockedException {
-<span class="fc bfc" id="L1359" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1360">            throw new LockedException();</span>
+<span class="fc bfc" id="L1362" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1363">            throw new LockedException();</span>
         }
-<span class="fc" id="L1362">        mInitialSy = initialSy;</span>
-<span class="fc" id="L1363">    }</span>
+<span class="fc" id="L1365">        mInitialSy = initialSy;</span>
+<span class="fc" id="L1366">    }</span>
 
     /**
      * Gets initial z scaling factor.
@@ -1368,7 +1371,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial z scaling factor.
      */
     public double getInitialSz() {
-<span class="fc" id="L1371">        return mInitialSz;</span>
+<span class="fc" id="L1374">        return mInitialSz;</span>
     }
 
     /**
@@ -1379,11 +1382,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialSz(final double initialSz)
             throws LockedException {
-<span class="fc bfc" id="L1382" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1383">            throw new LockedException();</span>
+<span class="fc bfc" id="L1385" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1386">            throw new LockedException();</span>
         }
-<span class="fc" id="L1385">        mInitialSz = initialSz;</span>
-<span class="fc" id="L1386">    }</span>
+<span class="fc" id="L1388">        mInitialSz = initialSz;</span>
+<span class="fc" id="L1389">    }</span>
 
     /**
      * Gets initial x-y cross coupling error.
@@ -1391,7 +1394,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial x-y cross coupling error.
      */
     public double getInitialMxy() {
-<span class="fc" id="L1394">        return mInitialMxy;</span>
+<span class="fc" id="L1397">        return mInitialMxy;</span>
     }
 
     /**
@@ -1402,11 +1405,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialMxy(final double initialMxy)
             throws LockedException {
-<span class="fc bfc" id="L1405" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1406">            throw new LockedException();</span>
+<span class="fc bfc" id="L1408" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1409">            throw new LockedException();</span>
         }
-<span class="fc" id="L1408">        mInitialMxy = initialMxy;</span>
-<span class="fc" id="L1409">    }</span>
+<span class="fc" id="L1411">        mInitialMxy = initialMxy;</span>
+<span class="fc" id="L1412">    }</span>
 
     /**
      * Gets initial x-z cross coupling error.
@@ -1414,7 +1417,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial x-z cross coupling error.
      */
     public double getInitialMxz() {
-<span class="fc" id="L1417">        return mInitialMxz;</span>
+<span class="fc" id="L1420">        return mInitialMxz;</span>
     }
 
     /**
@@ -1425,11 +1428,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialMxz(final double initialMxz)
             throws LockedException {
-<span class="fc bfc" id="L1428" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1429">            throw new LockedException();</span>
+<span class="fc bfc" id="L1431" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1432">            throw new LockedException();</span>
         }
-<span class="fc" id="L1431">        mInitialMxz = initialMxz;</span>
-<span class="fc" id="L1432">    }</span>
+<span class="fc" id="L1434">        mInitialMxz = initialMxz;</span>
+<span class="fc" id="L1435">    }</span>
 
     /**
      * Gets initial y-x cross coupling error.
@@ -1437,7 +1440,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial y-x cross coupling error.
      */
     public double getInitialMyx() {
-<span class="fc" id="L1440">        return mInitialMyx;</span>
+<span class="fc" id="L1443">        return mInitialMyx;</span>
     }
 
     /**
@@ -1448,11 +1451,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialMyx(final double initialMyx)
             throws LockedException {
-<span class="fc bfc" id="L1451" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1452">            throw new LockedException();</span>
+<span class="fc bfc" id="L1454" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1455">            throw new LockedException();</span>
         }
-<span class="fc" id="L1454">        mInitialMyx = initialMyx;</span>
-<span class="fc" id="L1455">    }</span>
+<span class="fc" id="L1457">        mInitialMyx = initialMyx;</span>
+<span class="fc" id="L1458">    }</span>
 
     /**
      * Gets initial y-z cross coupling error.
@@ -1460,7 +1463,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial y-z cross coupling error.
      */
     public double getInitialMyz() {
-<span class="fc" id="L1463">        return mInitialMyz;</span>
+<span class="fc" id="L1466">        return mInitialMyz;</span>
     }
 
     /**
@@ -1471,11 +1474,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialMyz(final double initialMyz)
             throws LockedException {
-<span class="fc bfc" id="L1474" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1475">            throw new LockedException();</span>
+<span class="fc bfc" id="L1477" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1478">            throw new LockedException();</span>
         }
-<span class="fc" id="L1477">        mInitialMyz = initialMyz;</span>
-<span class="fc" id="L1478">    }</span>
+<span class="fc" id="L1480">        mInitialMyz = initialMyz;</span>
+<span class="fc" id="L1481">    }</span>
 
     /**
      * Gets initial z-x cross coupling error.
@@ -1483,7 +1486,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial z-x cross coupling error.
      */
     public double getInitialMzx() {
-<span class="fc" id="L1486">        return mInitialMzx;</span>
+<span class="fc" id="L1489">        return mInitialMzx;</span>
     }
 
     /**
@@ -1494,11 +1497,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialMzx(final double initialMzx)
             throws LockedException {
-<span class="fc bfc" id="L1497" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1498">            throw new LockedException();</span>
+<span class="fc bfc" id="L1500" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1501">            throw new LockedException();</span>
         }
-<span class="fc" id="L1500">        mInitialMzx = initialMzx;</span>
-<span class="fc" id="L1501">    }</span>
+<span class="fc" id="L1503">        mInitialMzx = initialMzx;</span>
+<span class="fc" id="L1504">    }</span>
 
     /**
      * Gets initial z-y cross coupling error.
@@ -1506,7 +1509,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return initial z-y cross coupling error.
      */
     public double getInitialMzy() {
-<span class="fc" id="L1509">        return mInitialMzy;</span>
+<span class="fc" id="L1512">        return mInitialMzy;</span>
     }
 
     /**
@@ -1517,11 +1520,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialMzy(final double initialMzy)
             throws LockedException {
-<span class="fc bfc" id="L1520" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1521">            throw new LockedException();</span>
+<span class="fc bfc" id="L1523" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1524">            throw new LockedException();</span>
         }
-<span class="fc" id="L1523">        mInitialMzy = initialMzy;</span>
-<span class="fc" id="L1524">    }</span>
+<span class="fc" id="L1526">        mInitialMzy = initialMzy;</span>
+<span class="fc" id="L1527">    }</span>
 
     /**
      * Sets initial scaling factors.
@@ -1536,13 +1539,13 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final double initialSy,
             final double initialSz)
             throws LockedException {
-<span class="fc bfc" id="L1539" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1540">            throw new LockedException();</span>
+<span class="fc bfc" id="L1542" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1543">            throw new LockedException();</span>
         }
-<span class="fc" id="L1542">        mInitialSx = initialSx;</span>
-<span class="fc" id="L1543">        mInitialSy = initialSy;</span>
-<span class="fc" id="L1544">        mInitialSz = initialSz;</span>
-<span class="fc" id="L1545">    }</span>
+<span class="fc" id="L1545">        mInitialSx = initialSx;</span>
+<span class="fc" id="L1546">        mInitialSy = initialSy;</span>
+<span class="fc" id="L1547">        mInitialSz = initialSz;</span>
+<span class="fc" id="L1548">    }</span>
 
     /**
      * Sets initial cross coupling errors.
@@ -1563,16 +1566,16 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final double initialMzx,
             final double initialMzy)
             throws LockedException {
-<span class="fc bfc" id="L1566" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1567">            throw new LockedException();</span>
+<span class="fc bfc" id="L1569" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1570">            throw new LockedException();</span>
         }
-<span class="fc" id="L1569">        mInitialMxy = initialMxy;</span>
-<span class="fc" id="L1570">        mInitialMxz = initialMxz;</span>
-<span class="fc" id="L1571">        mInitialMyx = initialMyx;</span>
-<span class="fc" id="L1572">        mInitialMyz = initialMyz;</span>
-<span class="fc" id="L1573">        mInitialMzx = initialMzx;</span>
-<span class="fc" id="L1574">        mInitialMzy = initialMzy;</span>
-<span class="fc" id="L1575">    }</span>
+<span class="fc" id="L1572">        mInitialMxy = initialMxy;</span>
+<span class="fc" id="L1573">        mInitialMxz = initialMxz;</span>
+<span class="fc" id="L1574">        mInitialMyx = initialMyx;</span>
+<span class="fc" id="L1575">        mInitialMyz = initialMyz;</span>
+<span class="fc" id="L1576">        mInitialMzx = initialMzx;</span>
+<span class="fc" id="L1577">        mInitialMzy = initialMzy;</span>
+<span class="fc" id="L1578">    }</span>
 
     /**
      * Sets initial scaling factors and cross coupling errors.
@@ -1599,13 +1602,13 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
             final double initialMzx,
             final double initialMzy)
             throws LockedException {
-<span class="fc bfc" id="L1602" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1603">            throw new LockedException();</span>
+<span class="fc bfc" id="L1605" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1606">            throw new LockedException();</span>
         }
-<span class="fc" id="L1605">        setInitialScalingFactors(initialSx, initialSy, initialSz);</span>
-<span class="fc" id="L1606">        setInitialCrossCouplingErrors(initialMxy, initialMxz, initialMyx,</span>
+<span class="fc" id="L1608">        setInitialScalingFactors(initialSx, initialSy, initialSz);</span>
+<span class="fc" id="L1609">        setInitialCrossCouplingErrors(initialMxy, initialMxz, initialMyx,</span>
                 initialMyz, initialMzx, initialMzy);
-<span class="fc" id="L1608">    }</span>
+<span class="fc" id="L1611">    }</span>
 
     /**
      * Gets initial hard-iron bias to be used to find a solution as an array.
@@ -1614,10 +1617,10 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return array containing coordinates of initial bias.
      */
     public double[] getInitialHardIron() {
-<span class="fc" id="L1617">        final double[] result = new double[</span>
+<span class="fc" id="L1620">        final double[] result = new double[</span>
                 BodyMagneticFluxDensity.COMPONENTS];
-<span class="fc" id="L1619">        getInitialHardIron(result);</span>
-<span class="fc" id="L1620">        return result;</span>
+<span class="fc" id="L1622">        getInitialHardIron(result);</span>
+<span class="fc" id="L1623">        return result;</span>
     }
 
     /**
@@ -1629,13 +1632,13 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      *                                  length 3.
      */
     public void getInitialHardIron(final double[] result) {
-<span class="fc bfc" id="L1632" title="All 2 branches covered.">        if (result.length != BodyMagneticFluxDensity.COMPONENTS) {</span>
-<span class="fc" id="L1633">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L1635" title="All 2 branches covered.">        if (result.length != BodyMagneticFluxDensity.COMPONENTS) {</span>
+<span class="fc" id="L1636">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L1635">        result[0] = mInitialHardIronX;</span>
-<span class="fc" id="L1636">        result[1] = mInitialHardIronY;</span>
-<span class="fc" id="L1637">        result[2] = mInitialHardIronZ;</span>
-<span class="fc" id="L1638">    }</span>
+<span class="fc" id="L1638">        result[0] = mInitialHardIronX;</span>
+<span class="fc" id="L1639">        result[1] = mInitialHardIronY;</span>
+<span class="fc" id="L1640">        result[2] = mInitialHardIronZ;</span>
+<span class="fc" id="L1641">    }</span>
 
     /**
      * Sets initial hard-iron bias to be used to find a solution as an array.
@@ -1647,17 +1650,17 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialHardIron(final double[] initialHardIron)
             throws LockedException {
-<span class="fc bfc" id="L1650" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1651">            throw new LockedException();</span>
+<span class="fc bfc" id="L1653" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1654">            throw new LockedException();</span>
         }
 
-<span class="fc bfc" id="L1654" title="All 2 branches covered.">        if (initialHardIron.length != BodyMagneticFluxDensity.COMPONENTS) {</span>
-<span class="fc" id="L1655">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L1657" title="All 2 branches covered.">        if (initialHardIron.length != BodyMagneticFluxDensity.COMPONENTS) {</span>
+<span class="fc" id="L1658">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L1657">        mInitialHardIronX = initialHardIron[0];</span>
-<span class="fc" id="L1658">        mInitialHardIronY = initialHardIron[1];</span>
-<span class="fc" id="L1659">        mInitialHardIronZ = initialHardIron[2];</span>
-<span class="fc" id="L1660">    }</span>
+<span class="fc" id="L1660">        mInitialHardIronX = initialHardIron[0];</span>
+<span class="fc" id="L1661">        mInitialHardIronY = initialHardIron[1];</span>
+<span class="fc" id="L1662">        mInitialHardIronZ = initialHardIron[2];</span>
+<span class="fc" id="L1663">    }</span>
 
     /**
      * Gets initial hard-iron bias to be used to find a solution as a
@@ -1669,14 +1672,14 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
     public Matrix getInitialHardIronAsMatrix() {
         Matrix result;
         try {
-<span class="fc" id="L1672">            result = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc" id="L1675">            result = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                     1);
-<span class="fc" id="L1674">            getInitialHardIronAsMatrix(result);</span>
-<span class="nc" id="L1675">        } catch (final WrongSizeException ignore) {</span>
+<span class="fc" id="L1677">            getInitialHardIronAsMatrix(result);</span>
+<span class="nc" id="L1678">        } catch (final WrongSizeException ignore) {</span>
             // never happens
-<span class="nc" id="L1677">            result = null;</span>
-<span class="fc" id="L1678">        }</span>
-<span class="fc" id="L1679">        return result;</span>
+<span class="nc" id="L1680">            result = null;</span>
+<span class="fc" id="L1681">        }</span>
+<span class="fc" id="L1682">        return result;</span>
     }
 
     /**
@@ -1687,14 +1690,14 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @throws IllegalArgumentException if provided matrix is not 3x1.
      */
     public void getInitialHardIronAsMatrix(final Matrix result) {
-<span class="fc bfc" id="L1690" title="All 2 branches covered.">        if (result.getRows() != BodyMagneticFluxDensity.COMPONENTS</span>
-<span class="fc bfc" id="L1691" title="All 2 branches covered.">                || result.getColumns() != 1) {</span>
-<span class="fc" id="L1692">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L1693" title="All 2 branches covered.">        if (result.getRows() != BodyMagneticFluxDensity.COMPONENTS</span>
+<span class="fc bfc" id="L1694" title="All 2 branches covered.">                || result.getColumns() != 1) {</span>
+<span class="fc" id="L1695">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L1694">        result.setElementAtIndex(0, mInitialHardIronX);</span>
-<span class="fc" id="L1695">        result.setElementAtIndex(1, mInitialHardIronY);</span>
-<span class="fc" id="L1696">        result.setElementAtIndex(2, mInitialHardIronZ);</span>
-<span class="fc" id="L1697">    }</span>
+<span class="fc" id="L1697">        result.setElementAtIndex(0, mInitialHardIronX);</span>
+<span class="fc" id="L1698">        result.setElementAtIndex(1, mInitialHardIronY);</span>
+<span class="fc" id="L1699">        result.setElementAtIndex(2, mInitialHardIronZ);</span>
+<span class="fc" id="L1700">    }</span>
 
     /**
      * Sets initial hard-iron bias to be used to find a solution as a column
@@ -1706,18 +1709,18 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialHardIron(final Matrix initialHardIron)
             throws LockedException {
-<span class="fc bfc" id="L1709" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1710">            throw new LockedException();</span>
+<span class="fc bfc" id="L1712" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1713">            throw new LockedException();</span>
         }
-<span class="fc bfc" id="L1712" title="All 2 branches covered.">        if (initialHardIron.getRows() != BodyMagneticFluxDensity.COMPONENTS</span>
-<span class="fc bfc" id="L1713" title="All 2 branches covered.">                || initialHardIron.getColumns() != 1) {</span>
-<span class="fc" id="L1714">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L1715" title="All 2 branches covered.">        if (initialHardIron.getRows() != BodyMagneticFluxDensity.COMPONENTS</span>
+<span class="fc bfc" id="L1716" title="All 2 branches covered.">                || initialHardIron.getColumns() != 1) {</span>
+<span class="fc" id="L1717">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L1717">        mInitialHardIronX = initialHardIron.getElementAtIndex(0);</span>
-<span class="fc" id="L1718">        mInitialHardIronY = initialHardIron.getElementAtIndex(1);</span>
-<span class="fc" id="L1719">        mInitialHardIronZ = initialHardIron.getElementAtIndex(2);</span>
-<span class="fc" id="L1720">    }</span>
+<span class="fc" id="L1720">        mInitialHardIronX = initialHardIron.getElementAtIndex(0);</span>
+<span class="fc" id="L1721">        mInitialHardIronY = initialHardIron.getElementAtIndex(1);</span>
+<span class="fc" id="L1722">        mInitialHardIronZ = initialHardIron.getElementAtIndex(2);</span>
+<span class="fc" id="L1723">    }</span>
 
     /**
      * Gets initial scale factors and cross coupling errors matrix.
@@ -1727,14 +1730,14 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
     public Matrix getInitialMm() {
         Matrix result;
         try {
-<span class="fc" id="L1730">            result = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc" id="L1733">            result = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                     BodyMagneticFluxDensity.COMPONENTS);
-<span class="fc" id="L1732">            getInitialMm(result);</span>
-<span class="nc" id="L1733">        } catch (final WrongSizeException ignore) {</span>
+<span class="fc" id="L1735">            getInitialMm(result);</span>
+<span class="nc" id="L1736">        } catch (final WrongSizeException ignore) {</span>
             // never happens
-<span class="nc" id="L1735">            result = null;</span>
-<span class="fc" id="L1736">        }</span>
-<span class="fc" id="L1737">        return result;</span>
+<span class="nc" id="L1738">            result = null;</span>
+<span class="fc" id="L1739">        }</span>
+<span class="fc" id="L1740">        return result;</span>
     }
 
     /**
@@ -1744,22 +1747,22 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @throws IllegalArgumentException if provided matrix is not 3x3.
      */
     public void getInitialMm(final Matrix result) {
-<span class="fc bfc" id="L1747" title="All 2 branches covered.">        if (result.getRows() != BodyKinematics.COMPONENTS ||</span>
-<span class="fc bfc" id="L1748" title="All 2 branches covered.">                result.getColumns() != BodyKinematics.COMPONENTS) {</span>
-<span class="fc" id="L1749">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L1750" title="All 2 branches covered.">        if (result.getRows() != BodyKinematics.COMPONENTS ||</span>
+<span class="fc bfc" id="L1751" title="All 2 branches covered.">                result.getColumns() != BodyKinematics.COMPONENTS) {</span>
+<span class="fc" id="L1752">            throw new IllegalArgumentException();</span>
         }
-<span class="fc" id="L1751">        result.setElementAtIndex(0, mInitialSx);</span>
-<span class="fc" id="L1752">        result.setElementAtIndex(1, mInitialMyx);</span>
-<span class="fc" id="L1753">        result.setElementAtIndex(2, mInitialMzx);</span>
+<span class="fc" id="L1754">        result.setElementAtIndex(0, mInitialSx);</span>
+<span class="fc" id="L1755">        result.setElementAtIndex(1, mInitialMyx);</span>
+<span class="fc" id="L1756">        result.setElementAtIndex(2, mInitialMzx);</span>
 
-<span class="fc" id="L1755">        result.setElementAtIndex(3, mInitialMxy);</span>
-<span class="fc" id="L1756">        result.setElementAtIndex(4, mInitialSy);</span>
-<span class="fc" id="L1757">        result.setElementAtIndex(5, mInitialMzy);</span>
+<span class="fc" id="L1758">        result.setElementAtIndex(3, mInitialMxy);</span>
+<span class="fc" id="L1759">        result.setElementAtIndex(4, mInitialSy);</span>
+<span class="fc" id="L1760">        result.setElementAtIndex(5, mInitialMzy);</span>
 
-<span class="fc" id="L1759">        result.setElementAtIndex(6, mInitialMxz);</span>
-<span class="fc" id="L1760">        result.setElementAtIndex(7, mInitialMyz);</span>
-<span class="fc" id="L1761">        result.setElementAtIndex(8, mInitialSz);</span>
-<span class="fc" id="L1762">    }</span>
+<span class="fc" id="L1762">        result.setElementAtIndex(6, mInitialMxz);</span>
+<span class="fc" id="L1763">        result.setElementAtIndex(7, mInitialMyz);</span>
+<span class="fc" id="L1764">        result.setElementAtIndex(8, mInitialSz);</span>
+<span class="fc" id="L1765">    }</span>
 
     /**
      * Sets initial scale factors and cross coupling errors matrix.
@@ -1770,26 +1773,26 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setInitialMm(final Matrix initialMm)
             throws LockedException {
-<span class="fc bfc" id="L1773" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1774">            throw new LockedException();</span>
+<span class="fc bfc" id="L1776" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1777">            throw new LockedException();</span>
         }
-<span class="fc bfc" id="L1776" title="All 2 branches covered.">        if (initialMm.getRows() != BodyKinematics.COMPONENTS ||</span>
-<span class="fc bfc" id="L1777" title="All 2 branches covered.">                initialMm.getColumns() != BodyKinematics.COMPONENTS) {</span>
-<span class="fc" id="L1778">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L1779" title="All 2 branches covered.">        if (initialMm.getRows() != BodyKinematics.COMPONENTS ||</span>
+<span class="fc bfc" id="L1780" title="All 2 branches covered.">                initialMm.getColumns() != BodyKinematics.COMPONENTS) {</span>
+<span class="fc" id="L1781">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L1781">        mInitialSx = initialMm.getElementAtIndex(0);</span>
-<span class="fc" id="L1782">        mInitialMyx = initialMm.getElementAtIndex(1);</span>
-<span class="fc" id="L1783">        mInitialMzx = initialMm.getElementAtIndex(2);</span>
+<span class="fc" id="L1784">        mInitialSx = initialMm.getElementAtIndex(0);</span>
+<span class="fc" id="L1785">        mInitialMyx = initialMm.getElementAtIndex(1);</span>
+<span class="fc" id="L1786">        mInitialMzx = initialMm.getElementAtIndex(2);</span>
 
-<span class="fc" id="L1785">        mInitialMxy = initialMm.getElementAtIndex(3);</span>
-<span class="fc" id="L1786">        mInitialSy = initialMm.getElementAtIndex(4);</span>
-<span class="fc" id="L1787">        mInitialMzy = initialMm.getElementAtIndex(5);</span>
+<span class="fc" id="L1788">        mInitialMxy = initialMm.getElementAtIndex(3);</span>
+<span class="fc" id="L1789">        mInitialSy = initialMm.getElementAtIndex(4);</span>
+<span class="fc" id="L1790">        mInitialMzy = initialMm.getElementAtIndex(5);</span>
 
-<span class="fc" id="L1789">        mInitialMxz = initialMm.getElementAtIndex(6);</span>
-<span class="fc" id="L1790">        mInitialMyz = initialMm.getElementAtIndex(7);</span>
-<span class="fc" id="L1791">        mInitialSz = initialMm.getElementAtIndex(8);</span>
-<span class="fc" id="L1792">    }</span>
+<span class="fc" id="L1792">        mInitialMxz = initialMm.getElementAtIndex(6);</span>
+<span class="fc" id="L1793">        mInitialMyz = initialMm.getElementAtIndex(7);</span>
+<span class="fc" id="L1794">        mInitialSz = initialMm.getElementAtIndex(8);</span>
+<span class="fc" id="L1795">    }</span>
 
     /**
      * Gets position where body magnetic flux density measurements have been
@@ -1799,7 +1802,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * been taken.
      */
     public NEDPosition getNedPosition() {
-<span class="fc" id="L1802">        return mPosition;</span>
+<span class="fc" id="L1805">        return mPosition;</span>
     }
 
     /**
@@ -1812,12 +1815,12 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setPosition(final NEDPosition position)
             throws LockedException {
-<span class="fc bfc" id="L1815" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1816">            throw new LockedException();</span>
+<span class="fc bfc" id="L1818" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1819">            throw new LockedException();</span>
         }
 
-<span class="fc" id="L1819">        mPosition = position;</span>
-<span class="fc" id="L1820">    }</span>
+<span class="fc" id="L1822">        mPosition = position;</span>
+<span class="fc" id="L1823">    }</span>
 
     /**
      * Gets position where body magnetic flux density measurements have been
@@ -1827,12 +1830,12 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * been taken or null if not available.
      */
     public ECEFPosition getEcefPosition() {
-<span class="fc bfc" id="L1830" title="All 2 branches covered.">        if (mPosition != null) {</span>
-<span class="fc" id="L1831">            final ECEFPosition result = new ECEFPosition();</span>
-<span class="fc" id="L1832">            getEcefPosition(result);</span>
-<span class="fc" id="L1833">            return result;</span>
+<span class="fc bfc" id="L1833" title="All 2 branches covered.">        if (mPosition != null) {</span>
+<span class="fc" id="L1834">            final ECEFPosition result = new ECEFPosition();</span>
+<span class="fc" id="L1835">            getEcefPosition(result);</span>
+<span class="fc" id="L1836">            return result;</span>
         } else {
-<span class="fc" id="L1835">            return null;</span>
+<span class="fc" id="L1838">            return null;</span>
         }
     }
 
@@ -1845,15 +1848,15 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public boolean getEcefPosition(final ECEFPosition result) {
 
-<span class="fc bfc" id="L1848" title="All 2 branches covered.">        if (mPosition != null) {</span>
-<span class="fc" id="L1849">            final ECEFVelocity velocity = new ECEFVelocity();</span>
-<span class="fc" id="L1850">            NEDtoECEFPositionVelocityConverter.convertNEDtoECEF(</span>
-<span class="fc" id="L1851">                    mPosition.getLatitude(), mPosition.getLongitude(),</span>
-<span class="fc" id="L1852">                    mPosition.getHeight(), 0.0, 0.0, 0.0,</span>
+<span class="fc bfc" id="L1851" title="All 2 branches covered.">        if (mPosition != null) {</span>
+<span class="fc" id="L1852">            final ECEFVelocity velocity = new ECEFVelocity();</span>
+<span class="fc" id="L1853">            NEDtoECEFPositionVelocityConverter.convertNEDtoECEF(</span>
+<span class="fc" id="L1854">                    mPosition.getLatitude(), mPosition.getLongitude(),</span>
+<span class="fc" id="L1855">                    mPosition.getHeight(), 0.0, 0.0, 0.0,</span>
                     result, velocity);
-<span class="fc" id="L1854">            return true;</span>
+<span class="fc" id="L1857">            return true;</span>
         } else {
-<span class="fc" id="L1856">            return false;</span>
+<span class="fc" id="L1859">            return false;</span>
         }
     }
 
@@ -1867,12 +1870,12 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setPosition(final ECEFPosition position)
             throws LockedException {
-<span class="fc bfc" id="L1870" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1871">            throw new LockedException();</span>
+<span class="fc bfc" id="L1873" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1874">            throw new LockedException();</span>
         }
 
-<span class="fc" id="L1874">        mPosition = convertPosition(position);</span>
-<span class="fc" id="L1875">    }</span>
+<span class="fc" id="L1877">        mPosition = convertPosition(position);</span>
+<span class="fc" id="L1878">    }</span>
 
     /**
      * Gets timestamp expressed as decimal year where magnetic flux density
@@ -1881,7 +1884,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return timestamp expressed as decimal year or null if not defined.
      */
     public Double getYear() {
-<span class="fc" id="L1884">        return mYear;</span>
+<span class="fc" id="L1887">        return mYear;</span>
     }
 
     /**
@@ -1892,11 +1895,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @throws LockedException if calibrator is currently running.
      */
     public void setYear(final Double year) throws LockedException {
-<span class="fc bfc" id="L1895" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1896">            throw new LockedException();</span>
+<span class="fc bfc" id="L1898" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1899">            throw new LockedException();</span>
         }
-<span class="fc" id="L1898">        mYear = year;</span>
-<span class="fc" id="L1899">    }</span>
+<span class="fc" id="L1901">        mYear = year;</span>
+<span class="fc" id="L1902">    }</span>
 
     /**
      * Sets timestamp when magnetic flux density measurements have been
@@ -1907,11 +1910,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @throws LockedException if calibrator is currently running.
      */
     public void setTime(final Long timestampMillis) throws LockedException {
-<span class="fc bfc" id="L1910" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1911">            throw new LockedException();</span>
+<span class="fc bfc" id="L1913" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1914">            throw new LockedException();</span>
         }
-<span class="fc" id="L1913">        mYear = convertTime(timestampMillis);</span>
-<span class="fc" id="L1914">    }</span>
+<span class="fc" id="L1916">        mYear = convertTime(timestampMillis);</span>
+<span class="fc" id="L1917">    }</span>
 
     /**
      * Sets timestamp when magnetic flux density measurements have been
@@ -1921,11 +1924,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @throws LockedException if calibrator is currently running.
      */
     public void setTime(final Date date) throws LockedException {
-<span class="fc bfc" id="L1924" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1925">            throw new LockedException();</span>
+<span class="fc bfc" id="L1927" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1928">            throw new LockedException();</span>
         }
-<span class="fc" id="L1927">        mYear = convertTime(date);</span>
-<span class="fc" id="L1928">    }</span>
+<span class="fc" id="L1930">        mYear = convertTime(date);</span>
+<span class="fc" id="L1931">    }</span>
 
     /**
      * Sets timestamp when magnetic flux density measurements have been
@@ -1936,11 +1939,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setTime(final GregorianCalendar calendar)
             throws LockedException {
-<span class="fc bfc" id="L1939" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1940">            throw new LockedException();</span>
+<span class="fc bfc" id="L1942" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1943">            throw new LockedException();</span>
         }
-<span class="fc" id="L1942">        mYear = convertTime(calendar);</span>
-<span class="fc" id="L1943">    }</span>
+<span class="fc" id="L1945">        mYear = convertTime(calendar);</span>
+<span class="fc" id="L1946">    }</span>
 
     /**
      * Gets collection of body magnetic flux density measurements taken
@@ -1951,7 +1954,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * a known position and timestamp with unknown orientations.
      */
     public Collection&lt;StandardDeviationBodyMagneticFluxDensity&gt; getMeasurements() {
-<span class="fc" id="L1954">        return mMeasurements;</span>
+<span class="fc" id="L1957">        return mMeasurements;</span>
     }
 
     /**
@@ -1966,11 +1969,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setMeasurements(final Collection&lt;StandardDeviationBodyMagneticFluxDensity&gt; measurements)
             throws LockedException {
-<span class="fc bfc" id="L1969" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L1970">            throw new LockedException();</span>
+<span class="fc bfc" id="L1972" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1973">            throw new LockedException();</span>
         }
-<span class="fc" id="L1972">        mMeasurements = measurements;</span>
-<span class="fc" id="L1973">    }</span>
+<span class="fc" id="L1975">        mMeasurements = measurements;</span>
+<span class="fc" id="L1976">    }</span>
 
     /**
      * Indicates whether z-axis is assumed to be common for accelerometer,
@@ -1981,7 +1984,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * gyroscope and magnetometer, false otherwise.
      */
     public boolean isCommonAxisUsed() {
-<span class="fc" id="L1984">        return mCommonAxisUsed;</span>
+<span class="fc" id="L1987">        return mCommonAxisUsed;</span>
     }
 
     /**
@@ -1996,12 +1999,12 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setCommonAxisUsed(final boolean commonAxisUsed)
             throws LockedException {
-<span class="fc bfc" id="L1999" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L2000">            throw new LockedException();</span>
+<span class="fc bfc" id="L2002" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L2003">            throw new LockedException();</span>
         }
 
-<span class="fc" id="L2003">        mCommonAxisUsed = commonAxisUsed;</span>
-<span class="fc" id="L2004">    }</span>
+<span class="fc" id="L2006">        mCommonAxisUsed = commonAxisUsed;</span>
+<span class="fc" id="L2007">    }</span>
 
     /**
      * Gets listener to handle events raised by this calibrator.
@@ -2009,7 +2012,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return listener to handle events raised by this calibrator.
      */
     public KnownPositionAndInstantMagnetometerCalibratorListener getListener() {
-<span class="fc" id="L2012">        return mListener;</span>
+<span class="fc" id="L2015">        return mListener;</span>
     }
 
     /**
@@ -2021,12 +2024,12 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
     public void setListener(
             final KnownPositionAndInstantMagnetometerCalibratorListener listener)
             throws LockedException {
-<span class="fc bfc" id="L2024" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L2025">            throw new LockedException();</span>
+<span class="fc bfc" id="L2027" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L2028">            throw new LockedException();</span>
         }
 
-<span class="fc" id="L2028">        mListener = listener;</span>
-<span class="fc" id="L2029">    }</span>
+<span class="fc" id="L2031">        mListener = listener;</span>
+<span class="fc" id="L2032">    }</span>
 
     /**
      * Gets minimum number of required measurements.
@@ -2034,8 +2037,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return minimum number of required measurements.
      */
     public int getMinimumRequiredMeasurements() {
-<span class="fc bfc" id="L2037" title="All 2 branches covered.">        return mCommonAxisUsed ? MINIMUM_MEASUREMENTS_COMMON_Z_AXIS :</span>
-<span class="fc" id="L2038">                MINIMUM_MEASUREMENTS_GENERAL;</span>
+<span class="fc bfc" id="L2040" title="All 2 branches covered.">        return mCommonAxisUsed ? MINIMUM_MEASUREMENTS_COMMON_Z_AXIS :</span>
+<span class="fc" id="L2041">                MINIMUM_MEASUREMENTS_GENERAL;</span>
     }
 
     /**
@@ -2044,7 +2047,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return true if calibrator is ready, false otherwise.
      */
     public boolean isReady() {
-<span class="fc bfc" id="L2047" title="All 8 branches covered.">        return mMeasurements != null &amp;&amp; mMeasurements.size() &gt;= getMinimumRequiredMeasurements()</span>
+<span class="fc bfc" id="L2050" title="All 8 branches covered.">        return mMeasurements != null &amp;&amp; mMeasurements.size() &gt;= getMinimumRequiredMeasurements()</span>
                 &amp;&amp; mPosition != null &amp;&amp; mYear != null;
     }
 
@@ -2054,7 +2057,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return true if calibrator is running, false otherwise.
      */
     public boolean isRunning() {
-<span class="fc" id="L2057">        return mRunning;</span>
+<span class="fc" id="L2060">        return mRunning;</span>
     }
 
     /**
@@ -2063,7 +2066,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return Earth's magnetic model or null if not provided.
      */
     public WorldMagneticModel getMagneticModel() {
-<span class="fc" id="L2066">        return mMagneticModel;</span>
+<span class="fc" id="L2069">        return mMagneticModel;</span>
     }
 
     /**
@@ -2074,11 +2077,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void setMagneticModel(final WorldMagneticModel magneticModel)
             throws LockedException {
-<span class="fc bfc" id="L2077" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L2078">            throw new LockedException();</span>
+<span class="fc bfc" id="L2080" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L2081">            throw new LockedException();</span>
         }
-<span class="fc" id="L2080">        mMagneticModel = magneticModel;</span>
-<span class="fc" id="L2081">    }</span>
+<span class="fc" id="L2083">        mMagneticModel = magneticModel;</span>
+<span class="fc" id="L2084">    }</span>
 
     /**
      * Estimates magnetometer calibration parameters containing scale factors
@@ -2090,39 +2093,39 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public void calibrate() throws LockedException, NotReadyException,
             CalibrationException {
-<span class="fc bfc" id="L2093" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L2094">            throw new LockedException();</span>
+<span class="fc bfc" id="L2096" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L2097">            throw new LockedException();</span>
         }
 
-<span class="pc bpc" id="L2097" title="1 of 2 branches missed.">        if (!isReady()) {</span>
-<span class="nc" id="L2098">            throw new NotReadyException();</span>
+<span class="pc bpc" id="L2100" title="1 of 2 branches missed.">        if (!isReady()) {</span>
+<span class="nc" id="L2101">            throw new NotReadyException();</span>
         }
 
         try {
-<span class="fc" id="L2102">            mRunning = true;</span>
+<span class="fc" id="L2105">            mRunning = true;</span>
 
-<span class="fc bfc" id="L2104" title="All 2 branches covered.">            if (mListener != null) {</span>
-<span class="fc" id="L2105">                mListener.onCalibrateStart(this);</span>
+<span class="fc bfc" id="L2107" title="All 2 branches covered.">            if (mListener != null) {</span>
+<span class="fc" id="L2108">                mListener.onCalibrateStart(this);</span>
             }
 
-<span class="fc bfc" id="L2108" title="All 2 branches covered.">            if (mCommonAxisUsed) {</span>
-<span class="fc" id="L2109">                calibrateCommonAxis();</span>
+<span class="fc bfc" id="L2111" title="All 2 branches covered.">            if (mCommonAxisUsed) {</span>
+<span class="fc" id="L2112">                calibrateCommonAxis();</span>
             } else {
-<span class="fc" id="L2111">                calibrateGeneral();</span>
+<span class="fc" id="L2114">                calibrateGeneral();</span>
             }
 
-<span class="fc bfc" id="L2114" title="All 2 branches covered.">            if (mListener != null) {</span>
-<span class="fc" id="L2115">                mListener.onCalibrateEnd(this);</span>
+<span class="fc bfc" id="L2117" title="All 2 branches covered.">            if (mListener != null) {</span>
+<span class="fc" id="L2118">                mListener.onCalibrateEnd(this);</span>
             }
 
-<span class="fc" id="L2118">        } catch (final AlgebraException | FittingException</span>
+<span class="fc" id="L2121">        } catch (final AlgebraException | FittingException</span>
                 | com.irurueta.numerical.NotReadyException
                 | IOException e) {
-<span class="fc" id="L2121">            throw new CalibrationException(e);</span>
+<span class="fc" id="L2124">            throw new CalibrationException(e);</span>
         } finally {
-<span class="fc" id="L2123">            mRunning = false;</span>
+<span class="fc" id="L2126">            mRunning = false;</span>
         }
-<span class="fc" id="L2125">    }</span>
+<span class="fc" id="L2128">    }</span>
 
     /**
      * Gets array containing x,y,z components of estimated magnetometer
@@ -2132,7 +2135,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * hard-iron biases.
      */
     public double[] getEstimatedHardIron() {
-<span class="fc" id="L2135">        return mEstimatedHardIron;</span>
+<span class="fc" id="L2138">        return mEstimatedHardIron;</span>
     }
 
     /**
@@ -2145,12 +2148,12 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * estimation is not yet available).
      */
     public boolean getEstimatedHardIron(final double[] result) {
-<span class="pc bpc" id="L2148" title="1 of 2 branches missed.">        if (mEstimatedHardIron != null) {</span>
-<span class="fc" id="L2149">            System.arraycopy(mEstimatedHardIron, 0, result,</span>
+<span class="pc bpc" id="L2151" title="1 of 2 branches missed.">        if (mEstimatedHardIron != null) {</span>
+<span class="fc" id="L2152">            System.arraycopy(mEstimatedHardIron, 0, result,</span>
                     0, mEstimatedHardIron.length);
-<span class="fc" id="L2151">            return true;</span>
+<span class="fc" id="L2154">            return true;</span>
         } else {
-<span class="nc" id="L2153">            return false;</span>
+<span class="nc" id="L2156">            return false;</span>
         }
     }
 
@@ -2162,7 +2165,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * magnetometer hard-iron biases.
      */
     public Matrix getEstimatedHardIronAsMatrix() {
-<span class="fc bfc" id="L2165" title="All 2 branches covered.">        return mEstimatedHardIron != null ? Matrix.newFromArray(mEstimatedHardIron) : null;</span>
+<span class="fc bfc" id="L2168" title="All 2 branches covered.">        return mEstimatedHardIron != null ? Matrix.newFromArray(mEstimatedHardIron) : null;</span>
     }
 
     /**
@@ -2175,11 +2178,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      */
     public boolean getEstimatedHardIronAsMatrix(final Matrix result)
             throws WrongSizeException {
-<span class="fc bfc" id="L2178" title="All 2 branches covered.">        if (mEstimatedHardIron != null) {</span>
-<span class="fc" id="L2179">            result.fromArray(mEstimatedHardIron);</span>
-<span class="fc" id="L2180">            return true;</span>
+<span class="fc bfc" id="L2181" title="All 2 branches covered.">        if (mEstimatedHardIron != null) {</span>
+<span class="fc" id="L2182">            result.fromArray(mEstimatedHardIron);</span>
+<span class="fc" id="L2183">            return true;</span>
         } else {
-<span class="fc" id="L2182">            return false;</span>
+<span class="fc" id="L2185">            return false;</span>
         }
     }
 
@@ -2191,7 +2194,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * available.
      */
     public Double getEstimatedHardIronX() {
-<span class="fc bfc" id="L2194" title="All 2 branches covered.">        return mEstimatedHardIron != null ? mEstimatedHardIron[0] : null;</span>
+<span class="fc bfc" id="L2197" title="All 2 branches covered.">        return mEstimatedHardIron != null ? mEstimatedHardIron[0] : null;</span>
     }
 
     /**
@@ -2202,7 +2205,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * available.
      */
     public Double getEstimatedHardIronY() {
-<span class="fc bfc" id="L2205" title="All 2 branches covered.">        return mEstimatedHardIron != null ? mEstimatedHardIron[1] : null;</span>
+<span class="fc bfc" id="L2208" title="All 2 branches covered.">        return mEstimatedHardIron != null ? mEstimatedHardIron[1] : null;</span>
     }
 
     /**
@@ -2213,7 +2216,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * available.
      */
     public Double getEstimatedHardIronZ() {
-<span class="fc bfc" id="L2216" title="All 2 branches covered.">        return mEstimatedHardIron != null ? mEstimatedHardIron[2] : null;</span>
+<span class="fc bfc" id="L2219" title="All 2 branches covered.">        return mEstimatedHardIron != null ? mEstimatedHardIron[2] : null;</span>
     }
 
     /**
@@ -2260,7 +2263,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * or null if not available.
      */
     public Matrix getEstimatedMm() {
-<span class="fc" id="L2263">        return mEstimatedMm;</span>
+<span class="fc" id="L2266">        return mEstimatedMm;</span>
     }
 
     /**
@@ -2269,8 +2272,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated x-axis scale factor or null if not available.
      */
     public Double getEstimatedSx() {
-<span class="fc bfc" id="L2272" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
-<span class="fc" id="L2273">                mEstimatedMm.getElementAt(0, 0) : null;</span>
+<span class="fc bfc" id="L2275" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L2276">                mEstimatedMm.getElementAt(0, 0) : null;</span>
     }
 
     /**
@@ -2279,8 +2282,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated y-axis scale factor or null if not available.
      */
     public Double getEstimatedSy() {
-<span class="fc bfc" id="L2282" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
-<span class="fc" id="L2283">                mEstimatedMm.getElementAt(1, 1) : null;</span>
+<span class="fc bfc" id="L2285" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L2286">                mEstimatedMm.getElementAt(1, 1) : null;</span>
     }
 
     /**
@@ -2289,8 +2292,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated z-axis scale factor or null if not available.
      */
     public Double getEstimatedSz() {
-<span class="fc bfc" id="L2292" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
-<span class="fc" id="L2293">                mEstimatedMm.getElementAt(2, 2) : null;</span>
+<span class="fc bfc" id="L2295" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L2296">                mEstimatedMm.getElementAt(2, 2) : null;</span>
     }
 
     /**
@@ -2299,8 +2302,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated x-y cross-coupling error or null if not available.
      */
     public Double getEstimatedMxy() {
-<span class="fc bfc" id="L2302" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
-<span class="fc" id="L2303">                mEstimatedMm.getElementAt(0, 1) : null;</span>
+<span class="fc bfc" id="L2305" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L2306">                mEstimatedMm.getElementAt(0, 1) : null;</span>
     }
 
     /**
@@ -2309,8 +2312,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated x-z cross-coupling error or null if not available.
      */
     public Double getEstimatedMxz() {
-<span class="fc bfc" id="L2312" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
-<span class="fc" id="L2313">                mEstimatedMm.getElementAt(0, 2) : null;</span>
+<span class="fc bfc" id="L2315" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L2316">                mEstimatedMm.getElementAt(0, 2) : null;</span>
     }
 
     /**
@@ -2319,8 +2322,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated y-x cross-coupling error or null if not available.
      */
     public Double getEstimatedMyx() {
-<span class="fc bfc" id="L2322" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
-<span class="fc" id="L2323">                mEstimatedMm.getElementAt(1, 0) : null;</span>
+<span class="fc bfc" id="L2325" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L2326">                mEstimatedMm.getElementAt(1, 0) : null;</span>
     }
 
     /**
@@ -2329,8 +2332,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated y-z cross-coupling error or null if not available.
      */
     public Double getEstimatedMyz() {
-<span class="fc bfc" id="L2332" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
-<span class="fc" id="L2333">                mEstimatedMm.getElementAt(1, 2) : null;</span>
+<span class="fc bfc" id="L2335" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L2336">                mEstimatedMm.getElementAt(1, 2) : null;</span>
     }
 
     /**
@@ -2339,8 +2342,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated z-x cross-coupling error or null if not available.
      */
     public Double getEstimatedMzx() {
-<span class="fc bfc" id="L2342" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
-<span class="fc" id="L2343">                mEstimatedMm.getElementAt(2, 0) : null;</span>
+<span class="fc bfc" id="L2345" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L2346">                mEstimatedMm.getElementAt(2, 0) : null;</span>
     }
 
     /**
@@ -2349,8 +2352,8 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated z-y cross-coupling error or null if not available.
      */
     public Double getEstimatedMzy() {
-<span class="fc bfc" id="L2352" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
-<span class="fc" id="L2353">                mEstimatedMm.getElementAt(2, 1) : null;</span>
+<span class="fc bfc" id="L2355" title="All 2 branches covered.">        return mEstimatedMm != null ?</span>
+<span class="fc" id="L2356">                mEstimatedMm.getElementAt(2, 1) : null;</span>
     }
 
     /**
@@ -2359,7 +2362,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated covariance matrix for estimated position.
      */
     public Matrix getEstimatedCovariance() {
-<span class="fc" id="L2362">        return mEstimatedCovariance;</span>
+<span class="fc" id="L2365">        return mEstimatedCovariance;</span>
     }
 
     /**
@@ -2368,7 +2371,7 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return estimated chi square value.
      */
     public double getEstimatedChiSq() {
-<span class="fc" id="L2371">        return mEstimatedChiSq;</span>
+<span class="fc" id="L2374">        return mEstimatedChiSq;</span>
     }
 
     /**
@@ -2380,46 +2383,46 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
     private void setInputData() throws WrongSizeException, IOException {
 
         final WMMEarthMagneticFluxDensityEstimator wmmEstimator;
-<span class="pc bpc" id="L2383" title="1 of 2 branches missed.">        if (mMagneticModel != null) {</span>
-<span class="nc" id="L2384">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator(mMagneticModel);</span>
+<span class="pc bpc" id="L2386" title="1 of 2 branches missed.">        if (mMagneticModel != null) {</span>
+<span class="nc" id="L2387">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator(mMagneticModel);</span>
         } else {
-<span class="fc" id="L2386">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator();</span>
+<span class="fc" id="L2389">            wmmEstimator = new WMMEarthMagneticFluxDensityEstimator();</span>
         }
 
-<span class="fc" id="L2389">        final NEDPosition position = getNedPosition();</span>
-<span class="fc" id="L2390">        final NEDMagneticFluxDensity earthB = wmmEstimator.estimate(</span>
-<span class="fc" id="L2391">                position, mYear);</span>
-<span class="fc" id="L2392">        final double b = earthB.getNorm();</span>
-<span class="fc" id="L2393">        final double b2 = b * b;</span>
+<span class="fc" id="L2392">        final NEDPosition position = getNedPosition();</span>
+<span class="fc" id="L2393">        final NEDMagneticFluxDensity earthB = wmmEstimator.estimate(</span>
+<span class="fc" id="L2394">                position, mYear);</span>
+<span class="fc" id="L2395">        final double b = earthB.getNorm();</span>
+<span class="fc" id="L2396">        final double b2 = b * b;</span>
 
-<span class="fc" id="L2395">        final int numMeasurements = mMeasurements.size();</span>
-<span class="fc" id="L2396">        final Matrix x = new Matrix(numMeasurements,</span>
+<span class="fc" id="L2398">        final int numMeasurements = mMeasurements.size();</span>
+<span class="fc" id="L2399">        final Matrix x = new Matrix(numMeasurements,</span>
                 BodyMagneticFluxDensity.COMPONENTS);
-<span class="fc" id="L2398">        final double[] y = new double[numMeasurements];</span>
-<span class="fc" id="L2399">        final double[] specificForceStandardDeviations = new double[numMeasurements];</span>
-<span class="fc" id="L2400">        int i = 0;</span>
-<span class="fc bfc" id="L2401" title="All 2 branches covered.">        for (final StandardDeviationBodyMagneticFluxDensity measurement : mMeasurements) {</span>
-<span class="fc" id="L2402">            final BodyMagneticFluxDensity measuredMagneticFluxDensity =</span>
-<span class="fc" id="L2403">                    measurement.getMagneticFluxDensity();</span>
+<span class="fc" id="L2401">        final double[] y = new double[numMeasurements];</span>
+<span class="fc" id="L2402">        final double[] specificForceStandardDeviations = new double[numMeasurements];</span>
+<span class="fc" id="L2403">        int i = 0;</span>
+<span class="fc bfc" id="L2404" title="All 2 branches covered.">        for (final StandardDeviationBodyMagneticFluxDensity measurement : mMeasurements) {</span>
+<span class="fc" id="L2405">            final BodyMagneticFluxDensity measuredMagneticFluxDensity =</span>
+<span class="fc" id="L2406">                    measurement.getMagneticFluxDensity();</span>
 
-<span class="fc" id="L2405">            final double bmeasX = measuredMagneticFluxDensity.getBx();</span>
-<span class="fc" id="L2406">            final double bmeasY = measuredMagneticFluxDensity.getBy();</span>
-<span class="fc" id="L2407">            final double bmeasZ = measuredMagneticFluxDensity.getBz();</span>
+<span class="fc" id="L2408">            final double bmeasX = measuredMagneticFluxDensity.getBx();</span>
+<span class="fc" id="L2409">            final double bmeasY = measuredMagneticFluxDensity.getBy();</span>
+<span class="fc" id="L2410">            final double bmeasZ = measuredMagneticFluxDensity.getBz();</span>
 
-<span class="fc" id="L2409">            x.setElementAt(i, 0, bmeasX);</span>
-<span class="fc" id="L2410">            x.setElementAt(i, 1, bmeasY);</span>
-<span class="fc" id="L2411">            x.setElementAt(i, 2, bmeasZ);</span>
+<span class="fc" id="L2412">            x.setElementAt(i, 0, bmeasX);</span>
+<span class="fc" id="L2413">            x.setElementAt(i, 1, bmeasY);</span>
+<span class="fc" id="L2414">            x.setElementAt(i, 2, bmeasZ);</span>
 
-<span class="fc" id="L2413">            y[i] = b2;</span>
+<span class="fc" id="L2416">            y[i] = b2;</span>
 
-<span class="fc" id="L2415">            specificForceStandardDeviations[i] =</span>
-<span class="fc" id="L2416">                    measurement.getMagneticFluxDensityStandardDeviation();</span>
+<span class="fc" id="L2418">            specificForceStandardDeviations[i] =</span>
+<span class="fc" id="L2419">                    measurement.getMagneticFluxDensityStandardDeviation();</span>
 
-<span class="fc" id="L2418">            i++;</span>
-<span class="fc" id="L2419">        }</span>
+<span class="fc" id="L2421">            i++;</span>
+<span class="fc" id="L2422">        }</span>
 
-<span class="fc" id="L2421">        mFitter.setInputData(x, y, specificForceStandardDeviations);</span>
-<span class="fc" id="L2422">    }</span>
+<span class="fc" id="L2424">        mFitter.setInputData(x, y, specificForceStandardDeviations);</span>
+<span class="fc" id="L2425">    }</span>
 
     /**
      * Internal method to perform general calibration.
@@ -2473,47 +2476,47 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
         //     [m21 	m22 	m23]
         //     [m31 	m32 	m33]
 
-<span class="fc" id="L2476">        final GradientEstimator gradientEstimator = new GradientEstimator(</span>
-<span class="fc" id="L2477">                new MultiDimensionFunctionEvaluatorListener() {</span>
+<span class="fc" id="L2479">        final GradientEstimator gradientEstimator = new GradientEstimator(</span>
+<span class="fc" id="L2480">                new MultiDimensionFunctionEvaluatorListener() {</span>
                     @Override
                     public double evaluate(double[] point) throws EvaluationException {
-<span class="fc" id="L2480">                        return evaluateGeneral(point);</span>
+<span class="fc" id="L2483">                        return evaluateGeneral(point);</span>
                     }
                 });
 
-<span class="fc" id="L2484">        final Matrix initialM = Matrix.identity(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc" id="L2487">        final Matrix initialM = Matrix.identity(BodyMagneticFluxDensity.COMPONENTS,</span>
                 BodyMagneticFluxDensity.COMPONENTS);
-<span class="fc" id="L2486">        initialM.add(getInitialMm());</span>
+<span class="fc" id="L2489">        initialM.add(getInitialMm());</span>
 
-<span class="fc" id="L2488">        final Matrix invInitialM = Utils.inverse(initialM);</span>
-<span class="fc" id="L2489">        final Matrix initialBm = getInitialHardIronAsMatrix();</span>
-<span class="fc" id="L2490">        final Matrix initialB = invInitialM.multiplyAndReturnNew(initialBm);</span>
+<span class="fc" id="L2491">        final Matrix invInitialM = Utils.inverse(initialM);</span>
+<span class="fc" id="L2492">        final Matrix initialBm = getInitialHardIronAsMatrix();</span>
+<span class="fc" id="L2493">        final Matrix initialB = invInitialM.multiplyAndReturnNew(initialBm);</span>
 
-<span class="fc" id="L2492">        mFitter.setFunctionEvaluator(</span>
-<span class="fc" id="L2493">                new LevenbergMarquardtMultiDimensionFunctionEvaluator() {</span>
+<span class="fc" id="L2495">        mFitter.setFunctionEvaluator(</span>
+<span class="fc" id="L2496">                new LevenbergMarquardtMultiDimensionFunctionEvaluator() {</span>
                     @Override
                     public int getNumberOfDimensions() {
                         // Input points are measured magnetic flux density coordinates
-<span class="fc" id="L2497">                        return BodyMagneticFluxDensity.COMPONENTS;</span>
+<span class="fc" id="L2500">                        return BodyMagneticFluxDensity.COMPONENTS;</span>
                     }
 
                     @Override
                     public double[] createInitialParametersArray() {
-<span class="fc" id="L2502">                        final double[] initial = new double[GENERAL_UNKNOWNS];</span>
+<span class="fc" id="L2505">                        final double[] initial = new double[GENERAL_UNKNOWNS];</span>
 
                         // biases b
-<span class="fc bfc" id="L2505" title="All 2 branches covered.">                        for (int i = 0; i &lt; BodyMagneticFluxDensity.COMPONENTS; i++) {</span>
-<span class="fc" id="L2506">                            initial[i] = initialB.getElementAtIndex(i);</span>
+<span class="fc bfc" id="L2508" title="All 2 branches covered.">                        for (int i = 0; i &lt; BodyMagneticFluxDensity.COMPONENTS; i++) {</span>
+<span class="fc" id="L2509">                            initial[i] = initialB.getElementAtIndex(i);</span>
                         }
 
                         // cross coupling errors M
-<span class="fc" id="L2510">                        final int num = BodyMagneticFluxDensity.COMPONENTS</span>
+<span class="fc" id="L2513">                        final int num = BodyMagneticFluxDensity.COMPONENTS</span>
                                 * BodyMagneticFluxDensity.COMPONENTS;
-<span class="fc bfc" id="L2512" title="All 2 branches covered.">                        for (int i = 0, j = BodyMagneticFluxDensity.COMPONENTS; i &lt; num; i++, j++) {</span>
-<span class="fc" id="L2513">                            initial[j] = initialM.getElementAtIndex(i);</span>
+<span class="fc bfc" id="L2515" title="All 2 branches covered.">                        for (int i = 0, j = BodyMagneticFluxDensity.COMPONENTS; i &lt; num; i++, j++) {</span>
+<span class="fc" id="L2516">                            initial[j] = initialM.getElementAtIndex(i);</span>
                         }
 
-<span class="fc" id="L2516">                        return initial;</span>
+<span class="fc" id="L2519">                        return initial;</span>
                     }
 
                     @Override
@@ -2521,60 +2524,60 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
                                            final double[] params, final double[] derivatives)
                             throws EvaluationException {
 
-<span class="fc" id="L2524">                        mBmeasX = point[0];</span>
-<span class="fc" id="L2525">                        mBmeasY = point[1];</span>
-<span class="fc" id="L2526">                        mBmeasZ = point[2];</span>
+<span class="fc" id="L2527">                        mBmeasX = point[0];</span>
+<span class="fc" id="L2528">                        mBmeasY = point[1];</span>
+<span class="fc" id="L2529">                        mBmeasZ = point[2];</span>
 
-<span class="fc" id="L2528">                        gradientEstimator.gradient(params, derivatives);</span>
+<span class="fc" id="L2531">                        gradientEstimator.gradient(params, derivatives);</span>
 
-<span class="fc" id="L2530">                        return evaluateGeneral(params);</span>
+<span class="fc" id="L2533">                        return evaluateGeneral(params);</span>
                     }
                 });
 
-<span class="fc" id="L2534">        setInputData();</span>
+<span class="fc" id="L2537">        setInputData();</span>
 
-<span class="fc" id="L2536">        mFitter.fit();</span>
+<span class="fc" id="L2539">        mFitter.fit();</span>
 
-<span class="fc" id="L2538">        final double[] result = mFitter.getA();</span>
+<span class="fc" id="L2541">        final double[] result = mFitter.getA();</span>
 
-<span class="fc" id="L2540">        final double bx = result[0];</span>
-<span class="fc" id="L2541">        final double by = result[1];</span>
-<span class="fc" id="L2542">        final double bz = result[2];</span>
+<span class="fc" id="L2543">        final double bx = result[0];</span>
+<span class="fc" id="L2544">        final double by = result[1];</span>
+<span class="fc" id="L2545">        final double bz = result[2];</span>
 
-<span class="fc" id="L2544">        final double m11 = result[3];</span>
-<span class="fc" id="L2545">        final double m21 = result[4];</span>
-<span class="fc" id="L2546">        final double m31 = result[5];</span>
+<span class="fc" id="L2547">        final double m11 = result[3];</span>
+<span class="fc" id="L2548">        final double m21 = result[4];</span>
+<span class="fc" id="L2549">        final double m31 = result[5];</span>
 
-<span class="fc" id="L2548">        final double m12 = result[6];</span>
-<span class="fc" id="L2549">        final double m22 = result[7];</span>
-<span class="fc" id="L2550">        final double m32 = result[8];</span>
+<span class="fc" id="L2551">        final double m12 = result[6];</span>
+<span class="fc" id="L2552">        final double m22 = result[7];</span>
+<span class="fc" id="L2553">        final double m32 = result[8];</span>
 
-<span class="fc" id="L2552">        final double m13 = result[9];</span>
-<span class="fc" id="L2553">        final double m23 = result[10];</span>
-<span class="fc" id="L2554">        final double m33 = result[11];</span>
+<span class="fc" id="L2555">        final double m13 = result[9];</span>
+<span class="fc" id="L2556">        final double m23 = result[10];</span>
+<span class="fc" id="L2557">        final double m33 = result[11];</span>
 
-<span class="fc" id="L2556">        final Matrix b = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc" id="L2559">        final Matrix b = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                 1);
-<span class="fc" id="L2558">        b.setElementAtIndex(0, bx);</span>
-<span class="fc" id="L2559">        b.setElementAtIndex(1, by);</span>
-<span class="fc" id="L2560">        b.setElementAtIndex(2, bz);</span>
+<span class="fc" id="L2561">        b.setElementAtIndex(0, bx);</span>
+<span class="fc" id="L2562">        b.setElementAtIndex(1, by);</span>
+<span class="fc" id="L2563">        b.setElementAtIndex(2, bz);</span>
 
-<span class="fc" id="L2562">        final Matrix m = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc" id="L2565">        final Matrix m = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                 BodyMagneticFluxDensity.COMPONENTS);
-<span class="fc" id="L2564">        m.setElementAtIndex(0, m11);</span>
-<span class="fc" id="L2565">        m.setElementAtIndex(1, m21);</span>
-<span class="fc" id="L2566">        m.setElementAtIndex(2, m31);</span>
+<span class="fc" id="L2567">        m.setElementAtIndex(0, m11);</span>
+<span class="fc" id="L2568">        m.setElementAtIndex(1, m21);</span>
+<span class="fc" id="L2569">        m.setElementAtIndex(2, m31);</span>
 
-<span class="fc" id="L2568">        m.setElementAtIndex(3, m12);</span>
-<span class="fc" id="L2569">        m.setElementAtIndex(4, m22);</span>
-<span class="fc" id="L2570">        m.setElementAtIndex(5, m32);</span>
+<span class="fc" id="L2571">        m.setElementAtIndex(3, m12);</span>
+<span class="fc" id="L2572">        m.setElementAtIndex(4, m22);</span>
+<span class="fc" id="L2573">        m.setElementAtIndex(5, m32);</span>
 
-<span class="fc" id="L2572">        m.setElementAtIndex(6, m13);</span>
-<span class="fc" id="L2573">        m.setElementAtIndex(7, m23);</span>
-<span class="fc" id="L2574">        m.setElementAtIndex(8, m33);</span>
+<span class="fc" id="L2575">        m.setElementAtIndex(6, m13);</span>
+<span class="fc" id="L2576">        m.setElementAtIndex(7, m23);</span>
+<span class="fc" id="L2577">        m.setElementAtIndex(8, m33);</span>
 
-<span class="fc" id="L2576">        setResult(m, b);</span>
-<span class="fc" id="L2577">    }</span>
+<span class="fc" id="L2579">        setResult(m, b);</span>
+<span class="fc" id="L2580">    }</span>
 
     /**
      * Internal method to perform calibration when common z-axis is assumed for both
@@ -2630,57 +2633,57 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
         //     [0 	 	0 		m33]
 
 
-<span class="fc" id="L2633">        final GradientEstimator gradientEstimator = new GradientEstimator(</span>
-<span class="fc" id="L2634">                new MultiDimensionFunctionEvaluatorListener() {</span>
+<span class="fc" id="L2636">        final GradientEstimator gradientEstimator = new GradientEstimator(</span>
+<span class="fc" id="L2637">                new MultiDimensionFunctionEvaluatorListener() {</span>
                     @Override
                     public double evaluate(double[] point) throws EvaluationException {
-<span class="fc" id="L2637">                        return evaluateCommonAxis(point);</span>
+<span class="fc" id="L2640">                        return evaluateCommonAxis(point);</span>
                     }
                 });
 
-<span class="fc" id="L2641">        final Matrix initialM = Matrix.identity(</span>
+<span class="fc" id="L2644">        final Matrix initialM = Matrix.identity(</span>
                 BodyMagneticFluxDensity.COMPONENTS,
                 BodyMagneticFluxDensity.COMPONENTS);
-<span class="fc" id="L2644">        initialM.add(getInitialMm());</span>
+<span class="fc" id="L2647">        initialM.add(getInitialMm());</span>
 
         // Force initial M to be upper diagonal
-<span class="fc" id="L2647">        initialM.setElementAt(1, 0, 0.0);</span>
-<span class="fc" id="L2648">        initialM.setElementAt(2, 0, 0.0);</span>
-<span class="fc" id="L2649">        initialM.setElementAt(2, 1, 0.0);</span>
+<span class="fc" id="L2650">        initialM.setElementAt(1, 0, 0.0);</span>
+<span class="fc" id="L2651">        initialM.setElementAt(2, 0, 0.0);</span>
+<span class="fc" id="L2652">        initialM.setElementAt(2, 1, 0.0);</span>
 
-<span class="fc" id="L2651">        final Matrix invInitialM = Utils.inverse(initialM);</span>
-<span class="fc" id="L2652">        final Matrix initialBm = getInitialHardIronAsMatrix();</span>
-<span class="fc" id="L2653">        final Matrix initialB = invInitialM.multiplyAndReturnNew(initialBm);</span>
+<span class="fc" id="L2654">        final Matrix invInitialM = Utils.inverse(initialM);</span>
+<span class="fc" id="L2655">        final Matrix initialBm = getInitialHardIronAsMatrix();</span>
+<span class="fc" id="L2656">        final Matrix initialB = invInitialM.multiplyAndReturnNew(initialBm);</span>
 
-<span class="fc" id="L2655">        mFitter.setFunctionEvaluator(</span>
-<span class="fc" id="L2656">                new LevenbergMarquardtMultiDimensionFunctionEvaluator() {</span>
+<span class="fc" id="L2658">        mFitter.setFunctionEvaluator(</span>
+<span class="fc" id="L2659">                new LevenbergMarquardtMultiDimensionFunctionEvaluator() {</span>
                     @Override
                     public int getNumberOfDimensions() {
                         // Input points are measured magnetic flux density coordinates
-<span class="fc" id="L2660">                        return BodyKinematics.COMPONENTS;</span>
+<span class="fc" id="L2663">                        return BodyKinematics.COMPONENTS;</span>
                     }
 
                     @Override
                     public double[] createInitialParametersArray() {
-<span class="fc" id="L2665">                        final double[] initial = new double[COMMON_Z_AXIS_UNKNOWNS];</span>
+<span class="fc" id="L2668">                        final double[] initial = new double[COMMON_Z_AXIS_UNKNOWNS];</span>
 
                         // biases b
-<span class="fc bfc" id="L2668" title="All 2 branches covered.">                        for (int i = 0; i &lt; BodyMagneticFluxDensity.COMPONENTS; i++) {</span>
-<span class="fc" id="L2669">                            initial[i] = initialB.getElementAtIndex(i);</span>
+<span class="fc bfc" id="L2671" title="All 2 branches covered.">                        for (int i = 0; i &lt; BodyMagneticFluxDensity.COMPONENTS; i++) {</span>
+<span class="fc" id="L2672">                            initial[i] = initialB.getElementAtIndex(i);</span>
                         }
 
                         // upper diagonal cross coupling errors M
-<span class="fc" id="L2673">                        int k = BodyMagneticFluxDensity.COMPONENTS;</span>
-<span class="fc bfc" id="L2674" title="All 2 branches covered.">                        for (int j = 0; j &lt; BodyMagneticFluxDensity.COMPONENTS; j++) {</span>
-<span class="fc bfc" id="L2675" title="All 2 branches covered.">                            for (int i = 0; i &lt; BodyMagneticFluxDensity.COMPONENTS; i++) {</span>
-<span class="fc bfc" id="L2676" title="All 2 branches covered.">                                if (i &lt;= j) {</span>
-<span class="fc" id="L2677">                                    initial[k] = initialM.getElementAt(i, j);</span>
-<span class="fc" id="L2678">                                    k++;</span>
+<span class="fc" id="L2676">                        int k = BodyMagneticFluxDensity.COMPONENTS;</span>
+<span class="fc bfc" id="L2677" title="All 2 branches covered.">                        for (int j = 0; j &lt; BodyMagneticFluxDensity.COMPONENTS; j++) {</span>
+<span class="fc bfc" id="L2678" title="All 2 branches covered.">                            for (int i = 0; i &lt; BodyMagneticFluxDensity.COMPONENTS; i++) {</span>
+<span class="fc bfc" id="L2679" title="All 2 branches covered.">                                if (i &lt;= j) {</span>
+<span class="fc" id="L2680">                                    initial[k] = initialM.getElementAt(i, j);</span>
+<span class="fc" id="L2681">                                    k++;</span>
                                 }
                             }
                         }
 
-<span class="fc" id="L2683">                        return initial;</span>
+<span class="fc" id="L2686">                        return initial;</span>
                     }
 
                     @Override
@@ -2688,57 +2691,57 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
                                            final double[] params, final double[] derivatives)
                             throws EvaluationException {
 
-<span class="fc" id="L2691">                        mBmeasX = point[0];</span>
-<span class="fc" id="L2692">                        mBmeasY = point[1];</span>
-<span class="fc" id="L2693">                        mBmeasZ = point[2];</span>
+<span class="fc" id="L2694">                        mBmeasX = point[0];</span>
+<span class="fc" id="L2695">                        mBmeasY = point[1];</span>
+<span class="fc" id="L2696">                        mBmeasZ = point[2];</span>
 
-<span class="fc" id="L2695">                        gradientEstimator.gradient(params, derivatives);</span>
+<span class="fc" id="L2698">                        gradientEstimator.gradient(params, derivatives);</span>
 
-<span class="fc" id="L2697">                        return evaluateCommonAxis(params);</span>
+<span class="fc" id="L2700">                        return evaluateCommonAxis(params);</span>
                     }
                 });
 
-<span class="fc" id="L2701">        setInputData();</span>
+<span class="fc" id="L2704">        setInputData();</span>
 
-<span class="fc" id="L2703">        mFitter.fit();</span>
+<span class="fc" id="L2706">        mFitter.fit();</span>
 
-<span class="fc" id="L2705">        final double[] result = mFitter.getA();</span>
+<span class="fc" id="L2708">        final double[] result = mFitter.getA();</span>
 
-<span class="fc" id="L2707">        final double bx = result[0];</span>
-<span class="fc" id="L2708">        final double by = result[1];</span>
-<span class="fc" id="L2709">        final double bz = result[2];</span>
+<span class="fc" id="L2710">        final double bx = result[0];</span>
+<span class="fc" id="L2711">        final double by = result[1];</span>
+<span class="fc" id="L2712">        final double bz = result[2];</span>
 
-<span class="fc" id="L2711">        final double m11 = result[3];</span>
+<span class="fc" id="L2714">        final double m11 = result[3];</span>
 
-<span class="fc" id="L2713">        final double m12 = result[4];</span>
-<span class="fc" id="L2714">        final double m22 = result[5];</span>
+<span class="fc" id="L2716">        final double m12 = result[4];</span>
+<span class="fc" id="L2717">        final double m22 = result[5];</span>
 
-<span class="fc" id="L2716">        final double m13 = result[6];</span>
-<span class="fc" id="L2717">        final double m23 = result[7];</span>
-<span class="fc" id="L2718">        final double m33 = result[8];</span>
+<span class="fc" id="L2719">        final double m13 = result[6];</span>
+<span class="fc" id="L2720">        final double m23 = result[7];</span>
+<span class="fc" id="L2721">        final double m33 = result[8];</span>
 
-<span class="fc" id="L2720">        final Matrix b = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc" id="L2723">        final Matrix b = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                 1);
-<span class="fc" id="L2722">        b.setElementAtIndex(0, bx);</span>
-<span class="fc" id="L2723">        b.setElementAtIndex(1, by);</span>
-<span class="fc" id="L2724">        b.setElementAtIndex(2, bz);</span>
+<span class="fc" id="L2725">        b.setElementAtIndex(0, bx);</span>
+<span class="fc" id="L2726">        b.setElementAtIndex(1, by);</span>
+<span class="fc" id="L2727">        b.setElementAtIndex(2, bz);</span>
 
-<span class="fc" id="L2726">        final Matrix m = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc" id="L2729">        final Matrix m = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                 BodyMagneticFluxDensity.COMPONENTS);
-<span class="fc" id="L2728">        m.setElementAtIndex(0, m11);</span>
-<span class="fc" id="L2729">        m.setElementAtIndex(1, 0.0);</span>
-<span class="fc" id="L2730">        m.setElementAtIndex(2, 0.0);</span>
+<span class="fc" id="L2731">        m.setElementAtIndex(0, m11);</span>
+<span class="fc" id="L2732">        m.setElementAtIndex(1, 0.0);</span>
+<span class="fc" id="L2733">        m.setElementAtIndex(2, 0.0);</span>
 
-<span class="fc" id="L2732">        m.setElementAtIndex(3, m12);</span>
-<span class="fc" id="L2733">        m.setElementAtIndex(4, m22);</span>
-<span class="fc" id="L2734">        m.setElementAtIndex(5, 0.0);</span>
+<span class="fc" id="L2735">        m.setElementAtIndex(3, m12);</span>
+<span class="fc" id="L2736">        m.setElementAtIndex(4, m22);</span>
+<span class="fc" id="L2737">        m.setElementAtIndex(5, 0.0);</span>
 
-<span class="fc" id="L2736">        m.setElementAtIndex(6, m13);</span>
-<span class="fc" id="L2737">        m.setElementAtIndex(7, m23);</span>
-<span class="fc" id="L2738">        m.setElementAtIndex(8, m33);</span>
+<span class="fc" id="L2739">        m.setElementAtIndex(6, m13);</span>
+<span class="fc" id="L2740">        m.setElementAtIndex(7, m23);</span>
+<span class="fc" id="L2741">        m.setElementAtIndex(8, m33);</span>
 
-<span class="fc" id="L2740">        setResult(m, b);</span>
-<span class="fc" id="L2741">    }</span>
+<span class="fc" id="L2743">        setResult(m, b);</span>
+<span class="fc" id="L2744">    }</span>
 
     /**
      * Makes proper conversion of internal cross-coupling and bias matrices.
@@ -2756,28 +2759,28 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
         // Mm = M - I
         // bm = M*b
 
-<span class="fc bfc" id="L2759" title="All 2 branches covered.">        if (mEstimatedHardIron == null) {</span>
-<span class="fc" id="L2760">            mEstimatedHardIron = new double[</span>
+<span class="fc bfc" id="L2762" title="All 2 branches covered.">        if (mEstimatedHardIron == null) {</span>
+<span class="fc" id="L2763">            mEstimatedHardIron = new double[</span>
                     BodyMagneticFluxDensity.COMPONENTS];
         }
 
-<span class="fc" id="L2764">        final Matrix bm = m.multiplyAndReturnNew(b);</span>
-<span class="fc" id="L2765">        bm.toArray(mEstimatedHardIron);</span>
+<span class="fc" id="L2767">        final Matrix bm = m.multiplyAndReturnNew(b);</span>
+<span class="fc" id="L2768">        bm.toArray(mEstimatedHardIron);</span>
 
-<span class="fc bfc" id="L2767" title="All 2 branches covered.">        if (mEstimatedMm == null) {</span>
-<span class="fc" id="L2768">            mEstimatedMm = m;</span>
+<span class="fc bfc" id="L2770" title="All 2 branches covered.">        if (mEstimatedMm == null) {</span>
+<span class="fc" id="L2771">            mEstimatedMm = m;</span>
         } else {
-<span class="fc" id="L2770">            mEstimatedMm.copyFrom(m);</span>
+<span class="fc" id="L2773">            mEstimatedMm.copyFrom(m);</span>
         }
 
-<span class="fc bfc" id="L2773" title="All 2 branches covered.">        for (int i = 0; i &lt; BodyMagneticFluxDensity.COMPONENTS; i++) {</span>
-<span class="fc" id="L2774">            mEstimatedMm.setElementAt(i, i,</span>
-<span class="fc" id="L2775">                    mEstimatedMm.getElementAt(i, i) - 1.0);</span>
+<span class="fc bfc" id="L2776" title="All 2 branches covered.">        for (int i = 0; i &lt; BodyMagneticFluxDensity.COMPONENTS; i++) {</span>
+<span class="fc" id="L2777">            mEstimatedMm.setElementAt(i, i,</span>
+<span class="fc" id="L2778">                    mEstimatedMm.getElementAt(i, i) - 1.0);</span>
         }
 
-<span class="fc" id="L2778">        mEstimatedCovariance = mFitter.getCovar();</span>
-<span class="fc" id="L2779">        mEstimatedChiSq = mFitter.getChisq();</span>
-<span class="fc" id="L2780">    }</span>
+<span class="fc" id="L2781">        mEstimatedCovariance = mFitter.getCovar();</span>
+<span class="fc" id="L2782">        mEstimatedChiSq = mFitter.getChisq();</span>
+<span class="fc" id="L2783">    }</span>
 
     /**
      * Computes estimated true magnetic flux density squared norm using current measured
@@ -2791,23 +2794,23 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @throws EvaluationException if there are numerical instabilities.
      */
     private double evaluateGeneral(final double[] params) throws EvaluationException {
-<span class="fc" id="L2794">        final double bx = params[0];</span>
-<span class="fc" id="L2795">        final double by = params[1];</span>
-<span class="fc" id="L2796">        final double bz = params[2];</span>
+<span class="fc" id="L2797">        final double bx = params[0];</span>
+<span class="fc" id="L2798">        final double by = params[1];</span>
+<span class="fc" id="L2799">        final double bz = params[2];</span>
 
-<span class="fc" id="L2798">        final double m11 = params[3];</span>
-<span class="fc" id="L2799">        final double m21 = params[4];</span>
-<span class="fc" id="L2800">        final double m31 = params[5];</span>
+<span class="fc" id="L2801">        final double m11 = params[3];</span>
+<span class="fc" id="L2802">        final double m21 = params[4];</span>
+<span class="fc" id="L2803">        final double m31 = params[5];</span>
 
-<span class="fc" id="L2802">        final double m12 = params[6];</span>
-<span class="fc" id="L2803">        final double m22 = params[7];</span>
-<span class="fc" id="L2804">        final double m32 = params[8];</span>
+<span class="fc" id="L2805">        final double m12 = params[6];</span>
+<span class="fc" id="L2806">        final double m22 = params[7];</span>
+<span class="fc" id="L2807">        final double m32 = params[8];</span>
 
-<span class="fc" id="L2806">        final double m13 = params[9];</span>
-<span class="fc" id="L2807">        final double m23 = params[10];</span>
-<span class="fc" id="L2808">        final double m33 = params[11];</span>
+<span class="fc" id="L2809">        final double m13 = params[9];</span>
+<span class="fc" id="L2810">        final double m23 = params[10];</span>
+<span class="fc" id="L2811">        final double m33 = params[11];</span>
 
-<span class="fc" id="L2810">        return evaluate(bx, by, bz, m11, m21, m31, m12, m22, m32,</span>
+<span class="fc" id="L2813">        return evaluate(bx, by, bz, m11, m21, m31, m12, m22, m32,</span>
                 m13, m23, m33);
     }
 
@@ -2823,20 +2826,20 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @throws EvaluationException if there are numerical instabilities.
      */
     private double evaluateCommonAxis(final double[] params) throws EvaluationException {
-<span class="fc" id="L2826">        final double bx = params[0];</span>
-<span class="fc" id="L2827">        final double by = params[1];</span>
-<span class="fc" id="L2828">        final double bz = params[2];</span>
+<span class="fc" id="L2829">        final double bx = params[0];</span>
+<span class="fc" id="L2830">        final double by = params[1];</span>
+<span class="fc" id="L2831">        final double bz = params[2];</span>
 
-<span class="fc" id="L2830">        final double m11 = params[3];</span>
+<span class="fc" id="L2833">        final double m11 = params[3];</span>
 
-<span class="fc" id="L2832">        final double m12 = params[4];</span>
-<span class="fc" id="L2833">        final double m22 = params[5];</span>
+<span class="fc" id="L2835">        final double m12 = params[4];</span>
+<span class="fc" id="L2836">        final double m22 = params[5];</span>
 
-<span class="fc" id="L2835">        final double m13 = params[6];</span>
-<span class="fc" id="L2836">        final double m23 = params[7];</span>
-<span class="fc" id="L2837">        final double m33 = params[8];</span>
+<span class="fc" id="L2838">        final double m13 = params[6];</span>
+<span class="fc" id="L2839">        final double m23 = params[7];</span>
+<span class="fc" id="L2840">        final double m33 = params[8];</span>
 
-<span class="fc" id="L2839">        return evaluate(bx, by, bz, m11, 0.0, 0.0, m12, m22, 0.0,</span>
+<span class="fc" id="L2842">        return evaluate(bx, by, bz, m11, 0.0, 0.0, m12, m22, 0.0,</span>
                 m13, m23, m33);
     }
 
@@ -2872,57 +2875,57 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
         // btrue = M^-1*bmeas - b
 
         try {
-<span class="fc bfc" id="L2875" title="All 2 branches covered.">            if (mBmeas == null) {</span>
-<span class="fc" id="L2876">                mBmeas = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc bfc" id="L2878" title="All 2 branches covered.">            if (mBmeas == null) {</span>
+<span class="fc" id="L2879">                mBmeas = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                         1);
             }
-<span class="fc bfc" id="L2879" title="All 2 branches covered.">            if (mM == null) {</span>
-<span class="fc" id="L2880">                mM = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc bfc" id="L2882" title="All 2 branches covered.">            if (mM == null) {</span>
+<span class="fc" id="L2883">                mM = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                         BodyMagneticFluxDensity.COMPONENTS);
             }
-<span class="fc bfc" id="L2883" title="All 2 branches covered.">            if (mInvM == null) {</span>
-<span class="fc" id="L2884">                mInvM = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc bfc" id="L2886" title="All 2 branches covered.">            if (mInvM == null) {</span>
+<span class="fc" id="L2887">                mInvM = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                         BodyMagneticFluxDensity.COMPONENTS);
             }
-<span class="fc bfc" id="L2887" title="All 2 branches covered.">            if (mB == null) {</span>
-<span class="fc" id="L2888">                mB = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc bfc" id="L2890" title="All 2 branches covered.">            if (mB == null) {</span>
+<span class="fc" id="L2891">                mB = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                         1);
             }
-<span class="fc bfc" id="L2891" title="All 2 branches covered.">            if (mBtrue == null) {</span>
-<span class="fc" id="L2892">                mBtrue = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
+<span class="fc bfc" id="L2894" title="All 2 branches covered.">            if (mBtrue == null) {</span>
+<span class="fc" id="L2895">                mBtrue = new Matrix(BodyMagneticFluxDensity.COMPONENTS,</span>
                         1);
             }
 
-<span class="fc" id="L2896">            mBmeas.setElementAtIndex(0, mBmeasX);</span>
-<span class="fc" id="L2897">            mBmeas.setElementAtIndex(1, mBmeasY);</span>
-<span class="fc" id="L2898">            mBmeas.setElementAtIndex(2, mBmeasZ);</span>
+<span class="fc" id="L2899">            mBmeas.setElementAtIndex(0, mBmeasX);</span>
+<span class="fc" id="L2900">            mBmeas.setElementAtIndex(1, mBmeasY);</span>
+<span class="fc" id="L2901">            mBmeas.setElementAtIndex(2, mBmeasZ);</span>
 
-<span class="fc" id="L2900">            mM.setElementAt(0, 0, m11);</span>
-<span class="fc" id="L2901">            mM.setElementAt(1, 0, m21);</span>
-<span class="fc" id="L2902">            mM.setElementAt(2, 0, m31);</span>
+<span class="fc" id="L2903">            mM.setElementAt(0, 0, m11);</span>
+<span class="fc" id="L2904">            mM.setElementAt(1, 0, m21);</span>
+<span class="fc" id="L2905">            mM.setElementAt(2, 0, m31);</span>
 
-<span class="fc" id="L2904">            mM.setElementAt(0, 1, m12);</span>
-<span class="fc" id="L2905">            mM.setElementAt(1, 1, m22);</span>
-<span class="fc" id="L2906">            mM.setElementAt(2, 1, m32);</span>
+<span class="fc" id="L2907">            mM.setElementAt(0, 1, m12);</span>
+<span class="fc" id="L2908">            mM.setElementAt(1, 1, m22);</span>
+<span class="fc" id="L2909">            mM.setElementAt(2, 1, m32);</span>
 
-<span class="fc" id="L2908">            mM.setElementAt(0, 2, m13);</span>
-<span class="fc" id="L2909">            mM.setElementAt(1, 2, m23);</span>
-<span class="fc" id="L2910">            mM.setElementAt(2, 2, m33);</span>
+<span class="fc" id="L2911">            mM.setElementAt(0, 2, m13);</span>
+<span class="fc" id="L2912">            mM.setElementAt(1, 2, m23);</span>
+<span class="fc" id="L2913">            mM.setElementAt(2, 2, m33);</span>
 
-<span class="fc" id="L2912">            Utils.inverse(mM, mInvM);</span>
+<span class="fc" id="L2915">            Utils.inverse(mM, mInvM);</span>
 
-<span class="fc" id="L2914">            mB.setElementAtIndex(0, bx);</span>
-<span class="fc" id="L2915">            mB.setElementAtIndex(1, by);</span>
-<span class="fc" id="L2916">            mB.setElementAtIndex(2, bz);</span>
+<span class="fc" id="L2917">            mB.setElementAtIndex(0, bx);</span>
+<span class="fc" id="L2918">            mB.setElementAtIndex(1, by);</span>
+<span class="fc" id="L2919">            mB.setElementAtIndex(2, bz);</span>
 
-<span class="fc" id="L2918">            mInvM.multiply(mBmeas, mBtrue);</span>
-<span class="fc" id="L2919">            mBtrue.subtract(mB);</span>
+<span class="fc" id="L2921">            mInvM.multiply(mBmeas, mBtrue);</span>
+<span class="fc" id="L2922">            mBtrue.subtract(mB);</span>
 
-<span class="fc" id="L2921">            final double norm = Utils.normF(mBtrue);</span>
-<span class="fc" id="L2922">            return norm * norm;</span>
+<span class="fc" id="L2924">            final double norm = Utils.normF(mBtrue);</span>
+<span class="fc" id="L2925">            return norm * norm;</span>
 
-<span class="nc" id="L2924">        } catch (final AlgebraException e) {</span>
-<span class="nc" id="L2925">            throw new EvaluationException(e);</span>
+<span class="nc" id="L2927">        } catch (final AlgebraException e) {</span>
+<span class="nc" id="L2928">            throw new EvaluationException(e);</span>
         }
     }
 
@@ -2934,13 +2937,13 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return converted value expressed in decimal years.
      */
     private static Double convertTime(final Long timestampMillis) {
-<span class="pc bpc" id="L2937" title="1 of 2 branches missed.">        if (timestampMillis == null) {</span>
-<span class="nc" id="L2938">            return null;</span>
+<span class="pc bpc" id="L2940" title="1 of 2 branches missed.">        if (timestampMillis == null) {</span>
+<span class="nc" id="L2941">            return null;</span>
         }
 
-<span class="fc" id="L2941">        final GregorianCalendar calendar = new GregorianCalendar();</span>
-<span class="fc" id="L2942">        calendar.setTimeInMillis(timestampMillis);</span>
-<span class="fc" id="L2943">        return convertTime(calendar);</span>
+<span class="fc" id="L2944">        final GregorianCalendar calendar = new GregorianCalendar();</span>
+<span class="fc" id="L2945">        calendar.setTimeInMillis(timestampMillis);</span>
+<span class="fc" id="L2946">        return convertTime(calendar);</span>
     }
 
     /**
@@ -2951,13 +2954,13 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return converted value expressed in decimal years.
      */
     private static Double convertTime(final Date date) {
-<span class="pc bpc" id="L2954" title="1 of 2 branches missed.">        if (date == null) {</span>
-<span class="nc" id="L2955">            return null;</span>
+<span class="pc bpc" id="L2957" title="1 of 2 branches missed.">        if (date == null) {</span>
+<span class="nc" id="L2958">            return null;</span>
         }
 
-<span class="fc" id="L2958">        final GregorianCalendar calendar = new GregorianCalendar();</span>
-<span class="fc" id="L2959">        calendar.setTime(date);</span>
-<span class="fc" id="L2960">        return convertTime(calendar);</span>
+<span class="fc" id="L2961">        final GregorianCalendar calendar = new GregorianCalendar();</span>
+<span class="fc" id="L2962">        calendar.setTime(date);</span>
+<span class="fc" id="L2963">        return convertTime(calendar);</span>
     }
 
     /**
@@ -2969,11 +2972,11 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return converted value expressed in decimal years.
      */
     private static Double convertTime(final GregorianCalendar calendar) {
-<span class="pc bpc" id="L2972" title="1 of 2 branches missed.">        if (calendar == null) {</span>
-<span class="nc" id="L2973">            return null;</span>
+<span class="pc bpc" id="L2975" title="1 of 2 branches missed.">        if (calendar == null) {</span>
+<span class="nc" id="L2976">            return null;</span>
         }
 
-<span class="fc" id="L2976">        return WMMEarthMagneticFluxDensityEstimator.convertTime(calendar);</span>
+<span class="fc" id="L2979">        return WMMEarthMagneticFluxDensityEstimator.convertTime(calendar);</span>
     }
 
     /**
@@ -2984,12 +2987,12 @@ public class KnownPositionAndInstantMagnetometerCalibrator {
      * @return converted position expressed in NED coordinates.
      */
     private static NEDPosition convertPosition(final ECEFPosition position) {
-<span class="fc" id="L2987">        final NEDVelocity velocity = new NEDVelocity();</span>
-<span class="fc" id="L2988">        final NEDPosition result = new NEDPosition();</span>
-<span class="fc" id="L2989">        ECEFtoNEDPositionVelocityConverter.convertECEFtoNED(</span>
-<span class="fc" id="L2990">                position.getX(), position.getY(), position.getZ(),</span>
+<span class="fc" id="L2990">        final NEDVelocity velocity = new NEDVelocity();</span>
+<span class="fc" id="L2991">        final NEDPosition result = new NEDPosition();</span>
+<span class="fc" id="L2992">        ECEFtoNEDPositionVelocityConverter.convertECEFtoNED(</span>
+<span class="fc" id="L2993">                position.getX(), position.getY(), position.getZ(),</span>
                 0.0, 0.0, 0.0, result, velocity);
-<span class="fc" id="L2992">        return result;</span>
+<span class="fc" id="L2995">        return result;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
