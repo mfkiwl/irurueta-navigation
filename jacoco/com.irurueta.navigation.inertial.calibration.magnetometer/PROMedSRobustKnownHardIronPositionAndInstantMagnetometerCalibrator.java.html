@@ -2110,7 +2110,7 @@ public class PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator 
      * @throws IllegalArgumentException if provided value is zero or negative.
      * @throws LockedException          if calibrator is currently running.
      */
-    public void setStopThreshold(double stopThreshold) throws LockedException {
+    public void setStopThreshold(final double stopThreshold) throws LockedException {
 <span class="fc bfc" id="L2114" title="All 2 branches covered.">        if (mRunning) {</span>
 <span class="fc" id="L2115">            throw new LockedException();</span>
         }
@@ -2142,7 +2142,7 @@ public class PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator 
      * @throws LockedException          if calibrator is currently running.
      */
     @Override
-    public void setQualityScores(double[] qualityScores)
+    public void setQualityScores(final double[] qualityScores)
             throws LockedException {
 <span class="pc bpc" id="L2147" title="1 of 2 branches missed.">        if (mRunning) {</span>
 <span class="nc" id="L2148">            throw new LockedException();</span>
@@ -2170,120 +2170,122 @@ public class PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator 
      * @throws CalibrationException if estimation fails for numerical reasons.
      */
     @Override
-    public void calibrate() throws LockedException, NotReadyException, CalibrationException {
-<span class="fc bfc" id="L2174" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L2175">            throw new LockedException();</span>
+    public void calibrate() throws LockedException, NotReadyException,
+            CalibrationException {
+<span class="fc bfc" id="L2175" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L2176">            throw new LockedException();</span>
         }
-<span class="pc bpc" id="L2177" title="1 of 2 branches missed.">        if (!isReady()) {</span>
-<span class="nc" id="L2178">            throw new NotReadyException();</span>
+<span class="pc bpc" id="L2178" title="1 of 2 branches missed.">        if (!isReady()) {</span>
+<span class="nc" id="L2179">            throw new NotReadyException();</span>
         }
 
-<span class="fc" id="L2181">        final PROMedSRobustEstimator&lt;Matrix&gt; innerEstimator =</span>
-<span class="fc" id="L2182">                new PROMedSRobustEstimator&lt;&gt;(new PROMedSRobustEstimatorListener&lt;Matrix&gt;() {</span>
+<span class="fc" id="L2182">        final PROMedSRobustEstimator&lt;Matrix&gt; innerEstimator =</span>
+<span class="fc" id="L2183">                new PROMedSRobustEstimator&lt;&gt;(new PROMedSRobustEstimatorListener&lt;Matrix&gt;() {</span>
                     @Override
                     public double[] getQualityScores() {
-<span class="fc" id="L2185">                        return mQualityScores;</span>
+<span class="fc" id="L2186">                        return mQualityScores;</span>
                     }
 
                     @Override
                     public double getThreshold() {
-<span class="fc" id="L2190">                        return mStopThreshold;</span>
+<span class="fc" id="L2191">                        return mStopThreshold;</span>
                     }
 
                     @Override
                     public int getTotalSamples() {
-<span class="fc" id="L2195">                        return mMeasurements.size();</span>
+<span class="fc" id="L2196">                        return mMeasurements.size();</span>
                     }
 
                     @Override
                     public int getSubsetSize() {
-<span class="fc" id="L2200">                        return mPreliminarySubsetSize;</span>
+<span class="fc" id="L2201">                        return mPreliminarySubsetSize;</span>
                     }
 
                     @Override
                     public void estimatePreliminarSolutions(
                             final int[] samplesIndices,
                             final List&lt;Matrix&gt; solutions) {
-<span class="fc" id="L2207">                        computePreliminarySolutions(samplesIndices, solutions);</span>
-<span class="fc" id="L2208">                    }</span>
+<span class="fc" id="L2208">                        computePreliminarySolutions(samplesIndices, solutions);</span>
+<span class="fc" id="L2209">                    }</span>
 
                     @Override
                     public double computeResidual(
                             final Matrix currentEstimation,
                             final int i) {
-<span class="fc" id="L2214">                        return computeError(mMeasurements.get(i), currentEstimation);</span>
+<span class="fc" id="L2215">                        return computeError(mMeasurements.get(i), currentEstimation);</span>
                     }
 
                     @Override
                     public boolean isReady() {
-<span class="fc" id="L2219">                        return PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator.this.isReady();</span>
+<span class="fc" id="L2220">                        return PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator.this.isReady();</span>
                     }
 
                     @Override
                     public void onEstimateStart(
                             final RobustEstimator&lt;Matrix&gt; estimator) {
-<span class="pc bpc" id="L2225" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L2226">                            mListener.onCalibrateStart(</span>
-                                    PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator.this);
-                        }
-<span class="fc" id="L2229">                    }</span>
+<span class="fc" id="L2226">                    }</span>
 
                     @Override
                     public void onEstimateEnd(
                             final RobustEstimator&lt;Matrix&gt; estimator) {
-<span class="pc bpc" id="L2234" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L2235">                            mListener.onCalibrateEnd(</span>
-                                    PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator.this);
-                        }
-<span class="fc" id="L2238">                    }</span>
+<span class="fc" id="L2231">                    }</span>
 
                     @Override
                     public void onEstimateNextIteration(
                             final RobustEstimator&lt;Matrix&gt; estimator, int iteration) {
-<span class="pc bpc" id="L2243" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L2244">                            mListener.onCalibrateNextIteration(</span>
+<span class="pc bpc" id="L2236" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L2237">                            mListener.onCalibrateNextIteration(</span>
                                     PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator.this,
                                     iteration);
                         }
-<span class="fc" id="L2248">                    }</span>
+<span class="fc" id="L2241">                    }</span>
 
                     @Override
                     public void onEstimateProgressChange(
                             final RobustEstimator&lt;Matrix&gt; estimator,
                             final float progress) {
-<span class="nc bnc" id="L2254" title="All 2 branches missed.">                        if (mListener != null) {</span>
-<span class="nc" id="L2255">                            mListener.onCalibrateProgressChange(</span>
+<span class="nc bnc" id="L2247" title="All 2 branches missed.">                        if (mListener != null) {</span>
+<span class="nc" id="L2248">                            mListener.onCalibrateProgressChange(</span>
                                     PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator.this,
                                     progress);
                         }
-<span class="nc" id="L2259">                    }</span>
+<span class="nc" id="L2252">                    }</span>
                 });
 
         try {
-<span class="fc" id="L2263">            mRunning = true;</span>
-<span class="fc" id="L2264">            mInliersData = null;</span>
+<span class="fc" id="L2256">            mRunning = true;</span>
 
-<span class="fc" id="L2266">            initialize();</span>
+<span class="pc bpc" id="L2258" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L2259">                mListener.onCalibrateStart(this);</span>
+            }
 
-<span class="fc" id="L2268">            innerEstimator.setUseInlierThresholds(true);</span>
-<span class="fc" id="L2269">            innerEstimator.setConfidence(mConfidence);</span>
-<span class="fc" id="L2270">            innerEstimator.setMaxIterations(mMaxIterations);</span>
-<span class="fc" id="L2271">            innerEstimator.setProgressDelta(mProgressDelta);</span>
-<span class="fc" id="L2272">            final Matrix preliminaryResult = innerEstimator.estimate();</span>
-<span class="fc" id="L2273">            mInliersData = innerEstimator.getInliersData();</span>
+<span class="fc" id="L2262">            mInliersData = null;</span>
 
-<span class="fc" id="L2275">            attemptRefine(preliminaryResult);</span>
+<span class="fc" id="L2264">            initialize();</span>
 
-<span class="nc" id="L2277">        } catch (com.irurueta.numerical.LockedException e) {</span>
-<span class="nc" id="L2278">            throw new LockedException(e);</span>
-<span class="nc" id="L2279">        } catch (com.irurueta.numerical.NotReadyException e) {</span>
-<span class="nc" id="L2280">            throw new NotReadyException(e);</span>
-<span class="nc" id="L2281">        } catch (RobustEstimatorException | IOException e) {</span>
-<span class="nc" id="L2282">            throw new CalibrationException(e);</span>
+<span class="fc" id="L2266">            innerEstimator.setUseInlierThresholds(true);</span>
+<span class="fc" id="L2267">            innerEstimator.setConfidence(mConfidence);</span>
+<span class="fc" id="L2268">            innerEstimator.setMaxIterations(mMaxIterations);</span>
+<span class="fc" id="L2269">            innerEstimator.setProgressDelta(mProgressDelta);</span>
+<span class="fc" id="L2270">            final Matrix preliminaryResult = innerEstimator.estimate();</span>
+<span class="fc" id="L2271">            mInliersData = innerEstimator.getInliersData();</span>
+
+<span class="fc" id="L2273">            attemptRefine(preliminaryResult);</span>
+
+<span class="pc bpc" id="L2275" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L2276">                mListener.onCalibrateEnd(this);</span>
+            }
+
+<span class="nc" id="L2279">        } catch (final com.irurueta.numerical.LockedException e) {</span>
+<span class="nc" id="L2280">            throw new LockedException(e);</span>
+<span class="nc" id="L2281">        } catch (final com.irurueta.numerical.NotReadyException e) {</span>
+<span class="nc" id="L2282">            throw new NotReadyException(e);</span>
+<span class="nc" id="L2283">        } catch (final RobustEstimatorException | IOException e) {</span>
+<span class="nc" id="L2284">            throw new CalibrationException(e);</span>
         } finally {
-<span class="fc" id="L2284">            mRunning = false;</span>
+<span class="fc" id="L2286">            mRunning = false;</span>
         }
-<span class="fc" id="L2286">    }</span>
+<span class="fc" id="L2288">    }</span>
 
     /**
      * Returns method being used for robust estimation.
@@ -2292,7 +2294,7 @@ public class PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator 
      */
     @Override
     public RobustEstimatorMethod getMethod() {
-<span class="fc" id="L2295">        return RobustEstimatorMethod.PROMedS;</span>
+<span class="fc" id="L2297">        return RobustEstimatorMethod.PROMedS;</span>
     }
 
     /**
@@ -2305,12 +2307,12 @@ public class PROMedSRobustKnownHardIronPositionAndInstantMagnetometerCalibrator 
      *                                  is smaller than 4 samples.
      */
     private void internalSetQualityScores(final double[] qualityScores) {
-<span class="pc bpc" id="L2308" title="1 of 4 branches missed.">        if (qualityScores == null ||</span>
+<span class="pc bpc" id="L2310" title="1 of 4 branches missed.">        if (qualityScores == null ||</span>
                 qualityScores.length &lt; MINIMUM_MEASUREMENTS_COMMON_Z_AXIS) {
-<span class="fc" id="L2310">            throw new IllegalArgumentException();</span>
+<span class="fc" id="L2312">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L2313">        mQualityScores = qualityScores;</span>
-<span class="fc" id="L2314">    }</span>
+<span class="fc" id="L2315">        mQualityScores = qualityScores;</span>
+<span class="fc" id="L2316">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

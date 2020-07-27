@@ -3964,7 +3964,7 @@
 <a class="jxr_linenumber" name="L3956" href="#L3956">3956</a> <em class="jxr_javadoccomment">     * @throws IllegalArgumentException if provided value is zero or negative.</em>
 <a class="jxr_linenumber" name="L3957" href="#L3957">3957</a> <em class="jxr_javadoccomment">     * @throws LockedException          if calibrator is currently running.</em>
 <a class="jxr_linenumber" name="L3958" href="#L3958">3958</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L3959" href="#L3959">3959</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> setStopThreshold(<strong class="jxr_keyword">double</strong> stopThreshold) <strong class="jxr_keyword">throws</strong> LockedException {
+<a class="jxr_linenumber" name="L3959" href="#L3959">3959</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> setStopThreshold(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> stopThreshold) <strong class="jxr_keyword">throws</strong> LockedException {
 <a class="jxr_linenumber" name="L3960" href="#L3960">3960</a>         <strong class="jxr_keyword">if</strong> (mRunning) {
 <a class="jxr_linenumber" name="L3961" href="#L3961">3961</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/LockedException.html">LockedException</a>();
 <a class="jxr_linenumber" name="L3962" href="#L3962">3962</a>         }
@@ -3996,7 +3996,7 @@
 <a class="jxr_linenumber" name="L3988" href="#L3988">3988</a> <em class="jxr_javadoccomment">     * @throws LockedException          if calibrator is currently running.</em>
 <a class="jxr_linenumber" name="L3989" href="#L3989">3989</a> <em class="jxr_javadoccomment">     */</em>
 <a class="jxr_linenumber" name="L3990" href="#L3990">3990</a>     @Override
-<a class="jxr_linenumber" name="L3991" href="#L3991">3991</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> setQualityScores(<strong class="jxr_keyword">double</strong>[] qualityScores)
+<a class="jxr_linenumber" name="L3991" href="#L3991">3991</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> setQualityScores(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong>[] qualityScores)
 <a class="jxr_linenumber" name="L3992" href="#L3992">3992</a>             <strong class="jxr_keyword">throws</strong> <a href="../../../../../../com/irurueta/navigation/LockedException.html">LockedException</a> {
 <a class="jxr_linenumber" name="L3993" href="#L3993">3993</a>         <strong class="jxr_keyword">if</strong> (mRunning) {
 <a class="jxr_linenumber" name="L3994" href="#L3994">3994</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/LockedException.html">LockedException</a>();
@@ -4024,139 +4024,149 @@
 <a class="jxr_linenumber" name="L4016" href="#L4016">4016</a> <em class="jxr_javadoccomment">     * @throws CalibrationException if estimation fails for numerical reasons.</em>
 <a class="jxr_linenumber" name="L4017" href="#L4017">4017</a> <em class="jxr_javadoccomment">     */</em>
 <a class="jxr_linenumber" name="L4018" href="#L4018">4018</a>     @Override
-<a class="jxr_linenumber" name="L4019" href="#L4019">4019</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> calibrate() <strong class="jxr_keyword">throws</strong> LockedException, NotReadyException, CalibrationException {
-<a class="jxr_linenumber" name="L4020" href="#L4020">4020</a>         <strong class="jxr_keyword">if</strong> (mRunning) {
-<a class="jxr_linenumber" name="L4021" href="#L4021">4021</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/LockedException.html">LockedException</a>();
-<a class="jxr_linenumber" name="L4022" href="#L4022">4022</a>         }
-<a class="jxr_linenumber" name="L4023" href="#L4023">4023</a>         <strong class="jxr_keyword">if</strong> (!isReady()) {
-<a class="jxr_linenumber" name="L4024" href="#L4024">4024</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/NotReadyException.html">NotReadyException</a>();
-<a class="jxr_linenumber" name="L4025" href="#L4025">4025</a>         }
-<a class="jxr_linenumber" name="L4026" href="#L4026">4026</a> 
-<a class="jxr_linenumber" name="L4027" href="#L4027">4027</a>         <strong class="jxr_keyword">final</strong> PROMedSRobustEstimator&lt;PreliminaryResult&gt; innerEstimator =
-<a class="jxr_linenumber" name="L4028" href="#L4028">4028</a>                 <strong class="jxr_keyword">new</strong> PROMedSRobustEstimator&lt;&gt;(<strong class="jxr_keyword">new</strong> PROMedSRobustEstimatorListener&lt;PreliminaryResult&gt;() {
-<a class="jxr_linenumber" name="L4029" href="#L4029">4029</a>                     @Override
-<a class="jxr_linenumber" name="L4030" href="#L4030">4030</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">double</strong>[] getQualityScores() {
-<a class="jxr_linenumber" name="L4031" href="#L4031">4031</a>                         <strong class="jxr_keyword">return</strong> mQualityScores;
-<a class="jxr_linenumber" name="L4032" href="#L4032">4032</a>                     }
-<a class="jxr_linenumber" name="L4033" href="#L4033">4033</a> 
-<a class="jxr_linenumber" name="L4034" href="#L4034">4034</a>                     @Override
-<a class="jxr_linenumber" name="L4035" href="#L4035">4035</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">double</strong> getThreshold() {
-<a class="jxr_linenumber" name="L4036" href="#L4036">4036</a>                         <strong class="jxr_keyword">return</strong> mStopThreshold;
-<a class="jxr_linenumber" name="L4037" href="#L4037">4037</a>                     }
-<a class="jxr_linenumber" name="L4038" href="#L4038">4038</a> 
-<a class="jxr_linenumber" name="L4039" href="#L4039">4039</a>                     @Override
-<a class="jxr_linenumber" name="L4040" href="#L4040">4040</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">int</strong> getTotalSamples() {
-<a class="jxr_linenumber" name="L4041" href="#L4041">4041</a>                         <strong class="jxr_keyword">return</strong> mMeasurements.size();
-<a class="jxr_linenumber" name="L4042" href="#L4042">4042</a>                     }
-<a class="jxr_linenumber" name="L4043" href="#L4043">4043</a> 
-<a class="jxr_linenumber" name="L4044" href="#L4044">4044</a>                     @Override
-<a class="jxr_linenumber" name="L4045" href="#L4045">4045</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">int</strong> getSubsetSize() {
-<a class="jxr_linenumber" name="L4046" href="#L4046">4046</a>                         <strong class="jxr_keyword">return</strong> mPreliminarySubsetSize;
-<a class="jxr_linenumber" name="L4047" href="#L4047">4047</a>                     }
-<a class="jxr_linenumber" name="L4048" href="#L4048">4048</a> 
-<a class="jxr_linenumber" name="L4049" href="#L4049">4049</a>                     @Override
-<a class="jxr_linenumber" name="L4050" href="#L4050">4050</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> estimatePreliminarSolutions(
-<a class="jxr_linenumber" name="L4051" href="#L4051">4051</a>                             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong>[] samplesIndices, <strong class="jxr_keyword">final</strong> List&lt;PreliminaryResult&gt; solutions) {
-<a class="jxr_linenumber" name="L4052" href="#L4052">4052</a>                         computePreliminarySolutions(samplesIndices, solutions);
-<a class="jxr_linenumber" name="L4053" href="#L4053">4053</a>                     }
-<a class="jxr_linenumber" name="L4054" href="#L4054">4054</a> 
-<a class="jxr_linenumber" name="L4055" href="#L4055">4055</a>                     @Override
-<a class="jxr_linenumber" name="L4056" href="#L4056">4056</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">double</strong> computeResidual(
-<a class="jxr_linenumber" name="L4057" href="#L4057">4057</a>                             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/gyroscope/RobustKnownBiasEasyGyroscopeCalibrator.html">PreliminaryResult</a> currentEstimation, <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> i) {
-<a class="jxr_linenumber" name="L4058" href="#L4058">4058</a>                         <strong class="jxr_keyword">return</strong> computeError(mMeasurements.get(i), currentEstimation);
-<a class="jxr_linenumber" name="L4059" href="#L4059">4059</a>                     }
-<a class="jxr_linenumber" name="L4060" href="#L4060">4060</a> 
-<a class="jxr_linenumber" name="L4061" href="#L4061">4061</a>                     @Override
-<a class="jxr_linenumber" name="L4062" href="#L4062">4062</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">boolean</strong> isReady() {
-<a class="jxr_linenumber" name="L4063" href="#L4063">4063</a>                         <strong class="jxr_keyword">return</strong> PROMedSRobustTurntableGyroscopeCalibrator.<strong class="jxr_keyword">this</strong>.isReady();
-<a class="jxr_linenumber" name="L4064" href="#L4064">4064</a>                     }
-<a class="jxr_linenumber" name="L4065" href="#L4065">4065</a> 
-<a class="jxr_linenumber" name="L4066" href="#L4066">4066</a>                     @Override
-<a class="jxr_linenumber" name="L4067" href="#L4067">4067</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateStart(
-<a class="jxr_linenumber" name="L4068" href="#L4068">4068</a>                             <strong class="jxr_keyword">final</strong> RobustEstimator&lt;PreliminaryResult&gt; estimator) {
-<a class="jxr_linenumber" name="L4069" href="#L4069">4069</a>                         <strong class="jxr_keyword">if</strong> (mListener != <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L4070" href="#L4070">4070</a>                             mListener.onCalibrateStart(PROMedSRobustTurntableGyroscopeCalibrator.<strong class="jxr_keyword">this</strong>);
-<a class="jxr_linenumber" name="L4071" href="#L4071">4071</a>                         }
+<a class="jxr_linenumber" name="L4019" href="#L4019">4019</a>     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> calibrate() <strong class="jxr_keyword">throws</strong> LockedException, NotReadyException,
+<a class="jxr_linenumber" name="L4020" href="#L4020">4020</a>             <a href="../../../../../../com/irurueta/navigation/inertial/calibration/CalibrationException.html">CalibrationException</a> {
+<a class="jxr_linenumber" name="L4021" href="#L4021">4021</a>         <strong class="jxr_keyword">if</strong> (mRunning) {
+<a class="jxr_linenumber" name="L4022" href="#L4022">4022</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/LockedException.html">LockedException</a>();
+<a class="jxr_linenumber" name="L4023" href="#L4023">4023</a>         }
+<a class="jxr_linenumber" name="L4024" href="#L4024">4024</a>         <strong class="jxr_keyword">if</strong> (!isReady()) {
+<a class="jxr_linenumber" name="L4025" href="#L4025">4025</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/NotReadyException.html">NotReadyException</a>();
+<a class="jxr_linenumber" name="L4026" href="#L4026">4026</a>         }
+<a class="jxr_linenumber" name="L4027" href="#L4027">4027</a> 
+<a class="jxr_linenumber" name="L4028" href="#L4028">4028</a>         <strong class="jxr_keyword">final</strong> PROMedSRobustEstimator&lt;PreliminaryResult&gt; innerEstimator =
+<a class="jxr_linenumber" name="L4029" href="#L4029">4029</a>                 <strong class="jxr_keyword">new</strong> PROMedSRobustEstimator&lt;&gt;(
+<a class="jxr_linenumber" name="L4030" href="#L4030">4030</a>                         <strong class="jxr_keyword">new</strong> PROMedSRobustEstimatorListener&lt;PreliminaryResult&gt;() {
+<a class="jxr_linenumber" name="L4031" href="#L4031">4031</a>                     @Override
+<a class="jxr_linenumber" name="L4032" href="#L4032">4032</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">double</strong>[] getQualityScores() {
+<a class="jxr_linenumber" name="L4033" href="#L4033">4033</a>                         <strong class="jxr_keyword">return</strong> mQualityScores;
+<a class="jxr_linenumber" name="L4034" href="#L4034">4034</a>                     }
+<a class="jxr_linenumber" name="L4035" href="#L4035">4035</a> 
+<a class="jxr_linenumber" name="L4036" href="#L4036">4036</a>                     @Override
+<a class="jxr_linenumber" name="L4037" href="#L4037">4037</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">double</strong> getThreshold() {
+<a class="jxr_linenumber" name="L4038" href="#L4038">4038</a>                         <strong class="jxr_keyword">return</strong> mStopThreshold;
+<a class="jxr_linenumber" name="L4039" href="#L4039">4039</a>                     }
+<a class="jxr_linenumber" name="L4040" href="#L4040">4040</a> 
+<a class="jxr_linenumber" name="L4041" href="#L4041">4041</a>                     @Override
+<a class="jxr_linenumber" name="L4042" href="#L4042">4042</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">int</strong> getTotalSamples() {
+<a class="jxr_linenumber" name="L4043" href="#L4043">4043</a>                         <strong class="jxr_keyword">return</strong> mMeasurements.size();
+<a class="jxr_linenumber" name="L4044" href="#L4044">4044</a>                     }
+<a class="jxr_linenumber" name="L4045" href="#L4045">4045</a> 
+<a class="jxr_linenumber" name="L4046" href="#L4046">4046</a>                     @Override
+<a class="jxr_linenumber" name="L4047" href="#L4047">4047</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">int</strong> getSubsetSize() {
+<a class="jxr_linenumber" name="L4048" href="#L4048">4048</a>                         <strong class="jxr_keyword">return</strong> mPreliminarySubsetSize;
+<a class="jxr_linenumber" name="L4049" href="#L4049">4049</a>                     }
+<a class="jxr_linenumber" name="L4050" href="#L4050">4050</a> 
+<a class="jxr_linenumber" name="L4051" href="#L4051">4051</a>                     @Override
+<a class="jxr_linenumber" name="L4052" href="#L4052">4052</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> estimatePreliminarSolutions(
+<a class="jxr_linenumber" name="L4053" href="#L4053">4053</a>                             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong>[] samplesIndices,
+<a class="jxr_linenumber" name="L4054" href="#L4054">4054</a>                             <strong class="jxr_keyword">final</strong> List&lt;PreliminaryResult&gt; solutions) {
+<a class="jxr_linenumber" name="L4055" href="#L4055">4055</a>                         computePreliminarySolutions(samplesIndices, solutions);
+<a class="jxr_linenumber" name="L4056" href="#L4056">4056</a>                     }
+<a class="jxr_linenumber" name="L4057" href="#L4057">4057</a> 
+<a class="jxr_linenumber" name="L4058" href="#L4058">4058</a>                     @Override
+<a class="jxr_linenumber" name="L4059" href="#L4059">4059</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">double</strong> computeResidual(
+<a class="jxr_linenumber" name="L4060" href="#L4060">4060</a>                             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/gyroscope/RobustKnownBiasEasyGyroscopeCalibrator.html">PreliminaryResult</a> currentEstimation, <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> i) {
+<a class="jxr_linenumber" name="L4061" href="#L4061">4061</a>                         <strong class="jxr_keyword">return</strong> computeError(mMeasurements.get(i), currentEstimation);
+<a class="jxr_linenumber" name="L4062" href="#L4062">4062</a>                     }
+<a class="jxr_linenumber" name="L4063" href="#L4063">4063</a> 
+<a class="jxr_linenumber" name="L4064" href="#L4064">4064</a>                     @Override
+<a class="jxr_linenumber" name="L4065" href="#L4065">4065</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">boolean</strong> isReady() {
+<a class="jxr_linenumber" name="L4066" href="#L4066">4066</a>                         <strong class="jxr_keyword">return</strong> PROMedSRobustTurntableGyroscopeCalibrator.<strong class="jxr_keyword">this</strong>.isReady();
+<a class="jxr_linenumber" name="L4067" href="#L4067">4067</a>                     }
+<a class="jxr_linenumber" name="L4068" href="#L4068">4068</a> 
+<a class="jxr_linenumber" name="L4069" href="#L4069">4069</a>                     @Override
+<a class="jxr_linenumber" name="L4070" href="#L4070">4070</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateStart(
+<a class="jxr_linenumber" name="L4071" href="#L4071">4071</a>                             <strong class="jxr_keyword">final</strong> RobustEstimator&lt;PreliminaryResult&gt; estimator) {
 <a class="jxr_linenumber" name="L4072" href="#L4072">4072</a>                     }
 <a class="jxr_linenumber" name="L4073" href="#L4073">4073</a> 
 <a class="jxr_linenumber" name="L4074" href="#L4074">4074</a>                     @Override
 <a class="jxr_linenumber" name="L4075" href="#L4075">4075</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateEnd(
 <a class="jxr_linenumber" name="L4076" href="#L4076">4076</a>                             <strong class="jxr_keyword">final</strong> RobustEstimator&lt;PreliminaryResult&gt; estimator) {
-<a class="jxr_linenumber" name="L4077" href="#L4077">4077</a>                         <strong class="jxr_keyword">if</strong> (mListener != <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L4078" href="#L4078">4078</a>                             mListener.onCalibrateEnd(PROMedSRobustTurntableGyroscopeCalibrator.<strong class="jxr_keyword">this</strong>);
-<a class="jxr_linenumber" name="L4079" href="#L4079">4079</a>                         }
-<a class="jxr_linenumber" name="L4080" href="#L4080">4080</a>                     }
-<a class="jxr_linenumber" name="L4081" href="#L4081">4081</a> 
-<a class="jxr_linenumber" name="L4082" href="#L4082">4082</a>                     @Override
-<a class="jxr_linenumber" name="L4083" href="#L4083">4083</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateNextIteration(
-<a class="jxr_linenumber" name="L4084" href="#L4084">4084</a>                             <strong class="jxr_keyword">final</strong> RobustEstimator&lt;PreliminaryResult&gt; estimator, <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> iteration) {
-<a class="jxr_linenumber" name="L4085" href="#L4085">4085</a>                         <strong class="jxr_keyword">if</strong> (mListener != <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L4086" href="#L4086">4086</a>                             mListener.onCalibrateNextIteration(
-<a class="jxr_linenumber" name="L4087" href="#L4087">4087</a>                                     PROMedSRobustTurntableGyroscopeCalibrator.<strong class="jxr_keyword">this</strong>, iteration);
-<a class="jxr_linenumber" name="L4088" href="#L4088">4088</a>                         }
-<a class="jxr_linenumber" name="L4089" href="#L4089">4089</a>                     }
-<a class="jxr_linenumber" name="L4090" href="#L4090">4090</a> 
-<a class="jxr_linenumber" name="L4091" href="#L4091">4091</a>                     @Override
-<a class="jxr_linenumber" name="L4092" href="#L4092">4092</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateProgressChange(
-<a class="jxr_linenumber" name="L4093" href="#L4093">4093</a>                             <strong class="jxr_keyword">final</strong> RobustEstimator&lt;PreliminaryResult&gt; estimator, <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">float</strong> progress) {
+<a class="jxr_linenumber" name="L4077" href="#L4077">4077</a>                     }
+<a class="jxr_linenumber" name="L4078" href="#L4078">4078</a> 
+<a class="jxr_linenumber" name="L4079" href="#L4079">4079</a>                     @Override
+<a class="jxr_linenumber" name="L4080" href="#L4080">4080</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateNextIteration(
+<a class="jxr_linenumber" name="L4081" href="#L4081">4081</a>                             <strong class="jxr_keyword">final</strong> RobustEstimator&lt;PreliminaryResult&gt; estimator,
+<a class="jxr_linenumber" name="L4082" href="#L4082">4082</a>                             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> iteration) {
+<a class="jxr_linenumber" name="L4083" href="#L4083">4083</a>                         <strong class="jxr_keyword">if</strong> (mListener != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L4084" href="#L4084">4084</a>                             mListener.onCalibrateNextIteration(
+<a class="jxr_linenumber" name="L4085" href="#L4085">4085</a>                                     PROMedSRobustTurntableGyroscopeCalibrator.<strong class="jxr_keyword">this</strong>,
+<a class="jxr_linenumber" name="L4086" href="#L4086">4086</a>                                     iteration);
+<a class="jxr_linenumber" name="L4087" href="#L4087">4087</a>                         }
+<a class="jxr_linenumber" name="L4088" href="#L4088">4088</a>                     }
+<a class="jxr_linenumber" name="L4089" href="#L4089">4089</a> 
+<a class="jxr_linenumber" name="L4090" href="#L4090">4090</a>                     @Override
+<a class="jxr_linenumber" name="L4091" href="#L4091">4091</a>                     <strong class="jxr_keyword">public</strong> <strong class="jxr_keyword">void</strong> onEstimateProgressChange(
+<a class="jxr_linenumber" name="L4092" href="#L4092">4092</a>                             <strong class="jxr_keyword">final</strong> RobustEstimator&lt;PreliminaryResult&gt; estimator,
+<a class="jxr_linenumber" name="L4093" href="#L4093">4093</a>                             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">float</strong> progress) {
 <a class="jxr_linenumber" name="L4094" href="#L4094">4094</a>                         <strong class="jxr_keyword">if</strong> (mListener != <strong class="jxr_keyword">null</strong>) {
 <a class="jxr_linenumber" name="L4095" href="#L4095">4095</a>                             mListener.onCalibrateProgressChange(
-<a class="jxr_linenumber" name="L4096" href="#L4096">4096</a>                                     PROMedSRobustTurntableGyroscopeCalibrator.<strong class="jxr_keyword">this</strong>, progress);
-<a class="jxr_linenumber" name="L4097" href="#L4097">4097</a>                         }
-<a class="jxr_linenumber" name="L4098" href="#L4098">4098</a>                     }
-<a class="jxr_linenumber" name="L4099" href="#L4099">4099</a>                 });
-<a class="jxr_linenumber" name="L4100" href="#L4100">4100</a> 
-<a class="jxr_linenumber" name="L4101" href="#L4101">4101</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L4102" href="#L4102">4102</a>             mRunning = <strong class="jxr_keyword">true</strong>;
-<a class="jxr_linenumber" name="L4103" href="#L4103">4103</a>             mInliersData = <strong class="jxr_keyword">null</strong>;
-<a class="jxr_linenumber" name="L4104" href="#L4104">4104</a>             innerEstimator.setUseInlierThresholds(<strong class="jxr_keyword">true</strong>);
-<a class="jxr_linenumber" name="L4105" href="#L4105">4105</a>             innerEstimator.setConfidence(mConfidence);
-<a class="jxr_linenumber" name="L4106" href="#L4106">4106</a>             innerEstimator.setMaxIterations(mMaxIterations);
-<a class="jxr_linenumber" name="L4107" href="#L4107">4107</a>             innerEstimator.setProgressDelta(mProgressDelta);
-<a class="jxr_linenumber" name="L4108" href="#L4108">4108</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/gyroscope/RobustKnownBiasEasyGyroscopeCalibrator.html">PreliminaryResult</a> preliminaryResult = innerEstimator.estimate();
-<a class="jxr_linenumber" name="L4109" href="#L4109">4109</a>             mInliersData = innerEstimator.getInliersData();
-<a class="jxr_linenumber" name="L4110" href="#L4110">4110</a> 
-<a class="jxr_linenumber" name="L4111" href="#L4111">4111</a>             attemptRefine(preliminaryResult);
-<a class="jxr_linenumber" name="L4112" href="#L4112">4112</a> 
-<a class="jxr_linenumber" name="L4113" href="#L4113">4113</a>         } <strong class="jxr_keyword">catch</strong> (com.irurueta.numerical.LockedException e) {
-<a class="jxr_linenumber" name="L4114" href="#L4114">4114</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/LockedException.html">LockedException</a>(e);
-<a class="jxr_linenumber" name="L4115" href="#L4115">4115</a>         } <strong class="jxr_keyword">catch</strong> (com.irurueta.numerical.NotReadyException e) {
-<a class="jxr_linenumber" name="L4116" href="#L4116">4116</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/NotReadyException.html">NotReadyException</a>(e);
-<a class="jxr_linenumber" name="L4117" href="#L4117">4117</a>         } <strong class="jxr_keyword">catch</strong> (RobustEstimatorException e) {
-<a class="jxr_linenumber" name="L4118" href="#L4118">4118</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/CalibrationException.html">CalibrationException</a>(e);
-<a class="jxr_linenumber" name="L4119" href="#L4119">4119</a>         } <strong class="jxr_keyword">finally</strong> {
-<a class="jxr_linenumber" name="L4120" href="#L4120">4120</a>             mRunning = false;
-<a class="jxr_linenumber" name="L4121" href="#L4121">4121</a>         }
-<a class="jxr_linenumber" name="L4122" href="#L4122">4122</a>     }
-<a class="jxr_linenumber" name="L4123" href="#L4123">4123</a> 
-<a class="jxr_linenumber" name="L4124" href="#L4124">4124</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L4125" href="#L4125">4125</a> <em class="jxr_javadoccomment">     * Returns method being used for robust estimation.</em>
-<a class="jxr_linenumber" name="L4126" href="#L4126">4126</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L4127" href="#L4127">4127</a> <em class="jxr_javadoccomment">     * @return method being used for robust estimation.</em>
-<a class="jxr_linenumber" name="L4128" href="#L4128">4128</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L4129" href="#L4129">4129</a>     @Override
-<a class="jxr_linenumber" name="L4130" href="#L4130">4130</a>     <strong class="jxr_keyword">public</strong> RobustEstimatorMethod getMethod() {
-<a class="jxr_linenumber" name="L4131" href="#L4131">4131</a>         <strong class="jxr_keyword">return</strong> RobustEstimatorMethod.PROMedS;
+<a class="jxr_linenumber" name="L4096" href="#L4096">4096</a>                                     PROMedSRobustTurntableGyroscopeCalibrator.<strong class="jxr_keyword">this</strong>,
+<a class="jxr_linenumber" name="L4097" href="#L4097">4097</a>                                     progress);
+<a class="jxr_linenumber" name="L4098" href="#L4098">4098</a>                         }
+<a class="jxr_linenumber" name="L4099" href="#L4099">4099</a>                     }
+<a class="jxr_linenumber" name="L4100" href="#L4100">4100</a>                 });
+<a class="jxr_linenumber" name="L4101" href="#L4101">4101</a> 
+<a class="jxr_linenumber" name="L4102" href="#L4102">4102</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L4103" href="#L4103">4103</a>             mRunning = <strong class="jxr_keyword">true</strong>;
+<a class="jxr_linenumber" name="L4104" href="#L4104">4104</a> 
+<a class="jxr_linenumber" name="L4105" href="#L4105">4105</a>             <strong class="jxr_keyword">if</strong> (mListener != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L4106" href="#L4106">4106</a>                 mListener.onCalibrateStart(<strong class="jxr_keyword">this</strong>);
+<a class="jxr_linenumber" name="L4107" href="#L4107">4107</a>             }
+<a class="jxr_linenumber" name="L4108" href="#L4108">4108</a> 
+<a class="jxr_linenumber" name="L4109" href="#L4109">4109</a>             mInliersData = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L4110" href="#L4110">4110</a>             innerEstimator.setUseInlierThresholds(<strong class="jxr_keyword">true</strong>);
+<a class="jxr_linenumber" name="L4111" href="#L4111">4111</a>             innerEstimator.setConfidence(mConfidence);
+<a class="jxr_linenumber" name="L4112" href="#L4112">4112</a>             innerEstimator.setMaxIterations(mMaxIterations);
+<a class="jxr_linenumber" name="L4113" href="#L4113">4113</a>             innerEstimator.setProgressDelta(mProgressDelta);
+<a class="jxr_linenumber" name="L4114" href="#L4114">4114</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/gyroscope/RobustKnownBiasEasyGyroscopeCalibrator.html">PreliminaryResult</a> preliminaryResult = innerEstimator.estimate();
+<a class="jxr_linenumber" name="L4115" href="#L4115">4115</a>             mInliersData = innerEstimator.getInliersData();
+<a class="jxr_linenumber" name="L4116" href="#L4116">4116</a> 
+<a class="jxr_linenumber" name="L4117" href="#L4117">4117</a>             attemptRefine(preliminaryResult);
+<a class="jxr_linenumber" name="L4118" href="#L4118">4118</a> 
+<a class="jxr_linenumber" name="L4119" href="#L4119">4119</a>             <strong class="jxr_keyword">if</strong> (mListener != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L4120" href="#L4120">4120</a>                 mListener.onCalibrateEnd(<strong class="jxr_keyword">this</strong>);
+<a class="jxr_linenumber" name="L4121" href="#L4121">4121</a>             }
+<a class="jxr_linenumber" name="L4122" href="#L4122">4122</a> 
+<a class="jxr_linenumber" name="L4123" href="#L4123">4123</a>         } <strong class="jxr_keyword">catch</strong> (<strong class="jxr_keyword">final</strong> com.irurueta.numerical.LockedException e) {
+<a class="jxr_linenumber" name="L4124" href="#L4124">4124</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/LockedException.html">LockedException</a>(e);
+<a class="jxr_linenumber" name="L4125" href="#L4125">4125</a>         } <strong class="jxr_keyword">catch</strong> (<strong class="jxr_keyword">final</strong> com.irurueta.numerical.NotReadyException e) {
+<a class="jxr_linenumber" name="L4126" href="#L4126">4126</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/NotReadyException.html">NotReadyException</a>(e);
+<a class="jxr_linenumber" name="L4127" href="#L4127">4127</a>         } <strong class="jxr_keyword">catch</strong> (<strong class="jxr_keyword">final</strong> RobustEstimatorException e) {
+<a class="jxr_linenumber" name="L4128" href="#L4128">4128</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/CalibrationException.html">CalibrationException</a>(e);
+<a class="jxr_linenumber" name="L4129" href="#L4129">4129</a>         } <strong class="jxr_keyword">finally</strong> {
+<a class="jxr_linenumber" name="L4130" href="#L4130">4130</a>             mRunning = false;
+<a class="jxr_linenumber" name="L4131" href="#L4131">4131</a>         }
 <a class="jxr_linenumber" name="L4132" href="#L4132">4132</a>     }
 <a class="jxr_linenumber" name="L4133" href="#L4133">4133</a> 
 <a class="jxr_linenumber" name="L4134" href="#L4134">4134</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L4135" href="#L4135">4135</a> <em class="jxr_javadoccomment">     * Sets quality scores corresponding to each provided sample.</em>
-<a class="jxr_linenumber" name="L4136" href="#L4136">4136</a> <em class="jxr_javadoccomment">     * This method is used internally and does not check whether instance is</em>
-<a class="jxr_linenumber" name="L4137" href="#L4137">4137</a> <em class="jxr_javadoccomment">     * locked or not.</em>
-<a class="jxr_linenumber" name="L4138" href="#L4138">4138</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L4139" href="#L4139">4139</a> <em class="jxr_javadoccomment">     * @param qualityScores quality scores to be set.</em>
-<a class="jxr_linenumber" name="L4140" href="#L4140">4140</a> <em class="jxr_javadoccomment">     * @throws IllegalArgumentException if provided quality scores length</em>
-<a class="jxr_linenumber" name="L4141" href="#L4141">4141</a> <em class="jxr_javadoccomment">     *                                  is smaller than 4 samples.</em>
-<a class="jxr_linenumber" name="L4142" href="#L4142">4142</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L4143" href="#L4143">4143</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> internalSetQualityScores(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong>[] qualityScores) {
-<a class="jxr_linenumber" name="L4144" href="#L4144">4144</a>         <strong class="jxr_keyword">if</strong> (qualityScores == <strong class="jxr_keyword">null</strong> ||
-<a class="jxr_linenumber" name="L4145" href="#L4145">4145</a>                 qualityScores.length &lt; TurntableGyroscopeCalibrator.MINIMUM_MEASUREMENTS_COMMON_Z_AXIS) {
-<a class="jxr_linenumber" name="L4146" href="#L4146">4146</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalArgumentException();
-<a class="jxr_linenumber" name="L4147" href="#L4147">4147</a>         }
-<a class="jxr_linenumber" name="L4148" href="#L4148">4148</a> 
-<a class="jxr_linenumber" name="L4149" href="#L4149">4149</a>         mQualityScores = qualityScores;
-<a class="jxr_linenumber" name="L4150" href="#L4150">4150</a>     }
-<a class="jxr_linenumber" name="L4151" href="#L4151">4151</a> }
+<a class="jxr_linenumber" name="L4135" href="#L4135">4135</a> <em class="jxr_javadoccomment">     * Returns method being used for robust estimation.</em>
+<a class="jxr_linenumber" name="L4136" href="#L4136">4136</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L4137" href="#L4137">4137</a> <em class="jxr_javadoccomment">     * @return method being used for robust estimation.</em>
+<a class="jxr_linenumber" name="L4138" href="#L4138">4138</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L4139" href="#L4139">4139</a>     @Override
+<a class="jxr_linenumber" name="L4140" href="#L4140">4140</a>     <strong class="jxr_keyword">public</strong> RobustEstimatorMethod getMethod() {
+<a class="jxr_linenumber" name="L4141" href="#L4141">4141</a>         <strong class="jxr_keyword">return</strong> RobustEstimatorMethod.PROMedS;
+<a class="jxr_linenumber" name="L4142" href="#L4142">4142</a>     }
+<a class="jxr_linenumber" name="L4143" href="#L4143">4143</a> 
+<a class="jxr_linenumber" name="L4144" href="#L4144">4144</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L4145" href="#L4145">4145</a> <em class="jxr_javadoccomment">     * Sets quality scores corresponding to each provided sample.</em>
+<a class="jxr_linenumber" name="L4146" href="#L4146">4146</a> <em class="jxr_javadoccomment">     * This method is used internally and does not check whether instance is</em>
+<a class="jxr_linenumber" name="L4147" href="#L4147">4147</a> <em class="jxr_javadoccomment">     * locked or not.</em>
+<a class="jxr_linenumber" name="L4148" href="#L4148">4148</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L4149" href="#L4149">4149</a> <em class="jxr_javadoccomment">     * @param qualityScores quality scores to be set.</em>
+<a class="jxr_linenumber" name="L4150" href="#L4150">4150</a> <em class="jxr_javadoccomment">     * @throws IllegalArgumentException if provided quality scores length</em>
+<a class="jxr_linenumber" name="L4151" href="#L4151">4151</a> <em class="jxr_javadoccomment">     *                                  is smaller than 4 samples.</em>
+<a class="jxr_linenumber" name="L4152" href="#L4152">4152</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L4153" href="#L4153">4153</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">void</strong> internalSetQualityScores(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong>[] qualityScores) {
+<a class="jxr_linenumber" name="L4154" href="#L4154">4154</a>         <strong class="jxr_keyword">if</strong> (qualityScores == <strong class="jxr_keyword">null</strong> ||
+<a class="jxr_linenumber" name="L4155" href="#L4155">4155</a>                 qualityScores.length &lt; TurntableGyroscopeCalibrator.MINIMUM_MEASUREMENTS_COMMON_Z_AXIS) {
+<a class="jxr_linenumber" name="L4156" href="#L4156">4156</a>             <strong class="jxr_keyword">throw</strong> <strong class="jxr_keyword">new</strong> IllegalArgumentException();
+<a class="jxr_linenumber" name="L4157" href="#L4157">4157</a>         }
+<a class="jxr_linenumber" name="L4158" href="#L4158">4158</a> 
+<a class="jxr_linenumber" name="L4159" href="#L4159">4159</a>         mQualityScores = qualityScores;
+<a class="jxr_linenumber" name="L4160" href="#L4160">4160</a>     }
+<a class="jxr_linenumber" name="L4161" href="#L4161">4161</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2018&#x2013;2020. All rights reserved.</div>

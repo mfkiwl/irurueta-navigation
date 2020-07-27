@@ -725,7 +725,7 @@ public class MSACRobustKnownBiasAndFrameAccelerometerCalibrator extends
      *                                  zero.
      * @throws LockedException          if calibrator is currently running.
      */
-    public void setThreshold(double threshold) throws LockedException {
+    public void setThreshold(final double threshold) throws LockedException {
 <span class="fc bfc" id="L729" title="All 2 branches covered.">        if (mRunning) {</span>
 <span class="fc" id="L730">            throw new LockedException();</span>
         }
@@ -770,76 +770,84 @@ public class MSACRobustKnownBiasAndFrameAccelerometerCalibrator extends
                     }
 
                     @Override
-                    public void estimatePreliminarSolutions(final int[] samplesIndices,
-                                                            final List&lt;Matrix&gt; solutions) {
-<span class="fc" id="L775">                        computePreliminarySolutions(samplesIndices, solutions);</span>
-<span class="fc" id="L776">                    }</span>
+                    public void estimatePreliminarSolutions(
+                            final int[] samplesIndices,
+                            final List&lt;Matrix&gt; solutions) {
+<span class="fc" id="L776">                        computePreliminarySolutions(samplesIndices, solutions);</span>
+<span class="fc" id="L777">                    }</span>
 
                     @Override
-                    public double computeResidual(final Matrix currentEstimation, final int i) {
-<span class="fc" id="L780">                        return computeError(mMeasurements.get(i), currentEstimation);</span>
+                    public double computeResidual(
+                            final Matrix currentEstimation, final int i) {
+<span class="fc" id="L782">                        return computeError(mMeasurements.get(i), currentEstimation);</span>
                     }
 
                     @Override
                     public boolean isReady() {
-<span class="fc" id="L785">                        return MSACRobustKnownBiasAndFrameAccelerometerCalibrator.super.isReady();</span>
+<span class="fc" id="L787">                        return MSACRobustKnownBiasAndFrameAccelerometerCalibrator.super.isReady();</span>
                     }
 
                     @Override
                     public void onEstimateStart(final RobustEstimator&lt;Matrix&gt; estimator) {
-<span class="pc bpc" id="L790" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L791">                            mListener.onCalibrateStart(</span>
-                                    MSACRobustKnownBiasAndFrameAccelerometerCalibrator.this);
-                        }
-<span class="fc" id="L794">                    }</span>
+<span class="fc" id="L792">                    }</span>
 
                     @Override
                     public void onEstimateEnd(final RobustEstimator&lt;Matrix&gt; estimator) {
-<span class="pc bpc" id="L798" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L799">                            mListener.onCalibrateEnd(</span>
-                                    MSACRobustKnownBiasAndFrameAccelerometerCalibrator.this);
-                        }
-<span class="fc" id="L802">                    }</span>
+<span class="fc" id="L796">                    }</span>
 
                     @Override
-                    public void onEstimateNextIteration(final RobustEstimator&lt;Matrix&gt; estimator,
-                                                        final int iteration) {
-<span class="pc bpc" id="L807" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L808">                            mListener.onCalibrateNextIteration(</span>
-                                    MSACRobustKnownBiasAndFrameAccelerometerCalibrator.this, iteration);
+                    public void onEstimateNextIteration(
+                            final RobustEstimator&lt;Matrix&gt; estimator,
+                            final int iteration) {
+<span class="pc bpc" id="L802" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L803">                            mListener.onCalibrateNextIteration(</span>
+                                    MSACRobustKnownBiasAndFrameAccelerometerCalibrator.this,
+                                    iteration);
                         }
-<span class="fc" id="L811">                    }</span>
+<span class="fc" id="L807">                    }</span>
 
                     @Override
-                    public void onEstimateProgressChange(RobustEstimator&lt;Matrix&gt; estimator, float progress) {
-<span class="pc bpc" id="L815" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L816">                            mListener.onCalibrateProgressChange(</span>
-                                    MSACRobustKnownBiasAndFrameAccelerometerCalibrator.this, progress);
+                    public void onEstimateProgressChange(
+                            final RobustEstimator&lt;Matrix&gt; estimator,
+                            final float progress) {
+<span class="pc bpc" id="L813" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L814">                            mListener.onCalibrateProgressChange(</span>
+                                    MSACRobustKnownBiasAndFrameAccelerometerCalibrator.this,
+                                    progress);
                         }
-<span class="fc" id="L819">                    }</span>
+<span class="fc" id="L818">                    }</span>
                 });
 
         try {
-<span class="fc" id="L823">            mRunning = true;</span>
-<span class="fc" id="L824">            mInliersData = null;</span>
-<span class="fc" id="L825">            innerEstimator.setConfidence(mConfidence);</span>
-<span class="fc" id="L826">            innerEstimator.setMaxIterations(mMaxIterations);</span>
-<span class="fc" id="L827">            innerEstimator.setProgressDelta(mProgressDelta);</span>
-<span class="fc" id="L828">            final Matrix preliminaryResult = innerEstimator.estimate();</span>
-<span class="fc" id="L829">            mInliersData = innerEstimator.getInliersData();</span>
+<span class="fc" id="L822">            mRunning = true;</span>
 
-<span class="fc" id="L831">            attemptRefine(preliminaryResult);</span>
+<span class="pc bpc" id="L824" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L825">                mListener.onCalibrateStart(this);</span>
+            }
 
-<span class="nc" id="L833">        } catch (com.irurueta.numerical.LockedException e) {</span>
-<span class="nc" id="L834">            throw new LockedException(e);</span>
-<span class="nc" id="L835">        } catch (com.irurueta.numerical.NotReadyException e) {</span>
-<span class="nc" id="L836">            throw new NotReadyException(e);</span>
-<span class="nc" id="L837">        } catch (RobustEstimatorException e) {</span>
-<span class="nc" id="L838">            throw new CalibrationException(e);</span>
+<span class="fc" id="L828">            mInliersData = null;</span>
+<span class="fc" id="L829">            innerEstimator.setConfidence(mConfidence);</span>
+<span class="fc" id="L830">            innerEstimator.setMaxIterations(mMaxIterations);</span>
+<span class="fc" id="L831">            innerEstimator.setProgressDelta(mProgressDelta);</span>
+<span class="fc" id="L832">            final Matrix preliminaryResult = innerEstimator.estimate();</span>
+<span class="fc" id="L833">            mInliersData = innerEstimator.getInliersData();</span>
+
+<span class="fc" id="L835">            attemptRefine(preliminaryResult);</span>
+
+<span class="pc bpc" id="L837" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L838">                mListener.onCalibrateEnd(this);</span>
+            }
+
+<span class="nc" id="L841">        } catch (final com.irurueta.numerical.LockedException e) {</span>
+<span class="nc" id="L842">            throw new LockedException(e);</span>
+<span class="nc" id="L843">        } catch (final com.irurueta.numerical.NotReadyException e) {</span>
+<span class="nc" id="L844">            throw new NotReadyException(e);</span>
+<span class="nc" id="L845">        } catch (final RobustEstimatorException e) {</span>
+<span class="nc" id="L846">            throw new CalibrationException(e);</span>
         } finally {
-<span class="fc" id="L840">            mRunning = false;</span>
+<span class="fc" id="L848">            mRunning = false;</span>
         }
-<span class="fc" id="L842">    }</span>
+<span class="fc" id="L850">    }</span>
 
     /**
      * Returns method being used for robust estimation.
@@ -848,7 +856,7 @@ public class MSACRobustKnownBiasAndFrameAccelerometerCalibrator extends
      */
     @Override
     public RobustEstimatorMethod getMethod() {
-<span class="fc" id="L851">        return RobustEstimatorMethod.MSAC;</span>
+<span class="fc" id="L859">        return RobustEstimatorMethod.MSAC;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

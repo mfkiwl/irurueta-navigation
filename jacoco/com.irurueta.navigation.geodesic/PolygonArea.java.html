@@ -62,20 +62,20 @@ package com.irurueta.navigation.geodesic;
 @SuppressWarnings({&quot;WeakerAccess&quot;, &quot;Duplicates&quot;})
 public class PolygonArea {
 
-    private Geodesic mEarth;
+    private final Geodesic mEarth;
 
     //full ellipsoid area
-    private double mArea0;
+    private final double mArea0;
 
     //assume polyline (don't close and skip area)
-    private boolean mPolyline;
+    private final boolean mPolyline;
 
-    private int mMask;
+    private final int mMask;
     private int mNum;
     private int mCrossings;
 
     private Accumulator mAreasum;
-    private Accumulator mPerimetersum;
+    private final Accumulator mPerimetersum;
 
     private double mLat0;
     private double mLon0;
@@ -84,87 +84,91 @@ public class PolygonArea {
 
     /**
      * Constructor for PolygonArea.
-     * @param earth the Geodesic object to use for geodesic calculations.
+     *
+     * @param earth    the Geodesic object to use for geodesic calculations.
      * @param polyline if true that treat the points as defining a polyline instead of a polygon.
      */
     @SuppressWarnings(&quot;WeakerAccess&quot;)
-<span class="fc" id="L91">    public PolygonArea(Geodesic earth, boolean polyline) {</span>
-<span class="fc" id="L92">        mEarth = earth;</span>
-<span class="fc" id="L93">        mArea0 = mEarth.getEllipsoidArea();</span>
-<span class="fc" id="L94">        mPolyline = polyline;</span>
-<span class="fc" id="L95">        mMask = GeodesicMask.LATITUDE | GeodesicMask.LONGITUDE |</span>
+<span class="fc" id="L92">    public PolygonArea(final Geodesic earth, final boolean polyline) {</span>
+<span class="fc" id="L93">        mEarth = earth;</span>
+<span class="fc" id="L94">        mArea0 = mEarth.getEllipsoidArea();</span>
+<span class="fc" id="L95">        mPolyline = polyline;</span>
+<span class="fc" id="L96">        mMask = GeodesicMask.LATITUDE | GeodesicMask.LONGITUDE |</span>
                 GeodesicMask.DISTANCE |
-<span class="fc bfc" id="L97" title="All 2 branches covered.">                (mPolyline ? GeodesicMask.NONE :</span>
-<span class="fc" id="L98">                        GeodesicMask.AREA | GeodesicMask.LONG_UNROLL);</span>
-<span class="fc" id="L99">        mPerimetersum = new Accumulator(0);</span>
-<span class="fc bfc" id="L100" title="All 2 branches covered.">        if (!mPolyline) {</span>
-<span class="fc" id="L101">            mAreasum = new Accumulator(0);</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">                (mPolyline ? GeodesicMask.NONE :</span>
+<span class="fc" id="L99">                        GeodesicMask.AREA | GeodesicMask.LONG_UNROLL);</span>
+<span class="fc" id="L100">        mPerimetersum = new Accumulator(0);</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (!mPolyline) {</span>
+<span class="fc" id="L102">            mAreasum = new Accumulator(0);</span>
         }
-<span class="fc" id="L103">        clear();</span>
-<span class="fc" id="L104">    }</span>
+<span class="fc" id="L104">        clear();</span>
+<span class="fc" id="L105">    }</span>
 
     /**
      * Clear PolygonArea, allowing a new polygon to be started.
      */
     public void clear() {
-<span class="fc" id="L110">        mNum = 0;</span>
-<span class="fc" id="L111">        mCrossings = 0;</span>
-<span class="fc" id="L112">        mPerimetersum.set(0);</span>
-<span class="fc bfc" id="L113" title="All 2 branches covered.">        if (!mPolyline) {</span>
-<span class="fc" id="L114">            mAreasum.set(0);</span>
+<span class="fc" id="L111">        mNum = 0;</span>
+<span class="fc" id="L112">        mCrossings = 0;</span>
+<span class="fc" id="L113">        mPerimetersum.set(0);</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">        if (!mPolyline) {</span>
+<span class="fc" id="L115">            mAreasum.set(0);</span>
         }
-<span class="fc" id="L116">        mLat0 = mLon0 = mLat1 = mLon1 = Double.NaN;</span>
-<span class="fc" id="L117">    }</span>
+<span class="fc" id="L117">        mLat0 = mLon0 = mLat1 = mLon1 = Double.NaN;</span>
+<span class="fc" id="L118">    }</span>
 
     /**
      * Add a point to the polygon or polyline.
      * &lt;i&gt;lat&lt;/i&gt; should be in the range [&amp;minus;90&amp;deg;, 90&amp;deg;].
+     *
      * @param lat the latitude of the point (degrees).
      * @param lon the latitude of the point (degrees).
      */
-    public void addPoint(double lat, double lon) {
-<span class="fc" id="L126">        lon = GeoMath.angNormalize(lon);</span>
-<span class="fc bfc" id="L127" title="All 2 branches covered.">        if (mNum == 0) {</span>
-<span class="fc" id="L128">            mLat0 = mLat1 = lat;</span>
-<span class="fc" id="L129">            mLon0 = mLon1 = lon;</span>
+    public void addPoint(final double lat, double lon) {
+<span class="fc" id="L128">        lon = GeoMath.angNormalize(lon);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (mNum == 0) {</span>
+<span class="fc" id="L130">            mLat0 = mLat1 = lat;</span>
+<span class="fc" id="L131">            mLon0 = mLon1 = lon;</span>
         } else {
-<span class="fc" id="L131">            GeodesicData g = mEarth.inverse(mLat1, mLon1, lat, lon, mMask);</span>
-<span class="fc" id="L132">            mPerimetersum.add(g.getS12());</span>
-<span class="fc bfc" id="L133" title="All 2 branches covered.">            if (!mPolyline) {</span>
-<span class="fc" id="L134">                mAreasum.add(g.getAreaS12());</span>
-<span class="fc" id="L135">                mCrossings += transit(mLon1, lon);</span>
+<span class="fc" id="L133">            final GeodesicData g = mEarth.inverse(mLat1, mLon1, lat, lon, mMask);</span>
+<span class="fc" id="L134">            mPerimetersum.add(g.getS12());</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">            if (!mPolyline) {</span>
+<span class="fc" id="L136">                mAreasum.add(g.getAreaS12());</span>
+<span class="fc" id="L137">                mCrossings += transit(mLon1, lon);</span>
             }
-<span class="fc" id="L137">            mLat1 = lat;</span>
-<span class="fc" id="L138">            mLon1 = lon;</span>
+<span class="fc" id="L139">            mLat1 = lat;</span>
+<span class="fc" id="L140">            mLon1 = lon;</span>
         }
-<span class="fc" id="L140">        ++mNum;</span>
-<span class="fc" id="L141">    }</span>
+<span class="fc" id="L142">        ++mNum;</span>
+<span class="fc" id="L143">    }</span>
 
     /**
      * Add an edge to the polygon or polyline.
      * This does nothing if no points have been added yet. Use PolygonArea.getCurrentPoint to
      * determine the position of the new vertex.
+     *
      * @param azi azimuth at current point (degrees).
-     * @param s distance from current point to next point (meters).
+     * @param s   distance from current point to next point (meters).
      */
-    public void addEdge(double azi, double s) {
+    public void addEdge(final double azi, final double s) {
         //do nothing if mNum is zero
-<span class="pc bpc" id="L152" title="1 of 2 branches missed.">        if (mNum &gt; 0) {</span>
-<span class="fc" id="L153">            GeodesicData g = mEarth.direct(mLat1, mLon1, azi, s, mMask);</span>
-<span class="fc" id="L154">            mPerimetersum.add(g.getS12());</span>
-<span class="fc bfc" id="L155" title="All 2 branches covered.">            if (!mPolyline) {</span>
-<span class="fc" id="L156">                mAreasum.add(g.getAreaS12());</span>
-<span class="fc" id="L157">                mCrossings += transitDirect(mLon1, g.getLon2());</span>
+<span class="pc bpc" id="L155" title="1 of 2 branches missed.">        if (mNum &gt; 0) {</span>
+<span class="fc" id="L156">            final GeodesicData g = mEarth.direct(mLat1, mLon1, azi, s, mMask);</span>
+<span class="fc" id="L157">            mPerimetersum.add(g.getS12());</span>
+<span class="fc bfc" id="L158" title="All 2 branches covered.">            if (!mPolyline) {</span>
+<span class="fc" id="L159">                mAreasum.add(g.getAreaS12());</span>
+<span class="fc" id="L160">                mCrossings += transitDirect(mLon1, g.getLon2());</span>
             }
-<span class="fc" id="L159">            mLat1 = g.getLat2();</span>
-<span class="fc" id="L160">            mLon1 = g.getLon2();</span>
-<span class="fc" id="L161">            ++mNum;</span>
+<span class="fc" id="L162">            mLat1 = g.getLat2();</span>
+<span class="fc" id="L163">            mLon1 = g.getLon2();</span>
+<span class="fc" id="L164">            ++mNum;</span>
         }
-<span class="fc" id="L163">    }</span>
+<span class="fc" id="L166">    }</span>
 
     /**
      * Return the results so far.
      * Counter-clockwise traversal counts as a positive area.
+     *
      * @return PolygonResult(&lt;i&gt;num&lt;/i&gt;, &lt;i&gt;perimeter&lt;/i&gt;, &lt;i&gt;area&lt;/i&gt;) where
      * &lt;i&gt;num&lt;/i&gt; is the number of vertices, &lt;i&gt;perimeter&lt;/i&gt; is the perimeter of
      * the polygon or the length of the polyline (meters), and &lt;i&gt;area&lt;/i&gt; is the
@@ -172,58 +176,59 @@ public class PolygonArea {
      * is true in the constructor.
      */
     public PolygonResult compute() {
-<span class="fc" id="L175">        return compute(false, true);</span>
+<span class="fc" id="L179">        return compute(false, true);</span>
     }
 
     /**
      * Return the results so far.
      * More points can be added to the polygon after this call.
+     *
      * @param reverse if true then clockwise (instead of counter-clockwise) traversal counts as
      *                a positive area.
-     * @param sign if true then return a signed result for the area if the polygon is traversed
-     *             in the &quot;wrong&quot; direction instead of returning the area for the rest of the
-     *             earth.
+     * @param sign    if true then return a signed result for the area if the polygon is traversed
+     *                in the &quot;wrong&quot; direction instead of returning the area for the rest of the
+     *                earth.
      * @return PolygonResult(&lt;i&gt;num&lt;/i&gt;, &lt;i&gt;perimeter&lt;/i&gt;, &lt;i&gt;area&lt;/i&gt;) where
      * &lt;i&gt;num&lt;/i&gt; is the number of vertices, &lt;i&gt;perimeter&lt;/i&gt; is the perimeter of the polygon
      * or the length of the polyline (meters), and &lt;i&gt;area&lt;/i&gt; is the area of the polygon
      * (meters&lt;sup&gt;2&lt;/sup&gt;) or Double.NaN of &lt;i&gt;polyline&lt;/i&gt; is true in the constructor.
      */
-    public PolygonResult compute(boolean reverse, boolean sign) {
-<span class="pc bpc" id="L192" title="1 of 2 branches missed.">        if (mNum &lt; 2) {</span>
-<span class="nc bnc" id="L193" title="All 2 branches missed.">            return new PolygonResult(mNum, 0, mPolyline ? Double.NaN : 0);</span>
+    public PolygonResult compute(final boolean reverse, final boolean sign) {
+<span class="pc bpc" id="L197" title="1 of 2 branches missed.">        if (mNum &lt; 2) {</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">            return new PolygonResult(mNum, 0, mPolyline ? Double.NaN : 0);</span>
         }
-<span class="fc bfc" id="L195" title="All 2 branches covered.">        if (mPolyline) {</span>
-<span class="fc" id="L196">            return new PolygonResult(mNum, mPerimetersum.getSum(), Double.NaN);</span>
+<span class="fc bfc" id="L200" title="All 2 branches covered.">        if (mPolyline) {</span>
+<span class="fc" id="L201">            return new PolygonResult(mNum, mPerimetersum.getSum(), Double.NaN);</span>
         }
 
-<span class="fc" id="L199">        GeodesicData g = mEarth.inverse(mLat1, mLon1, mLat0, mLon0, mMask);</span>
-<span class="fc" id="L200">        Accumulator tempsum = new Accumulator(mAreasum);</span>
-<span class="fc" id="L201">        tempsum.add(g.getAreaS12());</span>
-<span class="fc" id="L202">        int crossings = mCrossings + transit(mLon1, mLon0);</span>
-<span class="fc bfc" id="L203" title="All 2 branches covered.">        if ((crossings &amp; 1) != 0) {</span>
-<span class="fc bfc" id="L204" title="All 2 branches covered.">            tempsum.add((tempsum.getSum() &lt; 0 ? 1 : -1) * mArea0 / 2);</span>
+<span class="fc" id="L204">        final GeodesicData g = mEarth.inverse(mLat1, mLon1, mLat0, mLon0, mMask);</span>
+<span class="fc" id="L205">        final Accumulator tempsum = new Accumulator(mAreasum);</span>
+<span class="fc" id="L206">        tempsum.add(g.getAreaS12());</span>
+<span class="fc" id="L207">        final int crossings = mCrossings + transit(mLon1, mLon0);</span>
+<span class="fc bfc" id="L208" title="All 2 branches covered.">        if ((crossings &amp; 1) != 0) {</span>
+<span class="fc bfc" id="L209" title="All 2 branches covered.">            tempsum.add((tempsum.getSum() &lt; 0 ? 1 : -1) * mArea0 / 2);</span>
         }
 
         //area is with the clockwise sense. If !reverse convert to counter-clockwise convention
-<span class="fc bfc" id="L208" title="All 2 branches covered.">        if (!reverse) {</span>
-<span class="fc" id="L209">            tempsum.negate();</span>
+<span class="fc bfc" id="L213" title="All 2 branches covered.">        if (!reverse) {</span>
+<span class="fc" id="L214">            tempsum.negate();</span>
         }
 
         //if sign put area in (-rea0/2, area0/2], else put area in [0, area0)
-<span class="fc bfc" id="L213" title="All 2 branches covered.">        if (sign) {</span>
-<span class="pc bpc" id="L214" title="1 of 2 branches missed.">            if (tempsum.getSum() &gt; mArea0/2) {</span>
-<span class="nc" id="L215">                tempsum.add(-mArea0);</span>
-<span class="fc bfc" id="L216" title="All 2 branches covered.">            } else if (tempsum.getSum() &lt;= -mArea0/2) {</span>
-<span class="fc" id="L217">                tempsum.add(+mArea0);</span>
+<span class="fc bfc" id="L218" title="All 2 branches covered.">        if (sign) {</span>
+<span class="pc bpc" id="L219" title="1 of 2 branches missed.">            if (tempsum.getSum() &gt; mArea0 / 2) {</span>
+<span class="nc" id="L220">                tempsum.add(-mArea0);</span>
+<span class="fc bfc" id="L221" title="All 2 branches covered.">            } else if (tempsum.getSum() &lt;= -mArea0 / 2) {</span>
+<span class="fc" id="L222">                tempsum.add(+mArea0);</span>
             }
         } else {
-<span class="pc bpc" id="L220" title="1 of 2 branches missed.">            if (tempsum.getSum() &gt;= mArea0) {</span>
-<span class="nc" id="L221">                tempsum.add(-mArea0);</span>
-<span class="fc bfc" id="L222" title="All 2 branches covered.">            } else if (tempsum.getSum() &lt; 0) {</span>
-<span class="fc" id="L223">                tempsum.add(+mArea0);</span>
+<span class="pc bpc" id="L225" title="1 of 2 branches missed.">            if (tempsum.getSum() &gt;= mArea0) {</span>
+<span class="nc" id="L226">                tempsum.add(-mArea0);</span>
+<span class="fc bfc" id="L227" title="All 2 branches covered.">            } else if (tempsum.getSum() &lt; 0) {</span>
+<span class="fc" id="L228">                tempsum.add(+mArea0);</span>
             }
         }
-<span class="fc" id="L226">        return new PolygonResult(mNum, mPerimetersum.sum(g.getS12()), 0 + tempsum.getSum());</span>
+<span class="fc" id="L231">        return new PolygonResult(mNum, mPerimetersum.sum(g.getS12()), 0 + tempsum.getSum());</span>
     }
 
     /**
@@ -233,67 +238,69 @@ public class PolygonArea {
      * arithmetic is used to accumulate the data for the test point; thus the area and perimeter
      * returned are less accurate than if addPoint and compute are used.
      * &lt;i&gt;lat&lt;/i&gt; should be in the range [&amp;minus;90&amp;deg;, 90&amp;deg;].
-     * @param lat the latitude of the test point (degrees).
-     * @param lon the longitude of the test point (degrees).
+     *
+     * @param lat     the latitude of the test point (degrees).
+     * @param lon     the longitude of the test point (degrees).
      * @param reverse if true then clockwise (instead of counter-clockwise) traversal counts as
      *                a positive area.
-     * @param sign if true then return a signed result for the area if the polygon is traversed
-     *             in the &quot;wrong&quot; direction instead of returning the area for the rest of the
-     *             earth.
+     * @param sign    if true then return a signed result for the area if the polygon is traversed
+     *                in the &quot;wrong&quot; direction instead of returning the area for the rest of the
+     *                earth.
      * @return PolygonResult(&lt;i&gt;num&lt;/i&gt;, &lt;i&gt;perimeter&lt;/i&gt;, &lt;i&gt;area&lt;/i&gt;) where &lt;i&gt;num&lt;/i&gt; is
      * the number of vertices, &lt;i&gt;perimeter&lt;/i&gt; is the perimeter of the polygon or the length
      * of the polyline (meters), and &lt;i&gt;area&lt;/i&gt; is the area of the polygon (meters&lt;sup&gt;2&lt;/sup&gt;)
      * or Double.NaN of &lt;i&gt;polyline&lt;/i&gt; is true in the constructor.
      */
-    public PolygonResult testPoint(double lat, double lon, boolean reverse, boolean sign) {
-<span class="pc bpc" id="L249" title="1 of 2 branches missed.">        if (mNum == 0) {</span>
-<span class="nc bnc" id="L250" title="All 2 branches missed.">            return new PolygonResult(1, 0, mPolyline ? Double.NaN : 0);</span>
+    public PolygonResult testPoint(
+            final double lat, final double lon, final boolean reverse, final boolean sign) {
+<span class="pc bpc" id="L256" title="1 of 2 branches missed.">        if (mNum == 0) {</span>
+<span class="nc bnc" id="L257" title="All 2 branches missed.">            return new PolygonResult(1, 0, mPolyline ? Double.NaN : 0);</span>
         }
 
-<span class="fc" id="L253">        double perimeter = mPerimetersum.getSum();</span>
-<span class="fc bfc" id="L254" title="All 2 branches covered.">        double tempsum = mPolyline ? 0 : mAreasum.getSum();</span>
-<span class="fc" id="L255">        int crossings = mCrossings;</span>
-<span class="fc" id="L256">        int num = mNum + 1;</span>
-<span class="fc bfc" id="L257" title="All 4 branches covered.">        for (int i = 0; i &lt; (mPolyline ? 1 : 2); ++i) {</span>
-<span class="fc bfc" id="L258" title="All 2 branches covered.">            GeodesicData g = mEarth.inverse(i == 0 ? mLat1 : lat,</span>
-<span class="fc bfc" id="L259" title="All 2 branches covered.">                    i == 0 ? mLon1 : lon,</span>
-<span class="fc bfc" id="L260" title="All 2 branches covered.">                    i != 0 ? mLat0 : lat,</span>
-<span class="fc bfc" id="L261" title="All 2 branches covered.">                    i != 0 ? mLon0 : lon, mMask);</span>
-<span class="fc" id="L262">            perimeter += g.getS12();</span>
-<span class="fc bfc" id="L263" title="All 2 branches covered.">            if (!mPolyline) {</span>
-<span class="fc" id="L264">                tempsum += g.getAreaS12();</span>
-<span class="fc bfc" id="L265" title="All 4 branches covered.">                crossings += transit(i == 0 ? mLon1 : lon, i != 0 ? mLon0 : lon);</span>
+<span class="fc" id="L260">        double perimeter = mPerimetersum.getSum();</span>
+<span class="fc bfc" id="L261" title="All 2 branches covered.">        double tempsum = mPolyline ? 0 : mAreasum.getSum();</span>
+<span class="fc" id="L262">        int crossings = mCrossings;</span>
+<span class="fc" id="L263">        final int num = mNum + 1;</span>
+<span class="fc bfc" id="L264" title="All 4 branches covered.">        for (int i = 0; i &lt; (mPolyline ? 1 : 2); ++i) {</span>
+<span class="fc bfc" id="L265" title="All 2 branches covered.">            final GeodesicData g = mEarth.inverse(i == 0 ? mLat1 : lat,</span>
+<span class="fc bfc" id="L266" title="All 2 branches covered.">                    i == 0 ? mLon1 : lon,</span>
+<span class="fc bfc" id="L267" title="All 2 branches covered.">                    i != 0 ? mLat0 : lat,</span>
+<span class="fc bfc" id="L268" title="All 2 branches covered.">                    i != 0 ? mLon0 : lon, mMask);</span>
+<span class="fc" id="L269">            perimeter += g.getS12();</span>
+<span class="fc bfc" id="L270" title="All 2 branches covered.">            if (!mPolyline) {</span>
+<span class="fc" id="L271">                tempsum += g.getAreaS12();</span>
+<span class="fc bfc" id="L272" title="All 4 branches covered.">                crossings += transit(i == 0 ? mLon1 : lon, i != 0 ? mLon0 : lon);</span>
             }
         }
 
-<span class="fc bfc" id="L269" title="All 2 branches covered.">        if (mPolyline) {</span>
-<span class="fc" id="L270">            return new PolygonResult(num, perimeter, Double.NaN);</span>
+<span class="fc bfc" id="L276" title="All 2 branches covered.">        if (mPolyline) {</span>
+<span class="fc" id="L277">            return new PolygonResult(num, perimeter, Double.NaN);</span>
         }
 
-<span class="pc bpc" id="L273" title="1 of 2 branches missed.">        if ((crossings &amp; 1) != 0) {</span>
-<span class="nc bnc" id="L274" title="All 2 branches missed.">            tempsum += (tempsum &lt; 0 ? 1 : -1) * mArea0 / 2;</span>
+<span class="pc bpc" id="L280" title="1 of 2 branches missed.">        if ((crossings &amp; 1) != 0) {</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">            tempsum += (tempsum &lt; 0 ? 1 : -1) * mArea0 / 2;</span>
         }
 
         //area is with the clockwise sense. If !reverse convert to counter-clockwise convention
-<span class="fc bfc" id="L278" title="All 2 branches covered.">        if (!reverse) {</span>
-<span class="fc" id="L279">            tempsum *= -1;</span>
+<span class="fc bfc" id="L285" title="All 2 branches covered.">        if (!reverse) {</span>
+<span class="fc" id="L286">            tempsum *= -1;</span>
         }
 
         //if sign put area in (-area0/2, area0/2], else put area in [0, area0)
-<span class="fc bfc" id="L283" title="All 2 branches covered.">        if (sign) {</span>
-<span class="pc bpc" id="L284" title="1 of 2 branches missed.">            if (tempsum &gt; mArea0/2) {</span>
-<span class="nc" id="L285">                tempsum -= mArea0;</span>
-<span class="pc bpc" id="L286" title="1 of 2 branches missed.">            } else if (tempsum &lt;= -mArea0/2) {</span>
-<span class="nc" id="L287">                tempsum += mArea0;</span>
+<span class="fc bfc" id="L290" title="All 2 branches covered.">        if (sign) {</span>
+<span class="pc bpc" id="L291" title="1 of 2 branches missed.">            if (tempsum &gt; mArea0 / 2) {</span>
+<span class="nc" id="L292">                tempsum -= mArea0;</span>
+<span class="pc bpc" id="L293" title="1 of 2 branches missed.">            } else if (tempsum &lt;= -mArea0 / 2) {</span>
+<span class="nc" id="L294">                tempsum += mArea0;</span>
             }
         } else {
-<span class="pc bpc" id="L290" title="1 of 2 branches missed.">            if (tempsum &gt;= mArea0) {</span>
-<span class="nc" id="L291">                tempsum -= mArea0;</span>
-<span class="fc bfc" id="L292" title="All 2 branches covered.">            } else if (tempsum &lt; 0) {</span>
-<span class="fc" id="L293">                tempsum += mArea0;</span>
+<span class="pc bpc" id="L297" title="1 of 2 branches missed.">            if (tempsum &gt;= mArea0) {</span>
+<span class="nc" id="L298">                tempsum -= mArea0;</span>
+<span class="fc bfc" id="L299" title="All 2 branches covered.">            } else if (tempsum &lt; 0) {</span>
+<span class="fc" id="L300">                tempsum += mArea0;</span>
             }
         }
-<span class="fc" id="L296">        return new PolygonResult(num, perimeter, 0 + tempsum);</span>
+<span class="fc" id="L303">        return new PolygonResult(num, perimeter, 0 + tempsum);</span>
     }
 
     /**
@@ -302,107 +309,112 @@ public class PolygonArea {
      * This lets you report a running result for the perimeter and area as the user moves the mouse
      * cursor. Ordinary floating point arithmetic is used to accumulate the data for the test point;
      * thus the area and perimeter returned are less accurate than if addPoint and compute are used.
-     * @param azi azimuth at current point (degrees).
-     * @param s distance from current point to final test point (meters).
+     *
+     * @param azi     azimuth at current point (degrees).
+     * @param s       distance from current point to final test point (meters).
      * @param reverse if true then clockwise (instead of counter-clockwise) traversal counts as a
      *                positive area.
-     * @param sign if true then return a signed result for the area if the polygon is traversed in
-     *             the &quot;wrong&quot; direction instead of returning the area for the rest of the earth.
+     * @param sign    if true then return a signed result for the area if the polygon is traversed in
+     *                the &quot;wrong&quot; direction instead of returning the area for the rest of the earth.
      * @return PolygonResult(&lt;i&gt;num&lt;/i&gt;, &lt;i&gt;perimeter&lt;/i&gt;, &lt;i&gt;area&lt;/i&gt;) where &lt;i&gt;num&lt;/i&gt; is the
      * number of vertices, &lt;i&gt;perimeter&lt;/i&gt; is the perimeter of the polygon or the length of the
      * polyline (meters), and &lt;i&gt;area&lt;/i&gt; is the area of the polygon (meters&lt;sup&gt;2&lt;/sup&gt;) or
      * Double.NaN of &lt;i&gt;polyline&lt;/i&gt; is true in the constructor.
      */
-    public PolygonResult testEdge(double azi, double s, boolean reverse, boolean sign) {
+    public PolygonResult testEdge(
+            final double azi, final double s, final boolean reverse, final boolean sign) {
         //we don't have a starting point!
-<span class="pc bpc" id="L318" title="1 of 2 branches missed.">        if (mNum == 0) {</span>
-<span class="nc" id="L319">            return new PolygonResult(0, Double.NaN, Double.NaN);</span>
+<span class="pc bpc" id="L327" title="1 of 2 branches missed.">        if (mNum == 0) {</span>
+<span class="nc" id="L328">            return new PolygonResult(0, Double.NaN, Double.NaN);</span>
         }
 
-<span class="fc" id="L322">        int num = mNum + 1;</span>
-<span class="fc" id="L323">        double perimeter = mPerimetersum.getSum() + s;</span>
-<span class="fc bfc" id="L324" title="All 2 branches covered.">        if (mPolyline) {</span>
-<span class="fc" id="L325">            return new PolygonResult(num, perimeter, Double.NaN);</span>
+<span class="fc" id="L331">        final int num = mNum + 1;</span>
+<span class="fc" id="L332">        double perimeter = mPerimetersum.getSum() + s;</span>
+<span class="fc bfc" id="L333" title="All 2 branches covered.">        if (mPolyline) {</span>
+<span class="fc" id="L334">            return new PolygonResult(num, perimeter, Double.NaN);</span>
         }
 
-<span class="fc" id="L328">        double tempsum = mAreasum.getSum();</span>
-<span class="fc" id="L329">        int crossings = mCrossings;</span>
+<span class="fc" id="L337">        double tempsum = mAreasum.getSum();</span>
+<span class="fc" id="L338">        int crossings = mCrossings;</span>
 
-<span class="fc" id="L331">        GeodesicData g = mEarth.direct(mLat1, mLon1, azi, false, s, mMask);</span>
-<span class="fc" id="L332">        tempsum += g.getAreaS12();</span>
-<span class="fc" id="L333">        crossings += transitDirect(mLon1, g.getLon2());</span>
-<span class="fc" id="L334">        g = mEarth.inverse(g.getLat2(), g.getLon2(), mLat0, mLon0, mMask);</span>
-<span class="fc" id="L335">        perimeter += g.getS12();</span>
-<span class="fc" id="L336">        tempsum += g.getAreaS12();</span>
-<span class="fc" id="L337">        crossings += transit(g.getLon2(), mLon0);</span>
+<span class="fc" id="L340">        GeodesicData g = mEarth.direct(mLat1, mLon1, azi, false, s, mMask);</span>
+<span class="fc" id="L341">        tempsum += g.getAreaS12();</span>
+<span class="fc" id="L342">        crossings += transitDirect(mLon1, g.getLon2());</span>
+<span class="fc" id="L343">        g = mEarth.inverse(g.getLat2(), g.getLon2(), mLat0, mLon0, mMask);</span>
+<span class="fc" id="L344">        perimeter += g.getS12();</span>
+<span class="fc" id="L345">        tempsum += g.getAreaS12();</span>
+<span class="fc" id="L346">        crossings += transit(g.getLon2(), mLon0);</span>
 
-<span class="pc bpc" id="L339" title="1 of 2 branches missed.">        if ((crossings &amp; 1) != 0) {</span>
-<span class="nc bnc" id="L340" title="All 2 branches missed.">            tempsum += (tempsum &lt; 0 ? 1 : -1) * mArea0/2;</span>
+<span class="pc bpc" id="L348" title="1 of 2 branches missed.">        if ((crossings &amp; 1) != 0) {</span>
+<span class="nc bnc" id="L349" title="All 2 branches missed.">            tempsum += (tempsum &lt; 0 ? 1 : -1) * mArea0 / 2;</span>
         }
 
         //area is with the clockwise sense. If !reverse convert to counter-clockwise convention.
-<span class="fc bfc" id="L344" title="All 2 branches covered.">        if (!reverse) {</span>
-<span class="fc" id="L345">            tempsum *= -1;</span>
+<span class="fc bfc" id="L353" title="All 2 branches covered.">        if (!reverse) {</span>
+<span class="fc" id="L354">            tempsum *= -1;</span>
         }
 
         //if sign put area in (-area0/2, area0/2], else put area in [0, area0)
-<span class="fc bfc" id="L349" title="All 2 branches covered.">        if (sign) {</span>
-<span class="pc bpc" id="L350" title="1 of 2 branches missed.">            if (tempsum &gt; mArea0/2) {</span>
-<span class="nc" id="L351">                tempsum -= mArea0;</span>
-<span class="pc bpc" id="L352" title="1 of 2 branches missed.">            } else if (tempsum &lt;= -mArea0/2) {</span>
-<span class="nc" id="L353">                tempsum += mArea0;</span>
+<span class="fc bfc" id="L358" title="All 2 branches covered.">        if (sign) {</span>
+<span class="pc bpc" id="L359" title="1 of 2 branches missed.">            if (tempsum &gt; mArea0 / 2) {</span>
+<span class="nc" id="L360">                tempsum -= mArea0;</span>
+<span class="pc bpc" id="L361" title="1 of 2 branches missed.">            } else if (tempsum &lt;= -mArea0 / 2) {</span>
+<span class="nc" id="L362">                tempsum += mArea0;</span>
             }
         } else {
-<span class="pc bpc" id="L356" title="1 of 2 branches missed.">            if (tempsum &gt;= mArea0) {</span>
-<span class="nc" id="L357">                tempsum -= mArea0;</span>
-<span class="fc bfc" id="L358" title="All 2 branches covered.">            } else if (tempsum &lt; 0) {</span>
-<span class="fc" id="L359">                tempsum += mArea0;</span>
+<span class="pc bpc" id="L365" title="1 of 2 branches missed.">            if (tempsum &gt;= mArea0) {</span>
+<span class="nc" id="L366">                tempsum -= mArea0;</span>
+<span class="fc bfc" id="L367" title="All 2 branches covered.">            } else if (tempsum &lt; 0) {</span>
+<span class="fc" id="L368">                tempsum += mArea0;</span>
             }
         }
 
-<span class="fc" id="L363">        return new PolygonResult(num, perimeter, 0 + tempsum);</span>
+<span class="fc" id="L372">        return new PolygonResult(num, perimeter, 0 + tempsum);</span>
     }
 
     /**
      * Gets the equatorial radius of the ellipsoid (meters).
+     *
      * @return &lt;i&gt;a&lt;/i&gt; the equatorial radius of the ellipsoid (meters). This is the value inherited
      * from the Geodesic object used in the constructor.
      */
     public double getMajorRadius() {
-<span class="fc" id="L372">        return mEarth.getMajorRadius();</span>
+<span class="fc" id="L382">        return mEarth.getMajorRadius();</span>
     }
 
     /**
      * Gets the flattening of the ellipsoid.
+     *
      * @return &lt;i&gt;f&lt;/i&gt; the flattening of the ellipsoid. This is the value inherited from the Geodesic
      * object used in the constructor.
      */
     public double getFlattening() {
-<span class="fc" id="L381">        return mEarth.getFlattening();</span>
+<span class="fc" id="L392">        return mEarth.getFlattening();</span>
     }
 
     /**
      * Report the previous vertex added to the polygon or polyline.
      * If no points have been added, then Double.NaN is returned. Otherwise, &lt;i&gt;lon&lt;/i&gt; will be
      * in the range [&amp;minus;180&amp;deg;, 180&amp;deg;].
+     *
      * @return Pair(&lt;i&gt;lat&lt;/i&gt;, &lt;i&gt;lon&lt;/i&gt;), the current latitude and longitude.
      */
     public Pair getCurrentPoint() {
-<span class="fc" id="L391">        return new Pair(mLat1, mLon1);</span>
+<span class="fc" id="L403">        return new Pair(mLat1, mLon1);</span>
     }
 
     private static int transit(double lon1, double lon2) {
         //return 1 or -1 if crossing prime meridian in east or west direction.
         //Otherwise return zero.
         //Compute lon12 the same way as Geodesic.inverse.
-<span class="fc" id="L398">        lon1 = GeoMath.angNormalize(lon1);</span>
-<span class="fc" id="L399">        lon2 = GeoMath.angNormalize(lon2);</span>
+<span class="fc" id="L410">        lon1 = GeoMath.angNormalize(lon1);</span>
+<span class="fc" id="L411">        lon2 = GeoMath.angNormalize(lon2);</span>
 
-<span class="fc" id="L401">        double lon12 = GeoMath.angDiff(lon1, lon2).getFirst();</span>
-<span class="fc bfc" id="L402" title="All 6 branches covered.">        if (lon1 &lt;= 0 &amp;&amp; lon2 &gt; 0 &amp;&amp; lon12 &gt; 0 ) {</span>
-<span class="fc" id="L403">            return 1;</span>
+<span class="fc" id="L413">        final double lon12 = GeoMath.angDiff(lon1, lon2).getFirst();</span>
+<span class="fc bfc" id="L414" title="All 6 branches covered.">        if (lon1 &lt;= 0 &amp;&amp; lon2 &gt; 0 &amp;&amp; lon12 &gt; 0) {</span>
+<span class="fc" id="L415">            return 1;</span>
         } else {
-<span class="fc bfc" id="L405" title="All 6 branches covered.">            return lon2 &lt;= 0 &amp;&amp; lon1 &gt; 0 &amp;&amp; lon12 &lt; 0 ? -1 : 0;</span>
+<span class="fc bfc" id="L417" title="All 6 branches covered.">            return lon2 &lt;= 0 &amp;&amp; lon1 &gt; 0 &amp;&amp; lon12 &lt; 0 ? -1 : 0;</span>
         }
     }
 
@@ -410,10 +422,10 @@ public class PolygonArea {
     private static int transitDirect(double lon1, double lon2) {
         //we want to compute exactly
         //int(floor(lon2 / 360)) - int(floor(lon1 / 360))
-<span class="fc" id="L413">        lon1 = lon1 % 720.0;</span>
-<span class="fc" id="L414">        lon2 = lon2 % 720.0;</span>
-<span class="pc bpc" id="L415" title="4 of 6 branches missed.">        return (((lon2 &gt;= 0 &amp;&amp; lon2 &lt; 360) || lon2 &lt; -360 ? 0 : 1) -</span>
-<span class="pc bpc" id="L416" title="4 of 6 branches missed.">                ((lon1 &gt;= 0 &amp;&amp; lon1 &lt; 360) || lon1 &lt; -360 ? 0 : 1));</span>
+<span class="fc" id="L425">        lon1 = lon1 % 720.0;</span>
+<span class="fc" id="L426">        lon2 = lon2 % 720.0;</span>
+<span class="pc bpc" id="L427" title="4 of 6 branches missed.">        return (((lon2 &gt;= 0 &amp;&amp; lon2 &lt; 360) || lon2 &lt; -360 ? 0 : 1) -</span>
+<span class="pc bpc" id="L428" title="4 of 6 branches missed.">                ((lon1 &gt;= 0 &amp;&amp; lon1 &lt; 360) || lon1 &lt; -360 ? 0 : 1));</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

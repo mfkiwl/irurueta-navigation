@@ -733,7 +733,7 @@ public class MSACRobustKnownBiasAndFrameGyroscopeCalibrator extends
      * @throws IllegalArgumentException if provided value is equal or less than zero.
      * @throws LockedException          if calibrator is currently running.
      */
-    public void setThreshold(double threshold) throws LockedException {
+    public void setThreshold(final double threshold) throws LockedException {
 <span class="fc bfc" id="L737" title="All 2 branches covered.">        if (mRunning) {</span>
 <span class="fc" id="L738">            throw new LockedException();</span>
         }
@@ -761,98 +761,104 @@ public class MSACRobustKnownBiasAndFrameGyroscopeCalibrator extends
         }
 
 <span class="fc" id="L763">        final MSACRobustEstimator&lt;PreliminaryResult&gt; innerEstimator =</span>
-<span class="fc" id="L764">                new MSACRobustEstimator&lt;&gt;(new MSACRobustEstimatorListener&lt;PreliminaryResult&gt;() {</span>
+                new MSACRobustEstimator&lt;&gt;(
+<span class="fc" id="L765">                        new MSACRobustEstimatorListener&lt;PreliminaryResult&gt;() {</span>
                     @Override
                     public double getThreshold() {
-<span class="fc" id="L767">                        return mThreshold;</span>
+<span class="fc" id="L768">                        return mThreshold;</span>
                     }
 
                     @Override
                     public int getTotalSamples() {
-<span class="fc" id="L772">                        return mMeasurements.size();</span>
+<span class="fc" id="L773">                        return mMeasurements.size();</span>
                     }
 
                     @Override
                     public int getSubsetSize() {
-<span class="fc" id="L777">                        return mPreliminarySubsetSize;</span>
+<span class="fc" id="L778">                        return mPreliminarySubsetSize;</span>
                     }
 
                     @Override
                     public void estimatePreliminarSolutions(
                             final int[] samplesIndices,
                             final List&lt;PreliminaryResult&gt; solutions) {
-<span class="fc" id="L784">                        computePreliminarySolutions(samplesIndices, solutions);</span>
-<span class="fc" id="L785">                    }</span>
+<span class="fc" id="L785">                        computePreliminarySolutions(samplesIndices, solutions);</span>
+<span class="fc" id="L786">                    }</span>
 
                     @Override
                     public double computeResidual(
                             final PreliminaryResult currentEstimation, final int i) {
-<span class="fc" id="L790">                        return computeError(mMeasurements.get(i), currentEstimation);</span>
+<span class="fc" id="L791">                        return computeError(mMeasurements.get(i), currentEstimation);</span>
                     }
 
                     @Override
                     public boolean isReady() {
-<span class="fc" id="L795">                        return MSACRobustKnownBiasAndFrameGyroscopeCalibrator.super.isReady();</span>
+<span class="fc" id="L796">                        return MSACRobustKnownBiasAndFrameGyroscopeCalibrator.super.isReady();</span>
                     }
 
                     @Override
                     public void onEstimateStart(
                             final RobustEstimator&lt;PreliminaryResult&gt; estimator) {
-<span class="pc bpc" id="L801" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L802">                            mListener.onCalibrateStart(MSACRobustKnownBiasAndFrameGyroscopeCalibrator.this);</span>
-                        }
-<span class="fc" id="L804">                    }</span>
+<span class="fc" id="L802">                    }</span>
 
                     @Override
                     public void onEstimateEnd(
                             final RobustEstimator&lt;PreliminaryResult&gt; estimator) {
-<span class="pc bpc" id="L809" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L810">                            mListener.onCalibrateEnd(MSACRobustKnownBiasAndFrameGyroscopeCalibrator.this);</span>
-                        }
-<span class="fc" id="L812">                    }</span>
+<span class="fc" id="L807">                    }</span>
 
                     @Override
                     public void onEstimateNextIteration(
                             final RobustEstimator&lt;PreliminaryResult&gt; estimator,
                             final int iteration) {
-<span class="pc bpc" id="L818" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L819">                            mListener.onCalibrateNextIteration(</span>
-                                    MSACRobustKnownBiasAndFrameGyroscopeCalibrator.this, iteration);
+<span class="pc bpc" id="L813" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L814">                            mListener.onCalibrateNextIteration(</span>
+                                    MSACRobustKnownBiasAndFrameGyroscopeCalibrator.this,
+                                    iteration);
                         }
-<span class="fc" id="L822">                    }</span>
+<span class="fc" id="L818">                    }</span>
 
                     @Override
                     public void onEstimateProgressChange(
                             final RobustEstimator&lt;PreliminaryResult&gt; estimator,
                             final float progress) {
-<span class="pc bpc" id="L828" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
-<span class="fc" id="L829">                            mListener.onCalibrateProgressChange(</span>
-                                    MSACRobustKnownBiasAndFrameGyroscopeCalibrator.this, progress);
+<span class="pc bpc" id="L824" title="1 of 2 branches missed.">                        if (mListener != null) {</span>
+<span class="fc" id="L825">                            mListener.onCalibrateProgressChange(</span>
+                                    MSACRobustKnownBiasAndFrameGyroscopeCalibrator.this,
+                                    progress);
                         }
-<span class="fc" id="L832">                    }</span>
+<span class="fc" id="L829">                    }</span>
                 });
 
         try {
-<span class="fc" id="L836">            mRunning = true;</span>
-<span class="fc" id="L837">            mInliersData = null;</span>
-<span class="fc" id="L838">            innerEstimator.setConfidence(mConfidence);</span>
-<span class="fc" id="L839">            innerEstimator.setMaxIterations(mMaxIterations);</span>
-<span class="fc" id="L840">            innerEstimator.setProgressDelta(mProgressDelta);</span>
-<span class="fc" id="L841">            final PreliminaryResult preliminaryResult = innerEstimator.estimate();</span>
-<span class="fc" id="L842">            mInliersData = innerEstimator.getInliersData();</span>
+<span class="fc" id="L833">            mRunning = true;</span>
 
-<span class="fc" id="L844">            attemptRefine(preliminaryResult);</span>
+<span class="pc bpc" id="L835" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L836">                mListener.onCalibrateStart(this);</span>
+            }
 
-<span class="nc" id="L846">        } catch (com.irurueta.numerical.LockedException e) {</span>
-<span class="nc" id="L847">            throw new LockedException(e);</span>
-<span class="nc" id="L848">        } catch (com.irurueta.numerical.NotReadyException e) {</span>
-<span class="nc" id="L849">            throw new NotReadyException(e);</span>
-<span class="nc" id="L850">        } catch (RobustEstimatorException e) {</span>
-<span class="nc" id="L851">            throw new CalibrationException(e);</span>
+<span class="fc" id="L839">            mInliersData = null;</span>
+<span class="fc" id="L840">            innerEstimator.setConfidence(mConfidence);</span>
+<span class="fc" id="L841">            innerEstimator.setMaxIterations(mMaxIterations);</span>
+<span class="fc" id="L842">            innerEstimator.setProgressDelta(mProgressDelta);</span>
+<span class="fc" id="L843">            final PreliminaryResult preliminaryResult = innerEstimator.estimate();</span>
+<span class="fc" id="L844">            mInliersData = innerEstimator.getInliersData();</span>
+
+<span class="fc" id="L846">            attemptRefine(preliminaryResult);</span>
+
+<span class="pc bpc" id="L848" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L849">                mListener.onCalibrateEnd(this);</span>
+            }
+
+<span class="nc" id="L852">        } catch (final com.irurueta.numerical.LockedException e) {</span>
+<span class="nc" id="L853">            throw new LockedException(e);</span>
+<span class="nc" id="L854">        } catch (final com.irurueta.numerical.NotReadyException e) {</span>
+<span class="nc" id="L855">            throw new NotReadyException(e);</span>
+<span class="nc" id="L856">        } catch (final RobustEstimatorException e) {</span>
+<span class="nc" id="L857">            throw new CalibrationException(e);</span>
         } finally {
-<span class="fc" id="L853">            mRunning = false;</span>
+<span class="fc" id="L859">            mRunning = false;</span>
         }
-<span class="fc" id="L855">    }</span>
+<span class="fc" id="L861">    }</span>
 
     /**
      * Returns method being used for robust estimation.
@@ -861,7 +867,7 @@ public class MSACRobustKnownBiasAndFrameGyroscopeCalibrator extends
      */
     @Override
     public RobustEstimatorMethod getMethod() {
-<span class="fc" id="L864">        return RobustEstimatorMethod.MSAC;</span>
+<span class="fc" id="L870">        return RobustEstimatorMethod.MSAC;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
