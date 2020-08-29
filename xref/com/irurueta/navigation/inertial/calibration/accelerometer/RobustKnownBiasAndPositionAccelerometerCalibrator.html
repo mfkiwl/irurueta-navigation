@@ -6179,235 +6179,237 @@
 <a class="jxr_linenumber" name="L6171" href="#L6171">6171</a> <em class="jxr_javadoccomment">     * @param preliminaryResult a preliminary result.</em>
 <a class="jxr_linenumber" name="L6172" href="#L6172">6172</a> <em class="jxr_javadoccomment">     * @return computed error.</em>
 <a class="jxr_linenumber" name="L6173" href="#L6173">6173</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L6174" href="#L6174">6174</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">double</strong> computeError(<strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/StandardDeviationBodyKinematics.html">StandardDeviationBodyKinematics</a> measurement,
-<a class="jxr_linenumber" name="L6175" href="#L6175">6175</a>                                   <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/accelerometer/RobustKnownFrameAccelerometerCalibrator.html">PreliminaryResult</a> preliminaryResult) {
-<a class="jxr_linenumber" name="L6176" href="#L6176">6176</a> 
-<a class="jxr_linenumber" name="L6177" href="#L6177">6177</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L6178" href="#L6178">6178</a>             <em class="jxr_comment">// We know that measured specific force is:</em>
-<a class="jxr_linenumber" name="L6179" href="#L6179">6179</a>             <em class="jxr_comment">// fmeas = ba + (I + Ma) * ftrue</em>
-<a class="jxr_linenumber" name="L6180" href="#L6180">6180</a> 
-<a class="jxr_linenumber" name="L6181" href="#L6181">6181</a>             <em class="jxr_comment">// fmeas - ba = (I + Ma) * ftrue</em>
-<a class="jxr_linenumber" name="L6182" href="#L6182">6182</a> 
-<a class="jxr_linenumber" name="L6183" href="#L6183">6183</a>             <em class="jxr_comment">// ftrue = (I + Ma)^-1 * (fmeas - ba)</em>
-<a class="jxr_linenumber" name="L6184" href="#L6184">6184</a> 
-<a class="jxr_linenumber" name="L6185" href="#L6185">6185</a>             <em class="jxr_comment">// We know that ||ftrue|| should be equal to the gravity value at current Earth</em>
-<a class="jxr_linenumber" name="L6186" href="#L6186">6186</a>             <em class="jxr_comment">// position</em>
-<a class="jxr_linenumber" name="L6187" href="#L6187">6187</a>             <em class="jxr_comment">// ||ftrue|| = g ~ 9.81 m/s^2</em>
-<a class="jxr_linenumber" name="L6188" href="#L6188">6188</a> 
-<a class="jxr_linenumber" name="L6189" href="#L6189">6189</a>             <strong class="jxr_keyword">final</strong> Matrix estimatedMa = preliminaryResult.mEstimatedMa;
-<a class="jxr_linenumber" name="L6190" href="#L6190">6190</a> 
-<a class="jxr_linenumber" name="L6191" href="#L6191">6191</a>             <strong class="jxr_keyword">if</strong> (mIdentity == <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L6192" href="#L6192">6192</a>                 mIdentity = Matrix.identity(BodyKinematics.COMPONENTS, BodyKinematics.COMPONENTS);
-<a class="jxr_linenumber" name="L6193" href="#L6193">6193</a>             }
-<a class="jxr_linenumber" name="L6194" href="#L6194">6194</a> 
-<a class="jxr_linenumber" name="L6195" href="#L6195">6195</a>             <strong class="jxr_keyword">if</strong> (mTmp1 == <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L6196" href="#L6196">6196</a>                 mTmp1 = <strong class="jxr_keyword">new</strong> Matrix(BodyKinematics.COMPONENTS, BodyKinematics.COMPONENTS);
-<a class="jxr_linenumber" name="L6197" href="#L6197">6197</a>             }
-<a class="jxr_linenumber" name="L6198" href="#L6198">6198</a> 
-<a class="jxr_linenumber" name="L6199" href="#L6199">6199</a>             <strong class="jxr_keyword">if</strong> (mTmp2 == <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L6200" href="#L6200">6200</a>                 mTmp2 = <strong class="jxr_keyword">new</strong> Matrix(BodyKinematics.COMPONENTS, BodyKinematics.COMPONENTS);
-<a class="jxr_linenumber" name="L6201" href="#L6201">6201</a>             }
-<a class="jxr_linenumber" name="L6202" href="#L6202">6202</a> 
-<a class="jxr_linenumber" name="L6203" href="#L6203">6203</a>             <strong class="jxr_keyword">if</strong> (mTmp3 == <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L6204" href="#L6204">6204</a>                 mTmp3 = <strong class="jxr_keyword">new</strong> Matrix(BodyKinematics.COMPONENTS, 1);
-<a class="jxr_linenumber" name="L6205" href="#L6205">6205</a>             }
-<a class="jxr_linenumber" name="L6206" href="#L6206">6206</a> 
-<a class="jxr_linenumber" name="L6207" href="#L6207">6207</a>             <strong class="jxr_keyword">if</strong> (mTmp4 == <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L6208" href="#L6208">6208</a>                 mTmp4 = <strong class="jxr_keyword">new</strong> Matrix(BodyKinematics.COMPONENTS, 1);
-<a class="jxr_linenumber" name="L6209" href="#L6209">6209</a>             }
-<a class="jxr_linenumber" name="L6210" href="#L6210">6210</a> 
-<a class="jxr_linenumber" name="L6211" href="#L6211">6211</a>             mIdentity.add(estimatedMa, mTmp1);
-<a class="jxr_linenumber" name="L6212" href="#L6212">6212</a> 
-<a class="jxr_linenumber" name="L6213" href="#L6213">6213</a>             Utils.inverse(mTmp1, mTmp2);
-<a class="jxr_linenumber" name="L6214" href="#L6214">6214</a> 
-<a class="jxr_linenumber" name="L6215" href="#L6215">6215</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/BodyKinematics.html">BodyKinematics</a> kinematics = measurement.getKinematics();
-<a class="jxr_linenumber" name="L6216" href="#L6216">6216</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> fmeasX = kinematics.getFx();
-<a class="jxr_linenumber" name="L6217" href="#L6217">6217</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> fmeasY = kinematics.getFy();
-<a class="jxr_linenumber" name="L6218" href="#L6218">6218</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> fmeasZ = kinematics.getFz();
-<a class="jxr_linenumber" name="L6219" href="#L6219">6219</a> 
-<a class="jxr_linenumber" name="L6220" href="#L6220">6220</a>             mTmp3.setElementAtIndex(0, fmeasX - mBiasX);
-<a class="jxr_linenumber" name="L6221" href="#L6221">6221</a>             mTmp3.setElementAtIndex(1, fmeasY - mBiasY);
-<a class="jxr_linenumber" name="L6222" href="#L6222">6222</a>             mTmp3.setElementAtIndex(2, fmeasZ - mBiasZ);
-<a class="jxr_linenumber" name="L6223" href="#L6223">6223</a> 
-<a class="jxr_linenumber" name="L6224" href="#L6224">6224</a>             mTmp2.multiply(mTmp3, mTmp4);
-<a class="jxr_linenumber" name="L6225" href="#L6225">6225</a> 
-<a class="jxr_linenumber" name="L6226" href="#L6226">6226</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> norm = Utils.normF(mTmp4);
-<a class="jxr_linenumber" name="L6227" href="#L6227">6227</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> diff = mGravityNorm - norm;
-<a class="jxr_linenumber" name="L6228" href="#L6228">6228</a> 
-<a class="jxr_linenumber" name="L6229" href="#L6229">6229</a>             <strong class="jxr_keyword">return</strong> diff * diff;
-<a class="jxr_linenumber" name="L6230" href="#L6230">6230</a> 
-<a class="jxr_linenumber" name="L6231" href="#L6231">6231</a>         } <strong class="jxr_keyword">catch</strong> (<strong class="jxr_keyword">final</strong> AlgebraException e) {
-<a class="jxr_linenumber" name="L6232" href="#L6232">6232</a>             <strong class="jxr_keyword">return</strong> Double.MAX_VALUE;
-<a class="jxr_linenumber" name="L6233" href="#L6233">6233</a>         }
-<a class="jxr_linenumber" name="L6234" href="#L6234">6234</a>     }
-<a class="jxr_linenumber" name="L6235" href="#L6235">6235</a> 
-<a class="jxr_linenumber" name="L6236" href="#L6236">6236</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L6237" href="#L6237">6237</a> <em class="jxr_javadoccomment">     * Computes a preliminary solution for a subset of samples picked by a robust estimator.</em>
-<a class="jxr_linenumber" name="L6238" href="#L6238">6238</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L6239" href="#L6239">6239</a> <em class="jxr_javadoccomment">     * @param samplesIndices indices of samples picked by the robust estimator.</em>
-<a class="jxr_linenumber" name="L6240" href="#L6240">6240</a> <em class="jxr_javadoccomment">     * @param solutions      list where estimated preliminary solution will be stored.</em>
-<a class="jxr_linenumber" name="L6241" href="#L6241">6241</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L6242" href="#L6242">6242</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> computePreliminarySolutions(<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong>[] samplesIndices,
-<a class="jxr_linenumber" name="L6243" href="#L6243">6243</a>                                                <strong class="jxr_keyword">final</strong> List&lt;PreliminaryResult&gt; solutions) {
-<a class="jxr_linenumber" name="L6244" href="#L6244">6244</a> 
-<a class="jxr_linenumber" name="L6245" href="#L6245">6245</a>         <strong class="jxr_keyword">final</strong> List&lt;StandardDeviationBodyKinematics&gt; measurements = <strong class="jxr_keyword">new</strong> ArrayList&lt;&gt;();
+<a class="jxr_linenumber" name="L6174" href="#L6174">6174</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">double</strong> computeError(
+<a class="jxr_linenumber" name="L6175" href="#L6175">6175</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/StandardDeviationBodyKinematics.html">StandardDeviationBodyKinematics</a> measurement,
+<a class="jxr_linenumber" name="L6176" href="#L6176">6176</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/accelerometer/RobustKnownFrameAccelerometerCalibrator.html">PreliminaryResult</a> preliminaryResult) {
+<a class="jxr_linenumber" name="L6177" href="#L6177">6177</a> 
+<a class="jxr_linenumber" name="L6178" href="#L6178">6178</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L6179" href="#L6179">6179</a>             <em class="jxr_comment">// We know that measured specific force is:</em>
+<a class="jxr_linenumber" name="L6180" href="#L6180">6180</a>             <em class="jxr_comment">// fmeas = ba + (I + Ma) * ftrue</em>
+<a class="jxr_linenumber" name="L6181" href="#L6181">6181</a> 
+<a class="jxr_linenumber" name="L6182" href="#L6182">6182</a>             <em class="jxr_comment">// fmeas - ba = (I + Ma) * ftrue</em>
+<a class="jxr_linenumber" name="L6183" href="#L6183">6183</a> 
+<a class="jxr_linenumber" name="L6184" href="#L6184">6184</a>             <em class="jxr_comment">// ftrue = (I + Ma)^-1 * (fmeas - ba)</em>
+<a class="jxr_linenumber" name="L6185" href="#L6185">6185</a> 
+<a class="jxr_linenumber" name="L6186" href="#L6186">6186</a>             <em class="jxr_comment">// We know that ||ftrue|| should be equal to the gravity value at current Earth</em>
+<a class="jxr_linenumber" name="L6187" href="#L6187">6187</a>             <em class="jxr_comment">// position</em>
+<a class="jxr_linenumber" name="L6188" href="#L6188">6188</a>             <em class="jxr_comment">// ||ftrue|| = g ~ 9.81 m/s^2</em>
+<a class="jxr_linenumber" name="L6189" href="#L6189">6189</a> 
+<a class="jxr_linenumber" name="L6190" href="#L6190">6190</a>             <strong class="jxr_keyword">final</strong> Matrix estimatedMa = preliminaryResult.mEstimatedMa;
+<a class="jxr_linenumber" name="L6191" href="#L6191">6191</a> 
+<a class="jxr_linenumber" name="L6192" href="#L6192">6192</a>             <strong class="jxr_keyword">if</strong> (mIdentity == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L6193" href="#L6193">6193</a>                 mIdentity = Matrix.identity(BodyKinematics.COMPONENTS, BodyKinematics.COMPONENTS);
+<a class="jxr_linenumber" name="L6194" href="#L6194">6194</a>             }
+<a class="jxr_linenumber" name="L6195" href="#L6195">6195</a> 
+<a class="jxr_linenumber" name="L6196" href="#L6196">6196</a>             <strong class="jxr_keyword">if</strong> (mTmp1 == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L6197" href="#L6197">6197</a>                 mTmp1 = <strong class="jxr_keyword">new</strong> Matrix(BodyKinematics.COMPONENTS, BodyKinematics.COMPONENTS);
+<a class="jxr_linenumber" name="L6198" href="#L6198">6198</a>             }
+<a class="jxr_linenumber" name="L6199" href="#L6199">6199</a> 
+<a class="jxr_linenumber" name="L6200" href="#L6200">6200</a>             <strong class="jxr_keyword">if</strong> (mTmp2 == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L6201" href="#L6201">6201</a>                 mTmp2 = <strong class="jxr_keyword">new</strong> Matrix(BodyKinematics.COMPONENTS, BodyKinematics.COMPONENTS);
+<a class="jxr_linenumber" name="L6202" href="#L6202">6202</a>             }
+<a class="jxr_linenumber" name="L6203" href="#L6203">6203</a> 
+<a class="jxr_linenumber" name="L6204" href="#L6204">6204</a>             <strong class="jxr_keyword">if</strong> (mTmp3 == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L6205" href="#L6205">6205</a>                 mTmp3 = <strong class="jxr_keyword">new</strong> Matrix(BodyKinematics.COMPONENTS, 1);
+<a class="jxr_linenumber" name="L6206" href="#L6206">6206</a>             }
+<a class="jxr_linenumber" name="L6207" href="#L6207">6207</a> 
+<a class="jxr_linenumber" name="L6208" href="#L6208">6208</a>             <strong class="jxr_keyword">if</strong> (mTmp4 == <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L6209" href="#L6209">6209</a>                 mTmp4 = <strong class="jxr_keyword">new</strong> Matrix(BodyKinematics.COMPONENTS, 1);
+<a class="jxr_linenumber" name="L6210" href="#L6210">6210</a>             }
+<a class="jxr_linenumber" name="L6211" href="#L6211">6211</a> 
+<a class="jxr_linenumber" name="L6212" href="#L6212">6212</a>             mIdentity.add(estimatedMa, mTmp1);
+<a class="jxr_linenumber" name="L6213" href="#L6213">6213</a> 
+<a class="jxr_linenumber" name="L6214" href="#L6214">6214</a>             Utils.inverse(mTmp1, mTmp2);
+<a class="jxr_linenumber" name="L6215" href="#L6215">6215</a> 
+<a class="jxr_linenumber" name="L6216" href="#L6216">6216</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/BodyKinematics.html">BodyKinematics</a> kinematics = measurement.getKinematics();
+<a class="jxr_linenumber" name="L6217" href="#L6217">6217</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> fmeasX = kinematics.getFx();
+<a class="jxr_linenumber" name="L6218" href="#L6218">6218</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> fmeasY = kinematics.getFy();
+<a class="jxr_linenumber" name="L6219" href="#L6219">6219</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> fmeasZ = kinematics.getFz();
+<a class="jxr_linenumber" name="L6220" href="#L6220">6220</a> 
+<a class="jxr_linenumber" name="L6221" href="#L6221">6221</a>             mTmp3.setElementAtIndex(0, fmeasX - mBiasX);
+<a class="jxr_linenumber" name="L6222" href="#L6222">6222</a>             mTmp3.setElementAtIndex(1, fmeasY - mBiasY);
+<a class="jxr_linenumber" name="L6223" href="#L6223">6223</a>             mTmp3.setElementAtIndex(2, fmeasZ - mBiasZ);
+<a class="jxr_linenumber" name="L6224" href="#L6224">6224</a> 
+<a class="jxr_linenumber" name="L6225" href="#L6225">6225</a>             mTmp2.multiply(mTmp3, mTmp4);
+<a class="jxr_linenumber" name="L6226" href="#L6226">6226</a> 
+<a class="jxr_linenumber" name="L6227" href="#L6227">6227</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> norm = Utils.normF(mTmp4);
+<a class="jxr_linenumber" name="L6228" href="#L6228">6228</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">double</strong> diff = mGravityNorm - norm;
+<a class="jxr_linenumber" name="L6229" href="#L6229">6229</a> 
+<a class="jxr_linenumber" name="L6230" href="#L6230">6230</a>             <strong class="jxr_keyword">return</strong> diff * diff;
+<a class="jxr_linenumber" name="L6231" href="#L6231">6231</a> 
+<a class="jxr_linenumber" name="L6232" href="#L6232">6232</a>         } <strong class="jxr_keyword">catch</strong> (<strong class="jxr_keyword">final</strong> AlgebraException e) {
+<a class="jxr_linenumber" name="L6233" href="#L6233">6233</a>             <strong class="jxr_keyword">return</strong> Double.MAX_VALUE;
+<a class="jxr_linenumber" name="L6234" href="#L6234">6234</a>         }
+<a class="jxr_linenumber" name="L6235" href="#L6235">6235</a>     }
+<a class="jxr_linenumber" name="L6236" href="#L6236">6236</a> 
+<a class="jxr_linenumber" name="L6237" href="#L6237">6237</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L6238" href="#L6238">6238</a> <em class="jxr_javadoccomment">     * Computes a preliminary solution for a subset of samples picked by a robust estimator.</em>
+<a class="jxr_linenumber" name="L6239" href="#L6239">6239</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L6240" href="#L6240">6240</a> <em class="jxr_javadoccomment">     * @param samplesIndices indices of samples picked by the robust estimator.</em>
+<a class="jxr_linenumber" name="L6241" href="#L6241">6241</a> <em class="jxr_javadoccomment">     * @param solutions      list where estimated preliminary solution will be stored.</em>
+<a class="jxr_linenumber" name="L6242" href="#L6242">6242</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L6243" href="#L6243">6243</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> computePreliminarySolutions(
+<a class="jxr_linenumber" name="L6244" href="#L6244">6244</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong>[] samplesIndices,
+<a class="jxr_linenumber" name="L6245" href="#L6245">6245</a>             <strong class="jxr_keyword">final</strong> List&lt;PreliminaryResult&gt; solutions) {
 <a class="jxr_linenumber" name="L6246" href="#L6246">6246</a> 
-<a class="jxr_linenumber" name="L6247" href="#L6247">6247</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> samplesIndex : samplesIndices) {
-<a class="jxr_linenumber" name="L6248" href="#L6248">6248</a>             measurements.add(mMeasurements.get(samplesIndex));
-<a class="jxr_linenumber" name="L6249" href="#L6249">6249</a>         }
-<a class="jxr_linenumber" name="L6250" href="#L6250">6250</a> 
-<a class="jxr_linenumber" name="L6251" href="#L6251">6251</a>         <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L6252" href="#L6252">6252</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/accelerometer/RobustKnownFrameAccelerometerCalibrator.html">PreliminaryResult</a> result = <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/accelerometer/RobustKnownFrameAccelerometerCalibrator.html">PreliminaryResult</a>();
-<a class="jxr_linenumber" name="L6253" href="#L6253">6253</a>             result.mEstimatedMa = getInitialMa();
-<a class="jxr_linenumber" name="L6254" href="#L6254">6254</a> 
-<a class="jxr_linenumber" name="L6255" href="#L6255">6255</a>             mInnerCalibrator.setBias(mBiasX, mBiasY, mBiasZ);
-<a class="jxr_linenumber" name="L6256" href="#L6256">6256</a>             mInnerCalibrator.setInitialMa(result.mEstimatedMa);
-<a class="jxr_linenumber" name="L6257" href="#L6257">6257</a>             mInnerCalibrator.setCommonAxisUsed(mCommonAxisUsed);
-<a class="jxr_linenumber" name="L6258" href="#L6258">6258</a>             mInnerCalibrator.setPosition(mPosition);
-<a class="jxr_linenumber" name="L6259" href="#L6259">6259</a>             mInnerCalibrator.setMeasurements(measurements);
-<a class="jxr_linenumber" name="L6260" href="#L6260">6260</a>             mInnerCalibrator.calibrate();
-<a class="jxr_linenumber" name="L6261" href="#L6261">6261</a> 
-<a class="jxr_linenumber" name="L6262" href="#L6262">6262</a>             result.mEstimatedMa = mInnerCalibrator.getEstimatedMa();
+<a class="jxr_linenumber" name="L6247" href="#L6247">6247</a>         <strong class="jxr_keyword">final</strong> List&lt;StandardDeviationBodyKinematics&gt; measurements = <strong class="jxr_keyword">new</strong> ArrayList&lt;&gt;();
+<a class="jxr_linenumber" name="L6248" href="#L6248">6248</a> 
+<a class="jxr_linenumber" name="L6249" href="#L6249">6249</a>         <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> samplesIndex : samplesIndices) {
+<a class="jxr_linenumber" name="L6250" href="#L6250">6250</a>             measurements.add(mMeasurements.get(samplesIndex));
+<a class="jxr_linenumber" name="L6251" href="#L6251">6251</a>         }
+<a class="jxr_linenumber" name="L6252" href="#L6252">6252</a> 
+<a class="jxr_linenumber" name="L6253" href="#L6253">6253</a>         <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L6254" href="#L6254">6254</a>             <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/accelerometer/RobustKnownFrameAccelerometerCalibrator.html">PreliminaryResult</a> result = <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/accelerometer/RobustKnownFrameAccelerometerCalibrator.html">PreliminaryResult</a>();
+<a class="jxr_linenumber" name="L6255" href="#L6255">6255</a>             result.mEstimatedMa = getInitialMa();
+<a class="jxr_linenumber" name="L6256" href="#L6256">6256</a> 
+<a class="jxr_linenumber" name="L6257" href="#L6257">6257</a>             mInnerCalibrator.setBias(mBiasX, mBiasY, mBiasZ);
+<a class="jxr_linenumber" name="L6258" href="#L6258">6258</a>             mInnerCalibrator.setInitialMa(result.mEstimatedMa);
+<a class="jxr_linenumber" name="L6259" href="#L6259">6259</a>             mInnerCalibrator.setCommonAxisUsed(mCommonAxisUsed);
+<a class="jxr_linenumber" name="L6260" href="#L6260">6260</a>             mInnerCalibrator.setPosition(mPosition);
+<a class="jxr_linenumber" name="L6261" href="#L6261">6261</a>             mInnerCalibrator.setMeasurements(measurements);
+<a class="jxr_linenumber" name="L6262" href="#L6262">6262</a>             mInnerCalibrator.calibrate();
 <a class="jxr_linenumber" name="L6263" href="#L6263">6263</a> 
-<a class="jxr_linenumber" name="L6264" href="#L6264">6264</a>             solutions.add(result);
+<a class="jxr_linenumber" name="L6264" href="#L6264">6264</a>             result.mEstimatedMa = mInnerCalibrator.getEstimatedMa();
 <a class="jxr_linenumber" name="L6265" href="#L6265">6265</a> 
-<a class="jxr_linenumber" name="L6266" href="#L6266">6266</a>         } <strong class="jxr_keyword">catch</strong> (<strong class="jxr_keyword">final</strong> LockedException | CalibrationException | NotReadyException e) {
-<a class="jxr_linenumber" name="L6267" href="#L6267">6267</a>             solutions.clear();
-<a class="jxr_linenumber" name="L6268" href="#L6268">6268</a>         }
-<a class="jxr_linenumber" name="L6269" href="#L6269">6269</a>     }
-<a class="jxr_linenumber" name="L6270" href="#L6270">6270</a> 
-<a class="jxr_linenumber" name="L6271" href="#L6271">6271</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L6272" href="#L6272">6272</a> <em class="jxr_javadoccomment">     * Attempts to refine calibration parameters if refinement is requested.</em>
-<a class="jxr_linenumber" name="L6273" href="#L6273">6273</a> <em class="jxr_javadoccomment">     * This method returns a refined solution or provided input if refinement is not</em>
-<a class="jxr_linenumber" name="L6274" href="#L6274">6274</a> <em class="jxr_javadoccomment">     * requested or has failed.</em>
-<a class="jxr_linenumber" name="L6275" href="#L6275">6275</a> <em class="jxr_javadoccomment">     * If refinement is enabled and it is requested to keep covariance, this method</em>
-<a class="jxr_linenumber" name="L6276" href="#L6276">6276</a> <em class="jxr_javadoccomment">     * will also keep covariance of refined position.</em>
-<a class="jxr_linenumber" name="L6277" href="#L6277">6277</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L6278" href="#L6278">6278</a> <em class="jxr_javadoccomment">     * @param preliminaryResult a preliminary result.</em>
-<a class="jxr_linenumber" name="L6279" href="#L6279">6279</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L6280" href="#L6280">6280</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> attemptRefine(<strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/accelerometer/RobustKnownFrameAccelerometerCalibrator.html">PreliminaryResult</a> preliminaryResult) {
-<a class="jxr_linenumber" name="L6281" href="#L6281">6281</a>         <strong class="jxr_keyword">if</strong> (mRefineResult &amp;&amp; mInliersData != <strong class="jxr_keyword">null</strong>) {
-<a class="jxr_linenumber" name="L6282" href="#L6282">6282</a>             <strong class="jxr_keyword">final</strong> BitSet inliers = mInliersData.getInliers();
-<a class="jxr_linenumber" name="L6283" href="#L6283">6283</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> nSamples = mMeasurements.size();
-<a class="jxr_linenumber" name="L6284" href="#L6284">6284</a> 
-<a class="jxr_linenumber" name="L6285" href="#L6285">6285</a>             <strong class="jxr_keyword">final</strong> List&lt;StandardDeviationBodyKinematics&gt; inlierMeasurements =
-<a class="jxr_linenumber" name="L6286" href="#L6286">6286</a>                     <strong class="jxr_keyword">new</strong> ArrayList&lt;&gt;();
-<a class="jxr_linenumber" name="L6287" href="#L6287">6287</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; nSamples; i++) {
-<a class="jxr_linenumber" name="L6288" href="#L6288">6288</a>                 <strong class="jxr_keyword">if</strong> (inliers.get(i)) {
-<a class="jxr_linenumber" name="L6289" href="#L6289">6289</a>                     <em class="jxr_comment">// sample is inlier</em>
-<a class="jxr_linenumber" name="L6290" href="#L6290">6290</a>                     inlierMeasurements.add(mMeasurements.get(i));
-<a class="jxr_linenumber" name="L6291" href="#L6291">6291</a>                 }
-<a class="jxr_linenumber" name="L6292" href="#L6292">6292</a>             }
-<a class="jxr_linenumber" name="L6293" href="#L6293">6293</a> 
-<a class="jxr_linenumber" name="L6294" href="#L6294">6294</a>             <strong class="jxr_keyword">try</strong> {
-<a class="jxr_linenumber" name="L6295" href="#L6295">6295</a>                 mInnerCalibrator.setBias(mBiasX, mBiasY, mBiasZ);
-<a class="jxr_linenumber" name="L6296" href="#L6296">6296</a>                 mInnerCalibrator.setInitialMa(preliminaryResult.mEstimatedMa);
-<a class="jxr_linenumber" name="L6297" href="#L6297">6297</a>                 mInnerCalibrator.setCommonAxisUsed(mCommonAxisUsed);
-<a class="jxr_linenumber" name="L6298" href="#L6298">6298</a>                 mInnerCalibrator.setPosition(mPosition);
-<a class="jxr_linenumber" name="L6299" href="#L6299">6299</a>                 mInnerCalibrator.setMeasurements(inlierMeasurements);
-<a class="jxr_linenumber" name="L6300" href="#L6300">6300</a>                 mInnerCalibrator.calibrate();
-<a class="jxr_linenumber" name="L6301" href="#L6301">6301</a> 
-<a class="jxr_linenumber" name="L6302" href="#L6302">6302</a>                 mEstimatedMa = mInnerCalibrator.getEstimatedMa();
+<a class="jxr_linenumber" name="L6266" href="#L6266">6266</a>             solutions.add(result);
+<a class="jxr_linenumber" name="L6267" href="#L6267">6267</a> 
+<a class="jxr_linenumber" name="L6268" href="#L6268">6268</a>         } <strong class="jxr_keyword">catch</strong> (<strong class="jxr_keyword">final</strong> LockedException | CalibrationException | NotReadyException e) {
+<a class="jxr_linenumber" name="L6269" href="#L6269">6269</a>             solutions.clear();
+<a class="jxr_linenumber" name="L6270" href="#L6270">6270</a>         }
+<a class="jxr_linenumber" name="L6271" href="#L6271">6271</a>     }
+<a class="jxr_linenumber" name="L6272" href="#L6272">6272</a> 
+<a class="jxr_linenumber" name="L6273" href="#L6273">6273</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L6274" href="#L6274">6274</a> <em class="jxr_javadoccomment">     * Attempts to refine calibration parameters if refinement is requested.</em>
+<a class="jxr_linenumber" name="L6275" href="#L6275">6275</a> <em class="jxr_javadoccomment">     * This method returns a refined solution or provided input if refinement is not</em>
+<a class="jxr_linenumber" name="L6276" href="#L6276">6276</a> <em class="jxr_javadoccomment">     * requested or has failed.</em>
+<a class="jxr_linenumber" name="L6277" href="#L6277">6277</a> <em class="jxr_javadoccomment">     * If refinement is enabled and it is requested to keep covariance, this method</em>
+<a class="jxr_linenumber" name="L6278" href="#L6278">6278</a> <em class="jxr_javadoccomment">     * will also keep covariance of refined position.</em>
+<a class="jxr_linenumber" name="L6279" href="#L6279">6279</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L6280" href="#L6280">6280</a> <em class="jxr_javadoccomment">     * @param preliminaryResult a preliminary result.</em>
+<a class="jxr_linenumber" name="L6281" href="#L6281">6281</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L6282" href="#L6282">6282</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">void</strong> attemptRefine(<strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/accelerometer/RobustKnownFrameAccelerometerCalibrator.html">PreliminaryResult</a> preliminaryResult) {
+<a class="jxr_linenumber" name="L6283" href="#L6283">6283</a>         <strong class="jxr_keyword">if</strong> (mRefineResult &amp;&amp; mInliersData != <strong class="jxr_keyword">null</strong>) {
+<a class="jxr_linenumber" name="L6284" href="#L6284">6284</a>             <strong class="jxr_keyword">final</strong> BitSet inliers = mInliersData.getInliers();
+<a class="jxr_linenumber" name="L6285" href="#L6285">6285</a>             <strong class="jxr_keyword">final</strong> <strong class="jxr_keyword">int</strong> nSamples = mMeasurements.size();
+<a class="jxr_linenumber" name="L6286" href="#L6286">6286</a> 
+<a class="jxr_linenumber" name="L6287" href="#L6287">6287</a>             <strong class="jxr_keyword">final</strong> List&lt;StandardDeviationBodyKinematics&gt; inlierMeasurements =
+<a class="jxr_linenumber" name="L6288" href="#L6288">6288</a>                     <strong class="jxr_keyword">new</strong> ArrayList&lt;&gt;();
+<a class="jxr_linenumber" name="L6289" href="#L6289">6289</a>             <strong class="jxr_keyword">for</strong> (<strong class="jxr_keyword">int</strong> i = 0; i &lt; nSamples; i++) {
+<a class="jxr_linenumber" name="L6290" href="#L6290">6290</a>                 <strong class="jxr_keyword">if</strong> (inliers.get(i)) {
+<a class="jxr_linenumber" name="L6291" href="#L6291">6291</a>                     <em class="jxr_comment">// sample is inlier</em>
+<a class="jxr_linenumber" name="L6292" href="#L6292">6292</a>                     inlierMeasurements.add(mMeasurements.get(i));
+<a class="jxr_linenumber" name="L6293" href="#L6293">6293</a>                 }
+<a class="jxr_linenumber" name="L6294" href="#L6294">6294</a>             }
+<a class="jxr_linenumber" name="L6295" href="#L6295">6295</a> 
+<a class="jxr_linenumber" name="L6296" href="#L6296">6296</a>             <strong class="jxr_keyword">try</strong> {
+<a class="jxr_linenumber" name="L6297" href="#L6297">6297</a>                 mInnerCalibrator.setBias(mBiasX, mBiasY, mBiasZ);
+<a class="jxr_linenumber" name="L6298" href="#L6298">6298</a>                 mInnerCalibrator.setInitialMa(preliminaryResult.mEstimatedMa);
+<a class="jxr_linenumber" name="L6299" href="#L6299">6299</a>                 mInnerCalibrator.setCommonAxisUsed(mCommonAxisUsed);
+<a class="jxr_linenumber" name="L6300" href="#L6300">6300</a>                 mInnerCalibrator.setPosition(mPosition);
+<a class="jxr_linenumber" name="L6301" href="#L6301">6301</a>                 mInnerCalibrator.setMeasurements(inlierMeasurements);
+<a class="jxr_linenumber" name="L6302" href="#L6302">6302</a>                 mInnerCalibrator.calibrate();
 <a class="jxr_linenumber" name="L6303" href="#L6303">6303</a> 
-<a class="jxr_linenumber" name="L6304" href="#L6304">6304</a>                 <strong class="jxr_keyword">if</strong> (mKeepCovariance) {
-<a class="jxr_linenumber" name="L6305" href="#L6305">6305</a>                     mEstimatedCovariance = mInnerCalibrator.getEstimatedCovariance();
-<a class="jxr_linenumber" name="L6306" href="#L6306">6306</a>                 } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L6307" href="#L6307">6307</a>                     mEstimatedCovariance = <strong class="jxr_keyword">null</strong>;
-<a class="jxr_linenumber" name="L6308" href="#L6308">6308</a>                 }
-<a class="jxr_linenumber" name="L6309" href="#L6309">6309</a>             } <strong class="jxr_keyword">catch</strong> (<strong class="jxr_keyword">final</strong> LockedException | CalibrationException | NotReadyException e) {
-<a class="jxr_linenumber" name="L6310" href="#L6310">6310</a>                 mEstimatedCovariance = <strong class="jxr_keyword">null</strong>;
-<a class="jxr_linenumber" name="L6311" href="#L6311">6311</a>                 mEstimatedMa = preliminaryResult.mEstimatedMa;
-<a class="jxr_linenumber" name="L6312" href="#L6312">6312</a>             }
-<a class="jxr_linenumber" name="L6313" href="#L6313">6313</a>         } <strong class="jxr_keyword">else</strong> {
-<a class="jxr_linenumber" name="L6314" href="#L6314">6314</a>             mEstimatedCovariance = <strong class="jxr_keyword">null</strong>;
-<a class="jxr_linenumber" name="L6315" href="#L6315">6315</a>             mEstimatedMa = preliminaryResult.mEstimatedMa;
-<a class="jxr_linenumber" name="L6316" href="#L6316">6316</a>         }
-<a class="jxr_linenumber" name="L6317" href="#L6317">6317</a>     }
-<a class="jxr_linenumber" name="L6318" href="#L6318">6318</a> 
-<a class="jxr_linenumber" name="L6319" href="#L6319">6319</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L6320" href="#L6320">6320</a> <em class="jxr_javadoccomment">     * Computes gravity norm for current position.</em>
-<a class="jxr_linenumber" name="L6321" href="#L6321">6321</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L6322" href="#L6322">6322</a> <em class="jxr_javadoccomment">     * @return gravity norm for current position expressed in meters per squared second.</em>
-<a class="jxr_linenumber" name="L6323" href="#L6323">6323</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L6324" href="#L6324">6324</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">double</strong> computeGravityNorm() {
-<a class="jxr_linenumber" name="L6325" href="#L6325">6325</a>         <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFGravity.html">ECEFGravity</a> gravity = ECEFGravityEstimator.estimateGravityAndReturnNew(
-<a class="jxr_linenumber" name="L6326" href="#L6326">6326</a>                 mPosition.getX(), mPosition.getY(), mPosition.getZ());
-<a class="jxr_linenumber" name="L6327" href="#L6327">6327</a>         <strong class="jxr_keyword">return</strong> gravity.getNorm();
-<a class="jxr_linenumber" name="L6328" href="#L6328">6328</a>     }
-<a class="jxr_linenumber" name="L6329" href="#L6329">6329</a> 
-<a class="jxr_linenumber" name="L6330" href="#L6330">6330</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L6331" href="#L6331">6331</a> <em class="jxr_javadoccomment">     * Converts provided NED position expressed in terms of latitude, longitude and height respect</em>
-<a class="jxr_linenumber" name="L6332" href="#L6332">6332</a> <em class="jxr_javadoccomment">     * mean Earth surface, to position expressed in ECEF coordinates.</em>
-<a class="jxr_linenumber" name="L6333" href="#L6333">6333</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L6334" href="#L6334">6334</a> <em class="jxr_javadoccomment">     * @param position NED position to be converted.</em>
-<a class="jxr_linenumber" name="L6335" href="#L6335">6335</a> <em class="jxr_javadoccomment">     * @return converted position expressed in ECEF coordinates.</em>
-<a class="jxr_linenumber" name="L6336" href="#L6336">6336</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L6337" href="#L6337">6337</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFPosition.html">ECEFPosition</a> convertPosition(<strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/NEDPosition.html">NEDPosition</a> position) {
-<a class="jxr_linenumber" name="L6338" href="#L6338">6338</a>         <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFVelocity.html">ECEFVelocity</a> velocity = <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFVelocity.html">ECEFVelocity</a>();
-<a class="jxr_linenumber" name="L6339" href="#L6339">6339</a>         <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFPosition.html">ECEFPosition</a> result = <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFPosition.html">ECEFPosition</a>();
-<a class="jxr_linenumber" name="L6340" href="#L6340">6340</a>         NEDtoECEFPositionVelocityConverter.convertNEDtoECEF(
-<a class="jxr_linenumber" name="L6341" href="#L6341">6341</a>                 position.getLatitude(), position.getLongitude(), position.getHeight(),
-<a class="jxr_linenumber" name="L6342" href="#L6342">6342</a>                 0.0, 0.0, 0.0, result, velocity);
-<a class="jxr_linenumber" name="L6343" href="#L6343">6343</a>         <strong class="jxr_keyword">return</strong> result;
-<a class="jxr_linenumber" name="L6344" href="#L6344">6344</a>     }
-<a class="jxr_linenumber" name="L6345" href="#L6345">6345</a> 
-<a class="jxr_linenumber" name="L6346" href="#L6346">6346</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L6347" href="#L6347">6347</a> <em class="jxr_javadoccomment">     * Converts acceleration instance to meters per squared second.</em>
-<a class="jxr_linenumber" name="L6348" href="#L6348">6348</a> <em class="jxr_javadoccomment">     *</em>
-<a class="jxr_linenumber" name="L6349" href="#L6349">6349</a> <em class="jxr_javadoccomment">     * @param acceleration acceleration instance to be converted.</em>
-<a class="jxr_linenumber" name="L6350" href="#L6350">6350</a> <em class="jxr_javadoccomment">     * @return converted value.</em>
-<a class="jxr_linenumber" name="L6351" href="#L6351">6351</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L6352" href="#L6352">6352</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">double</strong> convertAcceleration(<strong class="jxr_keyword">final</strong> Acceleration acceleration) {
-<a class="jxr_linenumber" name="L6353" href="#L6353">6353</a>         <strong class="jxr_keyword">return</strong> AccelerationConverter.convert(acceleration.getValue().doubleValue(),
-<a class="jxr_linenumber" name="L6354" href="#L6354">6354</a>                 acceleration.getUnit(), AccelerationUnit.METERS_PER_SQUARED_SECOND);
-<a class="jxr_linenumber" name="L6355" href="#L6355">6355</a>     }
-<a class="jxr_linenumber" name="L6356" href="#L6356">6356</a> 
-<a class="jxr_linenumber" name="L6357" href="#L6357">6357</a>     <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L6358" href="#L6358">6358</a> <em class="jxr_javadoccomment">     * Internal class containing estimated preliminary result.</em>
-<a class="jxr_linenumber" name="L6359" href="#L6359">6359</a> <em class="jxr_javadoccomment">     */</em>
-<a class="jxr_linenumber" name="L6360" href="#L6360">6360</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/accelerometer/RobustKnownFrameAccelerometerCalibrator.html">PreliminaryResult</a> {
-<a class="jxr_linenumber" name="L6361" href="#L6361">6361</a>         <em class="jxr_javadoccomment">/**</em>
-<a class="jxr_linenumber" name="L6362" href="#L6362">6362</a> <em class="jxr_javadoccomment">         * Estimated accelerometer scale factors and cross coupling errors.</em>
-<a class="jxr_linenumber" name="L6363" href="#L6363">6363</a> <em class="jxr_javadoccomment">         * This is the product of matrix Ta containing cross coupling errors and Ka</em>
-<a class="jxr_linenumber" name="L6364" href="#L6364">6364</a> <em class="jxr_javadoccomment">         * containing scaling factors.</em>
-<a class="jxr_linenumber" name="L6365" href="#L6365">6365</a> <em class="jxr_javadoccomment">         * So tat:</em>
-<a class="jxr_linenumber" name="L6366" href="#L6366">6366</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
-<a class="jxr_linenumber" name="L6367" href="#L6367">6367</a> <em class="jxr_javadoccomment">         *     Ma = [sx    mxy  mxz] = Ta*Ka</em>
-<a class="jxr_linenumber" name="L6368" href="#L6368">6368</a> <em class="jxr_javadoccomment">         *          [myx   sy   myz]</em>
-<a class="jxr_linenumber" name="L6369" href="#L6369">6369</a> <em class="jxr_javadoccomment">         *          [mzx   mzy  sz ]</em>
-<a class="jxr_linenumber" name="L6370" href="#L6370">6370</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
-<a class="jxr_linenumber" name="L6371" href="#L6371">6371</a> <em class="jxr_javadoccomment">         * Where:</em>
-<a class="jxr_linenumber" name="L6372" href="#L6372">6372</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
-<a class="jxr_linenumber" name="L6373" href="#L6373">6373</a> <em class="jxr_javadoccomment">         *     Ka = [sx 0   0 ]</em>
-<a class="jxr_linenumber" name="L6374" href="#L6374">6374</a> <em class="jxr_javadoccomment">         *          [0  sy  0 ]</em>
-<a class="jxr_linenumber" name="L6375" href="#L6375">6375</a> <em class="jxr_javadoccomment">         *          [0  0   sz]</em>
-<a class="jxr_linenumber" name="L6376" href="#L6376">6376</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
-<a class="jxr_linenumber" name="L6377" href="#L6377">6377</a> <em class="jxr_javadoccomment">         * and</em>
-<a class="jxr_linenumber" name="L6378" href="#L6378">6378</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
-<a class="jxr_linenumber" name="L6379" href="#L6379">6379</a> <em class="jxr_javadoccomment">         *     Ta = [1          -alphaXy    alphaXz ]</em>
-<a class="jxr_linenumber" name="L6380" href="#L6380">6380</a> <em class="jxr_javadoccomment">         *          [alphaYx    1           -alphaYz]</em>
-<a class="jxr_linenumber" name="L6381" href="#L6381">6381</a> <em class="jxr_javadoccomment">         *          [-alphaZx   alphaZy     1       ]</em>
-<a class="jxr_linenumber" name="L6382" href="#L6382">6382</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
-<a class="jxr_linenumber" name="L6383" href="#L6383">6383</a> <em class="jxr_javadoccomment">         * Hence:</em>
-<a class="jxr_linenumber" name="L6384" href="#L6384">6384</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
-<a class="jxr_linenumber" name="L6385" href="#L6385">6385</a> <em class="jxr_javadoccomment">         *     Ma = [sx    mxy  mxz] = Ta*Ka =  [sx             -sy * alphaXy   sz * alphaXz ]</em>
-<a class="jxr_linenumber" name="L6386" href="#L6386">6386</a> <em class="jxr_javadoccomment">         *          [myx   sy   myz]            [sx * alphaYx   sy              -sz * alphaYz]</em>
-<a class="jxr_linenumber" name="L6387" href="#L6387">6387</a> <em class="jxr_javadoccomment">         *          [mzx   mzy  sz ]            [-sx * alphaZx  sy * alphaZy    sz           ]</em>
-<a class="jxr_linenumber" name="L6388" href="#L6388">6388</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
-<a class="jxr_linenumber" name="L6389" href="#L6389">6389</a> <em class="jxr_javadoccomment">         * This instance allows any 3x3 matrix however, typically alphaYx, alphaZx and alphaZy</em>
-<a class="jxr_linenumber" name="L6390" href="#L6390">6390</a> <em class="jxr_javadoccomment">         * are considered to be zero if the accelerometer z-axis is assumed to be the same</em>
-<a class="jxr_linenumber" name="L6391" href="#L6391">6391</a> <em class="jxr_javadoccomment">         * as the body z-axis. When this is assumed, myx = mzx = mzy = 0 and the Ma matrix</em>
-<a class="jxr_linenumber" name="L6392" href="#L6392">6392</a> <em class="jxr_javadoccomment">         * becomes upper diagonal:</em>
-<a class="jxr_linenumber" name="L6393" href="#L6393">6393</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
-<a class="jxr_linenumber" name="L6394" href="#L6394">6394</a> <em class="jxr_javadoccomment">         *     Ma = [sx    mxy  mxz]</em>
-<a class="jxr_linenumber" name="L6395" href="#L6395">6395</a> <em class="jxr_javadoccomment">         *          [0     sy   myz]</em>
-<a class="jxr_linenumber" name="L6396" href="#L6396">6396</a> <em class="jxr_javadoccomment">         *          [0     0    sz ]</em>
-<a class="jxr_linenumber" name="L6397" href="#L6397">6397</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
-<a class="jxr_linenumber" name="L6398" href="#L6398">6398</a> <em class="jxr_javadoccomment">         * Values of this matrix are unitless.</em>
-<a class="jxr_linenumber" name="L6399" href="#L6399">6399</a> <em class="jxr_javadoccomment">         */</em>
-<a class="jxr_linenumber" name="L6400" href="#L6400">6400</a>         <strong class="jxr_keyword">private</strong> Matrix mEstimatedMa;
-<a class="jxr_linenumber" name="L6401" href="#L6401">6401</a>     }
-<a class="jxr_linenumber" name="L6402" href="#L6402">6402</a> }
+<a class="jxr_linenumber" name="L6304" href="#L6304">6304</a>                 mEstimatedMa = mInnerCalibrator.getEstimatedMa();
+<a class="jxr_linenumber" name="L6305" href="#L6305">6305</a> 
+<a class="jxr_linenumber" name="L6306" href="#L6306">6306</a>                 <strong class="jxr_keyword">if</strong> (mKeepCovariance) {
+<a class="jxr_linenumber" name="L6307" href="#L6307">6307</a>                     mEstimatedCovariance = mInnerCalibrator.getEstimatedCovariance();
+<a class="jxr_linenumber" name="L6308" href="#L6308">6308</a>                 } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L6309" href="#L6309">6309</a>                     mEstimatedCovariance = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L6310" href="#L6310">6310</a>                 }
+<a class="jxr_linenumber" name="L6311" href="#L6311">6311</a>             } <strong class="jxr_keyword">catch</strong> (<strong class="jxr_keyword">final</strong> LockedException | CalibrationException | NotReadyException e) {
+<a class="jxr_linenumber" name="L6312" href="#L6312">6312</a>                 mEstimatedCovariance = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L6313" href="#L6313">6313</a>                 mEstimatedMa = preliminaryResult.mEstimatedMa;
+<a class="jxr_linenumber" name="L6314" href="#L6314">6314</a>             }
+<a class="jxr_linenumber" name="L6315" href="#L6315">6315</a>         } <strong class="jxr_keyword">else</strong> {
+<a class="jxr_linenumber" name="L6316" href="#L6316">6316</a>             mEstimatedCovariance = <strong class="jxr_keyword">null</strong>;
+<a class="jxr_linenumber" name="L6317" href="#L6317">6317</a>             mEstimatedMa = preliminaryResult.mEstimatedMa;
+<a class="jxr_linenumber" name="L6318" href="#L6318">6318</a>         }
+<a class="jxr_linenumber" name="L6319" href="#L6319">6319</a>     }
+<a class="jxr_linenumber" name="L6320" href="#L6320">6320</a> 
+<a class="jxr_linenumber" name="L6321" href="#L6321">6321</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L6322" href="#L6322">6322</a> <em class="jxr_javadoccomment">     * Computes gravity norm for current position.</em>
+<a class="jxr_linenumber" name="L6323" href="#L6323">6323</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L6324" href="#L6324">6324</a> <em class="jxr_javadoccomment">     * @return gravity norm for current position expressed in meters per squared second.</em>
+<a class="jxr_linenumber" name="L6325" href="#L6325">6325</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L6326" href="#L6326">6326</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">double</strong> computeGravityNorm() {
+<a class="jxr_linenumber" name="L6327" href="#L6327">6327</a>         <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFGravity.html">ECEFGravity</a> gravity = ECEFGravityEstimator.estimateGravityAndReturnNew(
+<a class="jxr_linenumber" name="L6328" href="#L6328">6328</a>                 mPosition.getX(), mPosition.getY(), mPosition.getZ());
+<a class="jxr_linenumber" name="L6329" href="#L6329">6329</a>         <strong class="jxr_keyword">return</strong> gravity.getNorm();
+<a class="jxr_linenumber" name="L6330" href="#L6330">6330</a>     }
+<a class="jxr_linenumber" name="L6331" href="#L6331">6331</a> 
+<a class="jxr_linenumber" name="L6332" href="#L6332">6332</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L6333" href="#L6333">6333</a> <em class="jxr_javadoccomment">     * Converts provided NED position expressed in terms of latitude, longitude and height respect</em>
+<a class="jxr_linenumber" name="L6334" href="#L6334">6334</a> <em class="jxr_javadoccomment">     * mean Earth surface, to position expressed in ECEF coordinates.</em>
+<a class="jxr_linenumber" name="L6335" href="#L6335">6335</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L6336" href="#L6336">6336</a> <em class="jxr_javadoccomment">     * @param position NED position to be converted.</em>
+<a class="jxr_linenumber" name="L6337" href="#L6337">6337</a> <em class="jxr_javadoccomment">     * @return converted position expressed in ECEF coordinates.</em>
+<a class="jxr_linenumber" name="L6338" href="#L6338">6338</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L6339" href="#L6339">6339</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFPosition.html">ECEFPosition</a> convertPosition(<strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/NEDPosition.html">NEDPosition</a> position) {
+<a class="jxr_linenumber" name="L6340" href="#L6340">6340</a>         <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFVelocity.html">ECEFVelocity</a> velocity = <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFVelocity.html">ECEFVelocity</a>();
+<a class="jxr_linenumber" name="L6341" href="#L6341">6341</a>         <strong class="jxr_keyword">final</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFPosition.html">ECEFPosition</a> result = <strong class="jxr_keyword">new</strong> <a href="../../../../../../com/irurueta/navigation/inertial/ECEFPosition.html">ECEFPosition</a>();
+<a class="jxr_linenumber" name="L6342" href="#L6342">6342</a>         NEDtoECEFPositionVelocityConverter.convertNEDtoECEF(
+<a class="jxr_linenumber" name="L6343" href="#L6343">6343</a>                 position.getLatitude(), position.getLongitude(), position.getHeight(),
+<a class="jxr_linenumber" name="L6344" href="#L6344">6344</a>                 0.0, 0.0, 0.0, result, velocity);
+<a class="jxr_linenumber" name="L6345" href="#L6345">6345</a>         <strong class="jxr_keyword">return</strong> result;
+<a class="jxr_linenumber" name="L6346" href="#L6346">6346</a>     }
+<a class="jxr_linenumber" name="L6347" href="#L6347">6347</a> 
+<a class="jxr_linenumber" name="L6348" href="#L6348">6348</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L6349" href="#L6349">6349</a> <em class="jxr_javadoccomment">     * Converts acceleration instance to meters per squared second.</em>
+<a class="jxr_linenumber" name="L6350" href="#L6350">6350</a> <em class="jxr_javadoccomment">     *</em>
+<a class="jxr_linenumber" name="L6351" href="#L6351">6351</a> <em class="jxr_javadoccomment">     * @param acceleration acceleration instance to be converted.</em>
+<a class="jxr_linenumber" name="L6352" href="#L6352">6352</a> <em class="jxr_javadoccomment">     * @return converted value.</em>
+<a class="jxr_linenumber" name="L6353" href="#L6353">6353</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L6354" href="#L6354">6354</a>     <strong class="jxr_keyword">private</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">double</strong> convertAcceleration(<strong class="jxr_keyword">final</strong> Acceleration acceleration) {
+<a class="jxr_linenumber" name="L6355" href="#L6355">6355</a>         <strong class="jxr_keyword">return</strong> AccelerationConverter.convert(acceleration.getValue().doubleValue(),
+<a class="jxr_linenumber" name="L6356" href="#L6356">6356</a>                 acceleration.getUnit(), AccelerationUnit.METERS_PER_SQUARED_SECOND);
+<a class="jxr_linenumber" name="L6357" href="#L6357">6357</a>     }
+<a class="jxr_linenumber" name="L6358" href="#L6358">6358</a> 
+<a class="jxr_linenumber" name="L6359" href="#L6359">6359</a>     <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L6360" href="#L6360">6360</a> <em class="jxr_javadoccomment">     * Internal class containing estimated preliminary result.</em>
+<a class="jxr_linenumber" name="L6361" href="#L6361">6361</a> <em class="jxr_javadoccomment">     */</em>
+<a class="jxr_linenumber" name="L6362" href="#L6362">6362</a>     <strong class="jxr_keyword">protected</strong> <strong class="jxr_keyword">static</strong> <strong class="jxr_keyword">class</strong> <a href="../../../../../../com/irurueta/navigation/inertial/calibration/accelerometer/RobustKnownFrameAccelerometerCalibrator.html">PreliminaryResult</a> {
+<a class="jxr_linenumber" name="L6363" href="#L6363">6363</a>         <em class="jxr_javadoccomment">/**</em>
+<a class="jxr_linenumber" name="L6364" href="#L6364">6364</a> <em class="jxr_javadoccomment">         * Estimated accelerometer scale factors and cross coupling errors.</em>
+<a class="jxr_linenumber" name="L6365" href="#L6365">6365</a> <em class="jxr_javadoccomment">         * This is the product of matrix Ta containing cross coupling errors and Ka</em>
+<a class="jxr_linenumber" name="L6366" href="#L6366">6366</a> <em class="jxr_javadoccomment">         * containing scaling factors.</em>
+<a class="jxr_linenumber" name="L6367" href="#L6367">6367</a> <em class="jxr_javadoccomment">         * So tat:</em>
+<a class="jxr_linenumber" name="L6368" href="#L6368">6368</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
+<a class="jxr_linenumber" name="L6369" href="#L6369">6369</a> <em class="jxr_javadoccomment">         *     Ma = [sx    mxy  mxz] = Ta*Ka</em>
+<a class="jxr_linenumber" name="L6370" href="#L6370">6370</a> <em class="jxr_javadoccomment">         *          [myx   sy   myz]</em>
+<a class="jxr_linenumber" name="L6371" href="#L6371">6371</a> <em class="jxr_javadoccomment">         *          [mzx   mzy  sz ]</em>
+<a class="jxr_linenumber" name="L6372" href="#L6372">6372</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
+<a class="jxr_linenumber" name="L6373" href="#L6373">6373</a> <em class="jxr_javadoccomment">         * Where:</em>
+<a class="jxr_linenumber" name="L6374" href="#L6374">6374</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
+<a class="jxr_linenumber" name="L6375" href="#L6375">6375</a> <em class="jxr_javadoccomment">         *     Ka = [sx 0   0 ]</em>
+<a class="jxr_linenumber" name="L6376" href="#L6376">6376</a> <em class="jxr_javadoccomment">         *          [0  sy  0 ]</em>
+<a class="jxr_linenumber" name="L6377" href="#L6377">6377</a> <em class="jxr_javadoccomment">         *          [0  0   sz]</em>
+<a class="jxr_linenumber" name="L6378" href="#L6378">6378</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
+<a class="jxr_linenumber" name="L6379" href="#L6379">6379</a> <em class="jxr_javadoccomment">         * and</em>
+<a class="jxr_linenumber" name="L6380" href="#L6380">6380</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
+<a class="jxr_linenumber" name="L6381" href="#L6381">6381</a> <em class="jxr_javadoccomment">         *     Ta = [1          -alphaXy    alphaXz ]</em>
+<a class="jxr_linenumber" name="L6382" href="#L6382">6382</a> <em class="jxr_javadoccomment">         *          [alphaYx    1           -alphaYz]</em>
+<a class="jxr_linenumber" name="L6383" href="#L6383">6383</a> <em class="jxr_javadoccomment">         *          [-alphaZx   alphaZy     1       ]</em>
+<a class="jxr_linenumber" name="L6384" href="#L6384">6384</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
+<a class="jxr_linenumber" name="L6385" href="#L6385">6385</a> <em class="jxr_javadoccomment">         * Hence:</em>
+<a class="jxr_linenumber" name="L6386" href="#L6386">6386</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
+<a class="jxr_linenumber" name="L6387" href="#L6387">6387</a> <em class="jxr_javadoccomment">         *     Ma = [sx    mxy  mxz] = Ta*Ka =  [sx             -sy * alphaXy   sz * alphaXz ]</em>
+<a class="jxr_linenumber" name="L6388" href="#L6388">6388</a> <em class="jxr_javadoccomment">         *          [myx   sy   myz]            [sx * alphaYx   sy              -sz * alphaYz]</em>
+<a class="jxr_linenumber" name="L6389" href="#L6389">6389</a> <em class="jxr_javadoccomment">         *          [mzx   mzy  sz ]            [-sx * alphaZx  sy * alphaZy    sz           ]</em>
+<a class="jxr_linenumber" name="L6390" href="#L6390">6390</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
+<a class="jxr_linenumber" name="L6391" href="#L6391">6391</a> <em class="jxr_javadoccomment">         * This instance allows any 3x3 matrix however, typically alphaYx, alphaZx and alphaZy</em>
+<a class="jxr_linenumber" name="L6392" href="#L6392">6392</a> <em class="jxr_javadoccomment">         * are considered to be zero if the accelerometer z-axis is assumed to be the same</em>
+<a class="jxr_linenumber" name="L6393" href="#L6393">6393</a> <em class="jxr_javadoccomment">         * as the body z-axis. When this is assumed, myx = mzx = mzy = 0 and the Ma matrix</em>
+<a class="jxr_linenumber" name="L6394" href="#L6394">6394</a> <em class="jxr_javadoccomment">         * becomes upper diagonal:</em>
+<a class="jxr_linenumber" name="L6395" href="#L6395">6395</a> <em class="jxr_javadoccomment">         * &lt;pre&gt;</em>
+<a class="jxr_linenumber" name="L6396" href="#L6396">6396</a> <em class="jxr_javadoccomment">         *     Ma = [sx    mxy  mxz]</em>
+<a class="jxr_linenumber" name="L6397" href="#L6397">6397</a> <em class="jxr_javadoccomment">         *          [0     sy   myz]</em>
+<a class="jxr_linenumber" name="L6398" href="#L6398">6398</a> <em class="jxr_javadoccomment">         *          [0     0    sz ]</em>
+<a class="jxr_linenumber" name="L6399" href="#L6399">6399</a> <em class="jxr_javadoccomment">         * &lt;/pre&gt;</em>
+<a class="jxr_linenumber" name="L6400" href="#L6400">6400</a> <em class="jxr_javadoccomment">         * Values of this matrix are unitless.</em>
+<a class="jxr_linenumber" name="L6401" href="#L6401">6401</a> <em class="jxr_javadoccomment">         */</em>
+<a class="jxr_linenumber" name="L6402" href="#L6402">6402</a>         <strong class="jxr_keyword">private</strong> Matrix mEstimatedMa;
+<a class="jxr_linenumber" name="L6403" href="#L6403">6403</a>     }
+<a class="jxr_linenumber" name="L6404" href="#L6404">6404</a> }
 </pre>
 <hr/>
 <div id="footer">Copyright &#169; 2018&#x2013;2020. All rights reserved.</div>
