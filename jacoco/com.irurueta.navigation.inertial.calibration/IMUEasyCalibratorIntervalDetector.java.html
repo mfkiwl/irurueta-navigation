@@ -1,6 +1,25 @@
-<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IMUEasyCalibratorIntervalDetector.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.calibration</a> &gt; <span class="el_source">IMUEasyCalibratorIntervalDetector.java</span></div><h1>IMUEasyCalibratorIntervalDetector.java</h1><pre class="source lang-java linenums">package com.irurueta.navigation.inertial.calibration;
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IMUEasyCalibratorIntervalDetector.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.calibration</a> &gt; <span class="el_source">IMUEasyCalibratorIntervalDetector.java</span></div><h1>IMUEasyCalibratorIntervalDetector.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2020 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.inertial.calibration;
 
 import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.inertial.BodyKinematics;
+import com.irurueta.units.Time;
+import com.irurueta.units.TimeConverter;
+import com.irurueta.units.TimeUnit;
 
 public class IMUEasyCalibratorIntervalDetector {
 
@@ -10,20 +29,372 @@ public class IMUEasyCalibratorIntervalDetector {
     private static final int DEFAULT_INITIAL_SAMPLES = 2500;
 
     /**
+     * Default maximum threshold multiplier value.
+     */
+    private static final int DEFAULT_MAX_INITIAL_VARIANCE_THRESHOLD_MULTIPLIER = 10;
+
+    /**
      * Estimates initial accelerometer noise level.
      */
-<span class="nc" id="L15">    private IMUNoiseEstimator mNoiseEstimator = new IMUNoiseEstimator();</span>
+    //private final IMUNoiseEstimator mInitialNoiseEstimator =
+    //        new IMUNoiseEstimator();
 
-<span class="nc" id="L17">    private double mTimeInterval = IMUNoiseEstimator.DEFAULT_TIME_INTERVAL_SECONDS;</span>
+    /**
+     * Time internal between kinematics samples expressed in seconds (s).
+     */
+    private double mTimeInterval; // = IMUNoiseEstimator.DEFAULT_TIME_INTERVAL_SECONDS;
 
-<span class="nc" id="L19">    private int mInitialSamples = DEFAULT_INITIAL_SAMPLES;</span>
+    /**
+     * Total samples to be processed during initial interval.
+     */
+<span class="nc" id="L50">    private int mInitialSamples = DEFAULT_INITIAL_SAMPLES;</span>
 
-<span class="nc" id="L21">    IMUEasyCalibratorIntervalDetector() {</span>
-        try {
-<span class="nc" id="L23">            mNoiseEstimator.setTimeInterval(mTimeInterval);</span>
-<span class="nc" id="L24">            mNoiseEstimator.setTotalSamples(mInitialSamples);</span>
-<span class="nc" id="L25">        } catch (LockedException ignore) {</span>
-<span class="nc" id="L26">        }</span>
-<span class="nc" id="L27">    }</span>
+    /**
+     * Indicates whether initial interval has already been completed.
+     */
+    private boolean mInitialIntervalCompleted;
+
+    /**
+     * Estimated accelerometer variance during initial interval expressed in (m^2/s^4).
+     */
+    private double mInitialAccelerometerVariance;
+
+    /**
+     * Maximum allowed accelerometer variance during initial interval.
+     * During initial interval IMU is supposed to be static. If variance
+     * exceeds this value (because IMU is too noisy or a sudden
+     * movement occurs), then the detector will notify an error and reset.
+     * If this value is null, no limit is imposed on allowed initial
+     * accelerometer variance.
+     */
+    private Double mMaxInitialAccelerometerVariance;
+
+    /**
+     * Maximum multiplier value for estimated initial variance to estimate best intervals.
+     */
+<span class="nc" id="L75">    private int mMaxInitialVarianceThresholdMultiplier = DEFAULT_MAX_INITIAL_VARIANCE_THRESHOLD_MULTIPLIER;</span>
+
+    /**
+     * Indicates whether this detector is running.
+     * The detector is considered to be running from the moment the first
+     * kinematics measure is added until calibration is completed or fails,
+     * or the detector is reset.
+     */
+    private boolean mRunning;
+
+    /**
+     * Listener to notify completion of intervals, calibration and errors.
+     */
+    private IMUEasyCalibratorIntervalDetectorListener mListener;
+
+    /**
+     * Constructor.
+     */
+<span class="nc" id="L93">    IMUEasyCalibratorIntervalDetector() {</span>
+        /*try {
+            mInitialNoiseEstimator.setTimeInterval(mTimeInterval);
+            mInitialNoiseEstimator.setTotalSamples(mInitialSamples);
+            mInitialNoiseEstimator.setListener(new IMUNoiseEstimatorListener() {
+                @Override
+                public void onStart(IMUNoiseEstimator estimator) {
+
+                }
+
+                @Override
+                public void onBodyKinematicsAdded(IMUNoiseEstimator estimator) {
+                    mRunning = true;
+                }
+
+                @Override
+                public void onFinish(IMUNoiseEstimator estimator) {
+                    mInitialIntervalCompleted = true;
+                    // Accelerometer Power Spectral Density (m^2/s^-3)
+                    // Variance is m^2/s^4, PSD is variance * time interval
+                    // psd = variance * timeInterval --&gt; variance = psd / timeInterval
+                    final double psd = estimator.getAccelerometerNoisePSD();
+                    final double timeInterval = estimator.getTimeInterval();
+                    mInitialAccelerometerVariance = psd / timeInterval;
+
+                    if (mMaxInitialAccelerometerVariance != null
+                            &amp;&amp; mInitialAccelerometerVariance &gt; mMaxInitialAccelerometerVariance) {
+                        // variance exceeds maximum allowed value
+                        try {
+                            reset();
+                        } catch (final LockedException ignore) {
+                            // never happens
+                        }
+                        if (mListener != null) {
+                            mListener.onError(
+                                    IMUEasyCalibratorIntervalDetector.this);
+                        }
+                    } else {
+                        if (mListener != null) {
+                            mListener.onInitialIntervalCompleted(
+                                    IMUEasyCalibratorIntervalDetector.this,
+                                    psd, mInitialAccelerometerVariance);
+                        }
+                    }
+                }
+
+                @Override
+                public void onReset(IMUNoiseEstimator estimator) {
+
+                }
+            });
+        } catch (LockedException ignore) {
+        }*/
+<span class="nc" id="L146">    }</span>
+
+    /**
+     * Indicates whether this detector is running or not.
+     * The detector is considered to be running from the moment the first
+     * kinematics measure is added until calibration is completed or fails,
+     * or the detector is reset.
+     *
+     * @return true if the detector is running, false otherwise.
+     */
+    public boolean isRunning() {
+<span class="nc" id="L157">        return mRunning;</span>
+    }
+
+    /**
+     * Gets time interval between kinematics samples expressed in
+     * seconds (s).
+     *
+     * @return time interval between kinematics samples.
+     */
+    public double getTimeInterval() {
+<span class="nc" id="L167">        return mTimeInterval;</span>
+    }
+
+    /**
+     * Sets time interval between kinematics samples expressed in
+     * seconds (s).
+     *
+     * @param timeInterval time interval between kinematics samples.
+     * @throws LockedException          if detector is running.
+     * @throws IllegalArgumentException if provided value is zero
+     *                                  or negative.
+     */
+    public void setTimeInterval(final double timeInterval)
+            throws LockedException {
+<span class="nc bnc" id="L181" title="All 2 branches missed.">        if (mRunning) {</span>
+<span class="nc" id="L182">            throw new LockedException();</span>
+        }
+
+<span class="nc bnc" id="L185" title="All 2 branches missed.">        if (timeInterval &lt;= 0.0) {</span>
+<span class="nc" id="L186">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="nc" id="L189">        mTimeInterval = timeInterval;</span>
+        //mInitialNoiseEstimator.setTimeInterval(timeInterval);
+<span class="nc" id="L191">    }</span>
+
+    /**
+     * Gets time interval between kinematics samples.
+     *
+     * @return time interval between kinematics samples.
+     */
+    public Time getTimeIntervalAsTime() {
+<span class="nc" id="L199">        return new Time(mTimeInterval, TimeUnit.SECOND);</span>
+    }
+
+    /**
+     * Gets time interval between kinematics samples.
+     *
+     * @param result instance where time interval will be stored.
+     */
+    public void getTimeIntervalAsTime(final Time result) {
+<span class="nc" id="L208">        result.setValue(mTimeInterval);</span>
+<span class="nc" id="L209">        result.setUnit(TimeUnit.SECOND);</span>
+<span class="nc" id="L210">    }</span>
+
+    /**
+     * Sets time interval between kinematics samples.
+     *
+     * @param timeInterval time interval between kinematics samples.
+     * @throws LockedException          if detector is running.
+     * @throws IllegalArgumentException if provided value is
+     *                                  zero or negative.
+     */
+    public void setTimeInterval(final Time timeInterval)
+            throws LockedException {
+<span class="nc" id="L222">        setTimeInterval(TimeConverter.convert(</span>
+<span class="nc" id="L223">                timeInterval.getValue().doubleValue(),</span>
+<span class="nc" id="L224">                timeInterval.getUnit(), TimeUnit.SECOND));</span>
+<span class="nc" id="L225">    }</span>
+
+    /**
+     * Gets total samples to be processed during initial interval.
+     *
+     * @return total samples to be processed during initial interval.
+     */
+    public int getInitialSamples() {
+<span class="nc" id="L233">        return mInitialSamples;</span>
+    }
+
+    /**
+     * Sets total samples to be processed during initial interval.
+     *
+     * @param initialSamples total samples to be processed during initial
+     *                       interval.
+     * @throws LockedException          if detector is running.
+     * @throws IllegalArgumentException if provided value is zero
+     *                                  or negative.
+     */
+    public void setInitialSamples(final int initialSamples)
+            throws LockedException {
+<span class="nc bnc" id="L247" title="All 2 branches missed.">        if (mRunning) {</span>
+<span class="nc" id="L248">            throw new LockedException();</span>
+        }
+
+<span class="nc bnc" id="L251" title="All 2 branches missed.">        if (initialSamples &lt;= 0) {</span>
+<span class="nc" id="L252">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="nc" id="L255">        mInitialSamples = initialSamples;</span>
+        //mInitialNoiseEstimator.setTotalSamples(initialSamples);
+<span class="nc" id="L257">    }</span>
+
+    /**
+     * Gets estimated initial accelerometer variance expressed
+     * in (m^2/s^4).
+     *
+     * @return estimated initial accelerometer variance.
+     */
+    public double getInitialAccelerometerVariance() {
+<span class="nc" id="L266">        return mInitialAccelerometerVariance;</span>
+    }
+
+    /**
+     * Gets maximum allowed accelerometer variance during initial interval.
+     * During initial interval IMU is supposed to be static. If variance
+     * exceeds this value (because IMU is too noisy or a sudden movement
+     * occurs), then the detector will notify an error and reset.
+     * If this value is null, no limit is imposed on allowed initial
+     * accelerometer variance.
+     *
+     * @return maximum allowed accelerometer variance.
+     */
+    public Double getMaxInitialAccelerometerVariance() {
+<span class="nc" id="L280">        return mMaxInitialAccelerometerVariance;</span>
+    }
+
+    /**
+     * Sets maximum allowed accelerometer variance during initial interval.
+     * During initial interval IMU is supposed to be static. If variance
+     * exceeds this value (because IMU is too noisy or a sudden movement
+     * occurs), then the detector will notify an error and reset.
+     * If this value is null, no limit is imposed on allowed initial
+     * accelerometer variance.
+     *
+     * @param maximumInitialAccelerometerVariance maximum allowed
+     *                                            accelerometer variance or
+     *                                            null.
+     * @throws LockedException if detector is running.
+     */
+    public void setMaximumInitialAccelerometerVariance(
+            final Double maximumInitialAccelerometerVariance)
+            throws LockedException {
+<span class="nc bnc" id="L299" title="All 2 branches missed.">        if (mRunning) {</span>
+<span class="nc" id="L300">            throw new LockedException();</span>
+        }
+
+<span class="nc" id="L303">        mMaxInitialAccelerometerVariance =</span>
+                maximumInitialAccelerometerVariance;
+<span class="nc" id="L305">    }</span>
+
+    /**
+     * Gets maximum multiplier value for estimated initial variance to
+     * estimate best intervals.
+     *
+     * @return maximum multiplier value for estimated initial variance.
+     */
+    public int getMaxInitialVarianceThresholdMultiplier() {
+<span class="nc" id="L314">        return mMaxInitialVarianceThresholdMultiplier;</span>
+    }
+
+    /**
+     * Sets maixmum multiplier value for estimated initial variance to
+     * estimate best intervals.
+     *
+     * @param maxInitialVarianceThresholdMultiplier maximum multiplier value
+     *                                              for estimated initial
+     *                                              variance.
+     * @throws LockedException if detector is running.
+     * @throws IllegalArgumentException if provided value is less than 1.
+     */
+    public void setMaxInitialVarianceThresholdMultiplier(
+            final int maxInitialVarianceThresholdMultiplier)
+            throws LockedException {
+<span class="nc bnc" id="L330" title="All 2 branches missed.">        if (mRunning) {</span>
+<span class="nc" id="L331">            throw new LockedException();</span>
+        }
+
+<span class="nc bnc" id="L334" title="All 2 branches missed.">        if (maxInitialVarianceThresholdMultiplier &lt; 1) {</span>
+<span class="nc" id="L335">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="nc" id="L338">        mMaxInitialVarianceThresholdMultiplier =</span>
+                maxInitialVarianceThresholdMultiplier;
+<span class="nc" id="L340">    }</span>
+
+    /**
+     * Gets listener to notify completion of intervals, calibration and
+     * errors.
+     *
+     * @return listener to notify events.
+     */
+    public IMUEasyCalibratorIntervalDetectorListener getListener() {
+<span class="nc" id="L349">        return mListener;</span>
+    }
+
+    /**
+     * Sets listener to notify completion of intervals, calibration and
+     * errors.
+     *
+     * @param listener listener to notify events.
+     * @throws LockedException if detector is running.
+     */
+    public void setListener(
+            final IMUEasyCalibratorIntervalDetectorListener listener)
+            throws LockedException {
+<span class="nc bnc" id="L362" title="All 2 branches missed.">        if (mRunning) {</span>
+<span class="nc" id="L363">            throw new LockedException();</span>
+        }
+
+<span class="nc" id="L366">        mListener = listener;</span>
+<span class="nc" id="L367">    }</span>
+
+    /**
+     * Adds a body kinematics measure (accelerometer + gyroscope) to be
+     * processed by this detector.
+     *
+     * @param kinematics body kinematics measure to be processed.
+     * @throws LockedException if detector is running.
+     */
+    public void addKinematics(final BodyKinematics kinematics)
+            throws LockedException {
+<span class="nc" id="L378">        mRunning = true;</span>
+<span class="nc bnc" id="L379" title="All 2 branches missed.">        if (!mInitialIntervalCompleted) {</span>
+            //mInitialNoiseEstimator.addBodyKinematics(kinematics);
+        }
+<span class="nc" id="L382">    }</span>
+
+    /**
+     * Resets this detector.
+     *
+     * @throws LockedException if detector is running.
+     */
+    public void reset() throws LockedException {
+<span class="nc" id="L390">        mRunning = false;</span>
+        //mInitialNoiseEstimator.reset();
+<span class="nc" id="L392">        mInitialIntervalCompleted = false;</span>
+<span class="nc" id="L393">        mInitialAccelerometerVariance = 0.0;</span>
+
+<span class="nc bnc" id="L395" title="All 2 branches missed.">        if (mListener != null) {</span>
+<span class="nc" id="L396">            mListener.onReset(this);</span>
+        }
+<span class="nc" id="L398">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

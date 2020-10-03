@@ -1,0 +1,1123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WindowedTriadNoiseEstimator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.calibration.noise</a> &gt; <span class="el_source">WindowedTriadNoiseEstimator.java</span></div><h1>WindowedTriadNoiseEstimator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2020 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.irurueta.navigation.inertial.calibration.noise;
+
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.inertial.calibration.IMUTimeIntervalEstimator;
+import com.irurueta.navigation.inertial.calibration.Triad;
+import com.irurueta.units.Measurement;
+import com.irurueta.units.Time;
+import com.irurueta.units.TimeConverter;
+import com.irurueta.units.TimeUnit;
+
+import java.util.LinkedList;
+
+/**
+ * Base class to estimate measurement noise variances and PSD's (Power Spectral Densities)
+ * along with average values for a windowed amount of samples.
+ * Implementations of this estimator must be used when the body where the measurement device
+ * is attached to remains static on the same position with zero velocity while capturing data.
+ * To compute PSD's, this estimator assumes that measurement samples are obtained
+ * at a constant provided rate equal to {@link #getTimeInterval()} seconds.
+ * If not available, accelerometer sampling rate average can be estimated using
+ * {@link IMUTimeIntervalEstimator}.
+ * This estimator does NOT require the knowledge of current location and body
+ * orientation.
+ * Because body location and orientation is not known, estimated average values
+ * cannot be used to determine biases. Only norm of noise estimations
+ * (variance or standard deviation) can be safely used.
+ *
+ * @param &lt;U&gt; a measurement unit type.
+ * @param &lt;M&gt; a measurement type.
+ * @param &lt;T&gt; a triad type.
+ * @param &lt;E&gt; an estimator type.
+ * @param &lt;L&gt; a listener type.
+ */
+public abstract class WindowedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
+        M extends Measurement&lt;U&gt;, T extends Triad&lt;U, M&gt;,
+        E extends WindowedTriadNoiseEstimator&lt;U, M, T, E, L&gt;,
+        L extends WindowedTriadNoiseEstimatorListener&lt;U, M, T, E&gt;&gt; {
+
+    /**
+     * Number of samples to keep within the window by default.
+     * For an accelerometer generating 100 samples/second, this is equivalent to
+     * 1 second.
+     * For an accelerometer generating 50 samples/second, this is equivalent to
+     * 2 seconds.
+     */
+    public static final int DEFAULT_WINDOW_SIZE = 100;
+
+    /**
+     * Minimum allowed window size.
+     */
+    public static final int MIN_WINDOW_SIZE = 2;
+
+    /**
+     * Default time interval between accelerometer samples expressed in seconds
+     * (s).
+     */
+    public static final double DEFAULT_TIME_INTERVAL_SECONDS = 0.02;
+
+    /**
+     * Length of number of samples to keep within the window being processed.
+     * Window size must always be larger than allowed minimum value.
+     */
+<span class="fc" id="L78">    private int mWindowSize = DEFAULT_WINDOW_SIZE;</span>
+
+    /**
+     * Time interval expressed in seconds (s) between consecutive triad
+     * samples.
+     */
+<span class="fc" id="L84">    private double mTimeInterval = DEFAULT_TIME_INTERVAL_SECONDS;</span>
+
+    /**
+     * Keeps the list of triad samples that remain within the window.
+     */
+<span class="fc" id="L89">    private final LinkedList&lt;T&gt; mWindowedSamples = new LinkedList&lt;&gt;();</span>
+
+    /**
+     * Listener to handle events raised by this estimator.
+     */
+    private L mListener;
+
+    /**
+     * Contains estimated average of x coordinate of measurement expressed in its default
+     * unit (m/s^2 for acceleration, rad/s for angular speed or T for magnetic flux density).
+     */
+    private double mAvgX;
+
+    /**
+     * Contains estimated average of y coordinate of measurement expressed in its default
+     * unit (m/s^2 for acceleration, rad/s for angular speed or T for magnetic flux density).
+     */
+    private double mAvgY;
+
+    /**
+     * Contains estimated average of z coordinate of measurement expressed in its default
+     * unit (m/s^2 for acceleration, rad/s for angular speed or T for magnetic flux density).
+     */
+    private double mAvgZ;
+
+    /**
+     * Contains estimated variance of x coordinate of measurement expressed in its default
+     * squared unit (m^2/s^4 for acceleration, rad^2/s^2 for angular speed or T^2 for magnetic
+     * flux density).
+     */
+    private double mVarianceX;
+
+    /**
+     * Contains estimated variance of y coordinate of measurement expressed in its default
+     * squared unit (m^2/s^4 for acceleration, rad^2/s^2 for angular speed or T^2 for magnetic
+     * flux density).
+     */
+    private double mVarianceY;
+
+    /**
+     * Contains estimated variance of x coordinate of measurement expressed in its default
+     * squared unit (m^2/s^4 for acceleration, rad^2/s^2 for angular speed or T^2 for magnetic
+     * flux density).
+     */
+    private double mVarianceZ;
+
+    /**
+     * Number of processed acceleration triad samples.
+     */
+    private int mNumberOfProcessedSamples;
+
+    /**
+     * Indicates whether estimator is running or not.
+     */
+    private boolean mRunning;
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L148">    public WindowedTriadNoiseEstimator() {</span>
+<span class="fc" id="L149">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param listener listener to handle events raised by this estimator.
+     */
+<span class="fc" id="L156">    public WindowedTriadNoiseEstimator(final L listener) {</span>
+<span class="fc" id="L157">        mListener = listener;</span>
+<span class="fc" id="L158">    }</span>
+
+    /**
+     * Gets length of number of samples to keep within the window being processed.
+     * Window size must always be larger than allowed minimum value.
+     *
+     * @return length of number of samples to keep within the window.
+     */
+    public int getWindowSize() {
+<span class="fc" id="L167">        return mWindowSize;</span>
+    }
+
+    /**
+     * Sets length of number of samples to keep within the window being processed.
+     * Window size must always be larger than allowed minimum value.
+     * When window size is modified, instance state is reset.
+     *
+     * @param windowSize length of number of samples to keep within the window.
+     * @throws IllegalArgumentException if provided value is not valid.
+     * @throws LockedException          if estimator is currently running.
+     */
+    public void setWindowSize(final int windowSize) throws LockedException {
+<span class="fc bfc" id="L180" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L181">            throw new LockedException();</span>
+        }
+
+        // check that window is larger than minimum allowed value
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        if (windowSize &lt; MIN_WINDOW_SIZE) {</span>
+<span class="fc" id="L186">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L189">        mWindowSize = windowSize;</span>
+<span class="fc" id="L190">        reset();</span>
+<span class="fc" id="L191">    }</span>
+
+    /**
+     * Gets time interval between triad samples expressed in
+     * seconds (s).
+     *
+     * @return time interval between accelerometer triad samples.
+     */
+    public double getTimeInterval() {
+<span class="fc" id="L200">        return mTimeInterval;</span>
+    }
+
+    /**
+     * Sets time interval between triad samples expressed in
+     * seconds (s).
+     *
+     * @param timeInterval time interval between accelerometer triad samples.
+     * @throws IllegalArgumentException if provided value is negative.
+     * @throws LockedException          if estimator is currently running.
+     */
+    public void setTimeInterval(final double timeInterval) throws LockedException {
+<span class="fc bfc" id="L212" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L213">            throw new LockedException();</span>
+        }
+
+<span class="fc bfc" id="L216" title="All 2 branches covered.">        if (timeInterval &lt; 0.0) {</span>
+<span class="fc" id="L217">            throw new IllegalArgumentException();</span>
+        }
+
+<span class="fc" id="L220">        mTimeInterval = timeInterval;</span>
+<span class="fc" id="L221">    }</span>
+
+    /**
+     * Gets time interval between triad samples.
+     *
+     * @return time interval between accelerometer triad samples.
+     */
+    public Time getTimeIntervalAsTime() {
+<span class="fc" id="L229">        return new Time(mTimeInterval, TimeUnit.SECOND);</span>
+    }
+
+    /**
+     * Gets time interval between triad samples.
+     *
+     * @param result instance where time interval will be stored.
+     */
+    public void getTimeIntervalAsTime(final Time result) {
+<span class="fc" id="L238">        result.setValue(mTimeInterval);</span>
+<span class="fc" id="L239">        result.setUnit(TimeUnit.SECOND);</span>
+<span class="fc" id="L240">    }</span>
+
+    /**
+     * Sets time interval between triad samples.
+     *
+     * @param timeInterval time interval between accelerometer triad samples.
+     * @throws LockedException if estimator is currently running.
+     */
+    public void setTimeInterval(final Time timeInterval) throws LockedException {
+<span class="fc" id="L249">        setTimeInterval(TimeConverter.convert(timeInterval.getValue().doubleValue(),</span>
+<span class="fc" id="L250">                timeInterval.getUnit(), TimeUnit.SECOND));</span>
+<span class="fc" id="L251">    }</span>
+
+    /**
+     * Gets listener to handle events raised by this estimator.
+     *
+     * @return listener to handle events raised by this estimator.
+     */
+    public L getListener() {
+<span class="fc" id="L259">        return mListener;</span>
+    }
+
+    /**
+     * Sets listener to handle events raised by this estimator.
+     *
+     * @param listener listener to handle events raised by this estimator.
+     * @throws LockedException if this estimator is running.
+     */
+    public void setListener(final L listener) throws LockedException {
+<span class="fc bfc" id="L269" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L270">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L273">        mListener = listener;</span>
+<span class="fc" id="L274">    }</span>
+
+    /**
+     * Gets first provided measurement triad within the window.
+     *
+     * @return first provided measurement triad within the window or null if not
+     * available.
+     */
+    public T getFirstWindowedTriad() {
+<span class="fc bfc" id="L283" title="All 2 branches covered.">        return mWindowedSamples.isEmpty() ? null : mWindowedSamples.getFirst();</span>
+    }
+
+    /**
+     * Gets first provided measurement triad within the window.
+     *
+     * @param result instance where first provided measurement triad will be stored.
+     * @return true if result instance was updated, false otherwise.
+     */
+    public boolean getFirstWindowedTriad(final T result) {
+<span class="fc bfc" id="L293" title="All 2 branches covered.">        if (mWindowedSamples.isEmpty()) {</span>
+<span class="fc" id="L294">            return false;</span>
+        } else {
+<span class="fc" id="L296">            result.copyFrom(mWindowedSamples.getFirst());</span>
+<span class="fc" id="L297">            return true;</span>
+        }
+    }
+
+    /**
+     * Gets last provided measurement triad within the window.
+     *
+     * @return last provided measurement triad within the window or null if not
+     * available.
+     */
+    public T getLastWindowedTriad() {
+<span class="fc bfc" id="L308" title="All 2 branches covered.">        return mWindowedSamples.isEmpty() ? null : mWindowedSamples.getLast();</span>
+    }
+
+    /**
+     * Gets last provided measurement triad within the window.
+     *
+     * @param result instance where last provided measurement triad will be stored.
+     * @return true if result instance was updated, false otherwise.
+     */
+    public boolean getLastWindowedTriad(final T result) {
+<span class="fc bfc" id="L318" title="All 2 branches covered.">        if (mWindowedSamples.isEmpty()) {</span>
+<span class="fc" id="L319">            return false;</span>
+        } else {
+<span class="fc" id="L321">            result.copyFrom(mWindowedSamples.getLast());</span>
+<span class="fc" id="L322">            return true;</span>
+        }
+    }
+
+    /**
+     * Gets estimated average of x coordinate of measurement expressed in its default
+     * unit (m/s^2 for acceleration, rad/s for angular speed or T for magnetic flux density).
+     * This value will depend of body location and orientation, hence it should never
+     * be used as a calibration bias.
+     *
+     * @return average of x coordinate of measurement in current window.
+     */
+    public double getAvgX() {
+<span class="fc" id="L335">        return mAvgX;</span>
+    }
+
+    /**
+     * Gets estimated average of x coordinate of measurement within current window.
+     * This value will depend of body location and orientation, hence it should never
+     * be used as a calibration bias.
+     *
+     * @return average of x coordinate of measurement in current window.
+     */
+    public M getAvgXAsMeasurement() {
+<span class="fc" id="L346">        return createMeasurement(mAvgX, getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets estimated average of x coordinate of measurement within current window.
+     * This value will depend of body location and orientation, hence it should never
+     * be used as a calibration bias.
+     *
+     * @param result instance where average of x coordinate of measurement will be stored.
+     */
+    public void getAvgXAsMeasurement(final M result) {
+<span class="fc" id="L357">        result.setValue(mAvgX);</span>
+<span class="fc" id="L358">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L359">    }</span>
+
+    /**
+     * Gets estimated average of y coordinate of measurement expressed in its default
+     * unit (m/s^2 for acceleration, rad/s for angular speed or T for magnetic flux density).
+     * This value will depend of body location and orientation, hence it should never
+     * be used as a calibration bias.
+     *
+     * @return average of y coordinate of measurement in current window.
+     */
+    public double getAvgY() {
+<span class="fc" id="L370">        return mAvgY;</span>
+    }
+
+    /**
+     * Gets estimated average of y coordinate of measurement within current window.
+     * This value will depend of body location and orientation, hence it should never
+     * be used as a calibration bias.
+     *
+     * @return average of y coordinate of measurement in current window.
+     */
+    public M getAvgYAsMeasurement() {
+<span class="fc" id="L381">        return createMeasurement(mAvgY, getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets estimated average of y coordinate of measurement within current window.
+     * This value will depend of body location and orientation, hence it should never
+     * be used as a calibration bias.
+     *
+     * @param result instance where average of y coordinate of measurement will be stored.
+     */
+    public void getAvgYAsMeasurement(final M result) {
+<span class="fc" id="L392">        result.setValue(mAvgY);</span>
+<span class="fc" id="L393">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L394">    }</span>
+
+    /**
+     * Gets estimated average of z coordinate of measurement expressed in its default
+     * unit (m/s^2 for acceleration, rad/s for angular speed or T for magnetic flux density).
+     * This value will depend of body location and orientation, hence it should never
+     * be used as a calibration bias.
+     *
+     * @return average of z coordinate of measurement in current window.
+     */
+    public double getAvgZ() {
+<span class="fc" id="L405">        return mAvgZ;</span>
+    }
+
+    /**
+     * Gets estimated average of z coordinate of measurement within current window.
+     * This value will depend of body location and orientation, hence it should never
+     * be used as a calibration bias.
+     *
+     * @return average of z coordinate of measurement in current window.
+     */
+    public M getAvgZAsMeasurement() {
+<span class="fc" id="L416">        return createMeasurement(mAvgZ, getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets estimated average of z coordinate of measurement within current window.
+     * This value will depend of body location and orientation, hence it should never
+     * be used as a calibration bias.
+     *
+     * @param result instance where average of z coordinate of measurement will be stored.
+     */
+    public void getAvgZAsMeasurement(final M result) {
+<span class="fc" id="L427">        result.setValue(mAvgZ);</span>
+<span class="fc" id="L428">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L429">    }</span>
+
+    /**
+     * Gets estimated average as a measurement triad.
+     *
+     * @return average measurement triad.
+     */
+    public T getAvgTriad() {
+<span class="fc" id="L437">        return createTriad(mAvgX, mAvgY, mAvgZ, getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets estimated average as a measurement triad.
+     *
+     * @param result instance where average values and unit will be stored.
+     */
+    public void getAvgTriad(final T result) {
+<span class="fc" id="L446">        result.setValueCoordinatesAndUnit(mAvgX, mAvgY, mAvgZ, getDefaultUnit());</span>
+<span class="fc" id="L447">    }</span>
+
+    /**
+     * Gets norm of estimated average measurement within current window expressed in its default
+     * unit (m/s^2 for acceleration, rad/s for angular speed or T for magnetic flux density).
+     * This value is independent of body orientation.
+     *
+     * @return norm of estimated average specific force.
+     */
+    public double getAvgNorm() {
+<span class="fc" id="L457">        return Math.sqrt(mAvgX * mAvgX + mAvgY * mAvgY + mAvgZ * mAvgZ);</span>
+    }
+
+    /**
+     * Gets norm of estimated average measurement within current window.
+     *
+     * @return norm of estimated average measurement.
+     */
+    public M getAvgNormAsMeasurement() {
+<span class="fc" id="L466">        return createMeasurement(getAvgNorm(), getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets norm of estimated average measurement within current window.
+     *
+     * @param result instance where norm of estimated average measurement will be stored.
+     */
+    public void getAvgNormAsMeasurement(final M result) {
+<span class="fc" id="L475">        result.setValue(getAvgNorm());</span>
+<span class="fc" id="L476">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L477">    }</span>
+
+    /**
+     * Gets estimated variance of x coordinate of measurement within current window
+     * expressed in its default squared unit (m^2/s^4 for acceleration,
+     * rad^2/s^2 for angular speed or T^2 for magnetic flux density).
+     *
+     * @return estimated variance of x coordinate of measurement within current
+     * window.
+     */
+    public double getVarianceX() {
+<span class="fc" id="L488">        return mVarianceX;</span>
+    }
+
+    /**
+     * Gets estimated variance of y coordinate of measurement within current window
+     * expressed in its default squared unit (m^2/s^4 for acceleration,
+     * rad^2/s^2 for angular speed or T^2 for magnetic flux density).
+     *
+     * @return estimated variance of y coordinate of measurement within current
+     * window.
+     */
+    public double getVarianceY() {
+<span class="fc" id="L500">        return mVarianceY;</span>
+    }
+
+    /**
+     * Gets estimated variance of z coordinate of measurement within current window
+     * expressed in its default squared unit (m^2/s^4 for acceleration,
+     * rad^2/s^2 for angular speed or T^2 for magnetic flux density).
+     *
+     * @return estimated variance of z coordinate of measurement within current
+     * window.
+     */
+    public double getVarianceZ() {
+<span class="fc" id="L512">        return mVarianceZ;</span>
+    }
+
+    /**
+     * Gets estimated standard deviation of x coordinate of measurement within current
+     * window and expressed in its default unit (m/s^2 for acceleration, rad/s for
+     * angular speed or T for magnetic flux density).
+     *
+     * @return estimated standard deviation of x coordinate of measurement within
+     * current window.
+     */
+    public double getStandardDeviationX() {
+<span class="fc" id="L524">        return Math.sqrt(mVarianceX);</span>
+    }
+
+    /**
+     * Gets estimated standard deviation of x coordinate of measurement within current
+     * window.
+     *
+     * @return estimated standard deviation of x coordinate of measurement.
+     */
+    public M getStandardDeviationXAsMeasurement() {
+<span class="fc" id="L534">        return createMeasurement(getStandardDeviationX(), getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets estimated standard deviation of x coordinate of measurement within current
+     * window.
+     *
+     * @param result instance where estimated standard deviation of x coordinate of
+     *               measurement will be stored.
+     */
+    public void getStandardDeviationXAsMeasurement(final M result) {
+<span class="fc" id="L545">        result.setValue(getStandardDeviationX());</span>
+<span class="fc" id="L546">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L547">    }</span>
+
+    /**
+     * Gets estimated standard deviation of y coordinate of measurement within current
+     * window and expressed in its default unit (m/s^2 for acceleration, rad/s for
+     * angular speed or T for magnetic flux density).
+     *
+     * @return estimated standard deviation of y coordinate of measurement within
+     * current window.
+     */
+    public double getStandardDeviationY() {
+<span class="fc" id="L558">        return Math.sqrt(mVarianceY);</span>
+    }
+
+    /**
+     * Gets estimated standard deviation of y coordinate of measurement within current
+     * window.
+     *
+     * @return estimated standard deviation of y coordinate of measurement.
+     */
+    public M getStandardDeviationYAsMeasurement() {
+<span class="fc" id="L568">        return createMeasurement(getStandardDeviationY(), getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets estimated standard deviation of y coordinate of measurement within current
+     * window.
+     *
+     * @param result instance where estimated standard deviation of y coordinate of
+     *               measurement will be stored.
+     */
+    public void getStandardDeviationYAsMeasurement(final M result) {
+<span class="fc" id="L579">        result.setValue(getStandardDeviationY());</span>
+<span class="fc" id="L580">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L581">    }</span>
+
+    /**
+     * Gets estimated standard deviation of z coordinate of measurement within current
+     * window and expressed in its default unit (m/s^2 for acceleration, rad/s for
+     * angular speed or T for magnetic flux density).
+     *
+     * @return estimated standard deviation of z coordinate of measurement within
+     * current window.
+     */
+    public double getStandardDeviationZ() {
+<span class="fc" id="L592">        return Math.sqrt(mVarianceZ);</span>
+    }
+
+    /**
+     * Gets estimated standard deviation of z coordinate of measurement within current
+     * window.
+     *
+     * @return estimated standard deviation of z coordinate of measurement.
+     */
+    public M getStandardDeviationZAsMeasurement() {
+<span class="fc" id="L602">        return createMeasurement(getStandardDeviationZ(), getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets estimated standard deviation of z coordinate of measurement within current
+     * window.
+     *
+     * @param result instance where estimated standard deviation of z coordinate of
+     *               measurement will be stored.
+     */
+    public void getStandardDeviationZAsMeasurement(final M result) {
+<span class="fc" id="L613">        result.setValue(getStandardDeviationZ());</span>
+<span class="fc" id="L614">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L615">    }</span>
+
+    /**
+     * Gets estimated standard deviation of measurement within current window.
+     *
+     * @return estimated standard deviation triad of measurement.
+     */
+    public T getStandardDeviationTriad() {
+<span class="fc" id="L623">        return createTriad(</span>
+<span class="fc" id="L624">                getStandardDeviationX(),</span>
+<span class="fc" id="L625">                getStandardDeviationY(),</span>
+<span class="fc" id="L626">                getStandardDeviationZ(),</span>
+<span class="fc" id="L627">                getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets estimated standard deviation of measurement within current window.
+     *
+     * @param result instance where estimated standard deviation triad of
+     *               measurement will be stored.
+     */
+    public void getStandardDeviationTriad(final T result) {
+<span class="fc" id="L637">        result.setValueCoordinatesAndUnit(</span>
+<span class="fc" id="L638">                getStandardDeviationX(),</span>
+<span class="fc" id="L639">                getStandardDeviationY(),</span>
+<span class="fc" id="L640">                getStandardDeviationZ(),</span>
+<span class="fc" id="L641">                getDefaultUnit());</span>
+<span class="fc" id="L642">    }</span>
+
+    /**
+     * Gets norm of estimated standard deviation of measurement within current
+     * window expressed in its default unit (m/s^2 for acceleration, rad/s for
+     * angular speed or T for magnetic flux density).
+     *
+     * @return norm of estimated standard deviation of measurement.
+     */
+    public double getStandardDeviationNorm() {
+<span class="fc" id="L652">        final double fx = getStandardDeviationX();</span>
+<span class="fc" id="L653">        final double fy = getStandardDeviationY();</span>
+<span class="fc" id="L654">        final double fz = getStandardDeviationZ();</span>
+<span class="fc" id="L655">        return Math.sqrt(fx * fx + fy * fy + fz * fz);</span>
+    }
+
+    /**
+     * Gets norm of estimated standard deviation of measurement within current window.
+     *
+     * @return norm of estimated standard deviation of measurement.
+     */
+    public M getStandardDeviationNormAsMeasurement() {
+<span class="fc" id="L664">        return createMeasurement(getStandardDeviationNorm(), getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets norm of estimated standard deviation of measurement within current window.
+     *
+     * @param result instance where norm of estimated standard deviation will be stored.
+     */
+    public void getStandardDeviationNormAsMeasurement(
+            final M result) {
+<span class="fc" id="L674">        result.setValue(getStandardDeviationNorm());</span>
+<span class="fc" id="L675">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L676">    }</span>
+
+    /**
+     * Gets average of estimated standard deviation coordinates of measurement within
+     * current window expressed in its default unit (m/s^2 for acceleration, rad/s for
+     * angular speed or T for magnetic flux density).
+     *
+     * @return average of estimated standard deviation coordinates.
+     */
+    public double getAverageStandardDeviation() {
+<span class="fc" id="L686">        final double fx = getStandardDeviationX();</span>
+<span class="fc" id="L687">        final double fy = getStandardDeviationY();</span>
+<span class="fc" id="L688">        final double fz = getStandardDeviationZ();</span>
+<span class="fc" id="L689">        return (fx + fy + fz) / 3.0;</span>
+    }
+
+    /**
+     * Gets average of estimated standard deviation coordinates of measurement within
+     * current window.
+     *
+     * @return average of estimated standard deviation coordinates.
+     */
+    public M getAverageStandardDeviationAsMeasurement() {
+<span class="fc" id="L699">        return createMeasurement(getAverageStandardDeviation(), getDefaultUnit());</span>
+    }
+
+    /**
+     * Gets average of estimated standard deviation coordinates of measurement within
+     * current window.
+     *
+     * @param result instance where average of estimated standard deviation coordinates
+     *               will be stored.
+     */
+    public void getAverageStandardDeviationAsMeasurement(final M result) {
+<span class="fc" id="L710">        result.setValue(getAverageStandardDeviation());</span>
+<span class="fc" id="L711">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L712">    }</span>
+
+    /**
+     * Gets measurement noise PSD (Power Spectral Density) on x axis expressed
+     * in (m^2 * s^-3) for accelerometer, (rad^2/s) for gyroscope or (T^2 * s) for
+     * magnetometer.
+     *
+     * @return measurement noise PSD on x axis.
+     */
+    public double getPsdX() {
+<span class="fc" id="L722">        return mVarianceX * mTimeInterval;</span>
+    }
+
+    /**
+     * Gets measurement noise PSD (Power Spectral Density) on y axis expressed
+     * in (m^2 * s^-3) for accelerometer, (rad^2/s) for gyroscope or (T^2 * s) for
+     * magnetometer.
+     *
+     * @return measurement noise PSD on y axis.
+     */
+    public double getPsdY() {
+<span class="fc" id="L733">        return mVarianceY * mTimeInterval;</span>
+    }
+
+    /**
+     * Gets measurement noise PSD (Power Spectral Density) on z axis expressed
+     * in (m^2 * s^-3) for accelerometer, (rad^2/s) for gyroscope or (T^2 * s) for
+     * magnetometer.
+     *
+     * @return measurement noise PSD on z axis.
+     */
+    public double getPsdZ() {
+<span class="fc" id="L744">        return mVarianceZ * mTimeInterval;</span>
+    }
+
+    /**
+     * Gets measurement noise root PSD (Power Spectral Density) on x axis expressed in
+     * (m * s^-1.5) for accelerometer, (rad * s^-0.5) for gyroscope or (T * s^0.5) for
+     * magnetometer.
+     *
+     * @return measurement noise root PSD on x axis.
+     */
+    public double getRootPsdX() {
+<span class="fc" id="L755">        return Math.sqrt(getPsdX());</span>
+    }
+
+    /**
+     * Gets measurement noise root PSD (Power Spectral Density) on y axis expressed in
+     * (m * s^-1.5) for accelerometer, (rad * s^-0.5) for gyroscope or (T * s^0.5) for
+     * magnetometer.
+     *
+     * @return measurement noise root PSD on y axis.
+     */
+    public double getRootPsdY() {
+<span class="fc" id="L766">        return Math.sqrt(getPsdY());</span>
+    }
+
+    /**
+     * Gets measurement noise root PSD (Power Spectral Density) on z axis expressed in
+     * (m * s^-1.5) for accelerometer, (rad * s^-0.5) for gyroscope or (T * s^0.5) for
+     * magnetometer.
+     *
+     * @return measurement noise root PSD on z axis.
+     */
+    public double getRootPsdZ() {
+<span class="fc" id="L777">        return Math.sqrt(getPsdZ());</span>
+    }
+
+    /**
+     * Gets average measurement noise PSD (Power Spectral Density) among
+     * x,y,z components expressed as (m^2 * s^-3) for accelerometer,
+     * (rad^2/s) for gyroscope or (T^2 * s) for magnetometer.
+     *
+     * @return average measurement noise PSD.
+     */
+    public double getAvgNoisePsd() {
+<span class="fc" id="L788">        return (getPsdX() + getPsdY() + getPsdZ()) / 3.0;</span>
+    }
+
+    /**
+     * Gets norm of noise root PSD (Power Spectral Density) among x,y,z
+     * components expressed as (m * s^-1.5) for accelerometer,
+     * (rad * s^-0.5) for gyroscope or (T * s^0.5) for magnetometer.
+     *
+     * @return norm of measurement noise root PSD.
+     */
+    public double getNoiseRootPsdNorm() {
+<span class="fc" id="L799">        return Math.sqrt(getPsdX() + getPsdY() + getPsdZ());</span>
+    }
+
+    /**
+     * Gets number of samples that have been processed so far.
+     *
+     * @return number of samples that have been processed so far.
+     */
+    public int getNumberOfProcessedSamples() {
+<span class="fc" id="L808">        return mNumberOfProcessedSamples;</span>
+    }
+
+    /**
+     * Gets number of currently windowed samples.
+     *
+     * @return number of samples within the window.
+     */
+    public int getNumberOfSamplesInWindow() {
+<span class="fc" id="L817">        return mWindowedSamples.size();</span>
+    }
+
+    /**
+     * Indicates whether estimator is currently running or not.
+     *
+     * @return true if estimator is running, false otherwise.
+     */
+    public boolean isRunning() {
+<span class="fc" id="L826">        return mRunning;</span>
+    }
+
+    /**
+     * Indicates whether window of samples is filled or not.
+     *
+     * @return true if window is filled, false otherwise.
+     */
+    public boolean isWindowFilled() {
+<span class="fc bfc" id="L835" title="All 2 branches covered.">        return getNumberOfSamplesInWindow() == mWindowSize;</span>
+    }
+
+    /**
+     * Adds a triad of measurement samples and processes current window.
+     *
+     * @param triad measurement triad to be added and processed.
+     * @return true if result values were updated, false if not enough samples are available yet
+     * and no average or variance values have been computed yet.
+     * @throws LockedException if estimator is currently running.
+     */
+    public boolean addTriadAndProcess(final T triad) throws LockedException {
+<span class="fc" id="L847">        return internalAdd(triad, true);</span>
+    }
+
+    /**
+     * Adds a triad of measurement samples and processes current window.
+     * Values are expressed in measurement default unit (m/s^2 for acceleration, rad/s for
+     * angular speed or T for magnetic flux density).
+     *
+     * @param valueX x coordinate of measurement to be added and processed.
+     * @param valueY y coordinate of measurement to be added and processed.
+     * @param valueZ z coordinate of measurement to be added and processed.
+     * @return true if result values were updated, false if not enough samples are available yet
+     * and no average or variance values have been computed yet.
+     * @throws LockedException if estimator is currently running.
+     */
+    public boolean addTriadAndProcess(
+            final double valueX, final double valueY, final double valueZ)
+            throws LockedException {
+<span class="fc" id="L865">        return addTriadAndProcess(createTriad(valueX, valueY, valueZ, getDefaultUnit()));</span>
+    }
+
+    /**
+     * Adds a triad of measurement samples and processes current window.
+     *
+     * @param valueX x coordinate of measurement to be added and processed.
+     * @param valueY y coordinate of measurement to be added and processed.
+     * @param valueZ z coordinate of measurement to be added and processed.
+     * @return true if result values were updated, false if not enough samples are available yet
+     * and no average or variance values have been computed yet.
+     * @throws LockedException if estimator is currently running.
+     */
+    public boolean addTriadAndProcess(
+            final M valueX, final M valueY, final M valueZ)
+            throws LockedException {
+<span class="fc" id="L881">        return addTriadAndProcess(createTriad(valueX, valueY, valueZ));</span>
+    }
+
+    /**
+     * Adds a triad of measurement samples without processing current window or updating
+     * result values.
+     *
+     * @param triad measurement triad to be added.
+     * @throws LockedException if estimator is currently running.
+     */
+    public void addTriad(final T triad) throws LockedException {
+<span class="fc" id="L892">        internalAdd(triad, false);</span>
+<span class="fc" id="L893">    }</span>
+
+    /**
+     * Adds a triad of measurement samples without processing current window or updating
+     * result values.
+     * Values are expressed in measurement default unit (m/s^2 for acceleration, rad/s for
+     * angular speed or T for magnetic flux density).
+     *
+     * @param valueX x coordinate of measurement to be added.
+     * @param valueY y coordinate of measurement to be added.
+     * @param valueZ z coordinate of measurement to be added.
+     * @throws LockedException if estimator is currently running.
+     */
+    public void addTriad(final double valueX, final double valueY, final double valueZ)
+            throws LockedException {
+<span class="fc" id="L908">        addTriad(createTriad(valueX, valueY, valueZ, getDefaultUnit()));</span>
+<span class="fc" id="L909">    }</span>
+
+    /**
+     * Adds a triad of measurement samples without processing current window or updating
+     * result values.
+     *
+     * @param valueX x coordinate of measurement to be added.
+     * @param valueY y coordinate of measurement to be added.
+     * @param valueZ z coordinate of measurement to be added.
+     * @throws LockedException if estimator is currently running.
+     */
+    public void addTriad(final M valueX, final M valueY, final M valueZ)
+            throws LockedException {
+<span class="fc" id="L922">        addTriad(createTriad(valueX, valueY, valueZ));</span>
+<span class="fc" id="L923">    }</span>
+
+    /**
+     * Resets current estimator.
+     *
+     * @return true if estimator was successfully reset, false if no reset was needed.
+     * @throws LockedException if estimator is currently running.
+     */
+    public boolean reset() throws LockedException {
+<span class="fc bfc" id="L932" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L933">            throw new LockedException();</span>
+        }
+
+<span class="fc bfc" id="L936" title="All 2 branches covered.">        if (mNumberOfProcessedSamples == 0) {</span>
+<span class="fc" id="L937">            return false;</span>
+        }
+
+<span class="fc" id="L940">        mWindowedSamples.clear();</span>
+<span class="fc" id="L941">        mAvgX = 0.0;</span>
+<span class="fc" id="L942">        mAvgY = 0.0;</span>
+<span class="fc" id="L943">        mAvgZ = 0.0;</span>
+<span class="fc" id="L944">        mVarianceX = 0.0;</span>
+<span class="fc" id="L945">        mVarianceY = 0.0;</span>
+<span class="fc" id="L946">        mVarianceZ = 0.0;</span>
+<span class="fc" id="L947">        mNumberOfProcessedSamples = 0;</span>
+
+<span class="pc bpc" id="L949" title="1 of 2 branches missed.">        if (mListener != null) {</span>
+            //noinspection unchecked
+<span class="fc" id="L951">            mListener.onReset((E) this);</span>
+        }
+
+<span class="fc" id="L954">        return true;</span>
+    }
+
+    /**
+     * Creates a copy of a triad.
+     *
+     * @param input triad to be copied.
+     * @return copy of a triad.
+     */
+    protected abstract T copyTriad(final T input);
+
+    /**
+     * Creates a triad with provided values and unit.
+     *
+     * @param valueX x coordinate value.
+     * @param valueY y coordinate value.
+     * @param valueZ z coordinate value.
+     * @param unit   unit.
+     * @return created triad.
+     */
+    protected abstract T createTriad(
+            final double valueX, final double valueY, final double valueZ, final U unit);
+
+    /**
+     * Creates a triad with provided values.
+     *
+     * @param valueX x coordinate value.
+     * @param valueY y coordinate value.
+     * @param valueZ z coordinate value.
+     * @return created triad.
+     */
+    protected abstract T createTriad(final M valueX, final M valueY, final M valueZ);
+
+    /**
+     * Gets default unit for a measurement.
+     *
+     * @return default unit for a measurement.
+     */
+    protected abstract U getDefaultUnit();
+
+    /**
+     * Creates a measurement with provided value and unit.
+     *
+     * @param value value to be set.
+     * @param unit  unit to be set.
+     * @return created measurement.
+     */
+    protected abstract M createMeasurement(final double value, final U unit);
+
+    /**
+     * Internally adds a triad of measurement samples and processes current window if indicated.
+     *
+     * @param triad   measurement triad to be added.
+     * @param process true if window of samples must also be processed, false otherwise.
+     * @return true if result values were updated, false if not enough samples are available yet
+     * and no average or variance values have been computed yet.
+     * @throws LockedException if estimator is currently running.
+     */
+    private boolean internalAdd(final T triad, final boolean process)
+            throws LockedException {
+<span class="fc bfc" id="L1014" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L1015">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L1018">        mRunning = true;</span>
+
+<span class="pc bpc" id="L1020" title="1 of 4 branches missed.">        if (mWindowedSamples.isEmpty() &amp;&amp; mListener != null) {</span>
+            //noinspection unchecked
+<span class="fc" id="L1022">            mListener.onStart((E) this);</span>
+        }
+
+<span class="fc" id="L1025">        final boolean wasFilled = isWindowFilled();</span>
+<span class="fc bfc" id="L1026" title="All 2 branches covered.">        if (wasFilled) {</span>
+            // remove first sample
+<span class="fc" id="L1028">            mWindowedSamples.removeFirst();</span>
+        }
+
+<span class="fc" id="L1031">        mWindowedSamples.addLast(copyTriad(triad));</span>
+
+        // process window
+<span class="fc bfc" id="L1034" title="All 4 branches covered.">        final boolean result = process &amp;&amp; processWindow();</span>
+
+<span class="fc" id="L1036">        mRunning = false;</span>
+
+<span class="pc bpc" id="L1038" title="1 of 2 branches missed.">        if (mListener != null) {</span>
+            //noinspection unchecked
+<span class="fc" id="L1040">            mListener.onTriadAdded((E) this);</span>
+
+<span class="fc bfc" id="L1042" title="All 4 branches covered.">            if (!wasFilled &amp;&amp; isWindowFilled()) {</span>
+                //noinspection unchecked
+<span class="fc" id="L1044">                mListener.onWindowFilled((E) this);</span>
+            }
+        }
+
+<span class="fc" id="L1048">        return result;</span>
+    }
+
+    /**
+     * Processes current windowed samples.
+     *
+     * @return true if sample was processed, false it there are not enough samples to
+     * process current window.
+     */
+    private boolean processWindow() {
+
+<span class="fc" id="L1059">        mNumberOfProcessedSamples++;</span>
+
+<span class="fc" id="L1061">        final int n = mWindowedSamples.size();</span>
+<span class="fc bfc" id="L1062" title="All 2 branches covered.">        if (n &lt;= 1) {</span>
+<span class="fc" id="L1063">            return false;</span>
+        }
+
+        // compute averages
+<span class="fc" id="L1067">        double avgX = 0.0;</span>
+<span class="fc" id="L1068">        double avgY = 0.0;</span>
+<span class="fc" id="L1069">        double avgZ = 0.0;</span>
+<span class="fc bfc" id="L1070" title="All 2 branches covered.">        for (final T triad : mWindowedSamples) {</span>
+<span class="fc" id="L1071">            final double valueX = triad.getValueX();</span>
+<span class="fc" id="L1072">            final double valueY = triad.getValueY();</span>
+<span class="fc" id="L1073">            final double valueZ = triad.getValueZ();</span>
+
+<span class="fc" id="L1075">            avgX += valueX;</span>
+<span class="fc" id="L1076">            avgY += valueY;</span>
+<span class="fc" id="L1077">            avgZ += valueZ;</span>
+<span class="fc" id="L1078">        }</span>
+
+<span class="fc" id="L1080">        avgX /= n;</span>
+<span class="fc" id="L1081">        avgY /= n;</span>
+<span class="fc" id="L1082">        avgZ /= n;</span>
+
+        // compute variances
+<span class="fc" id="L1085">        double varX = 0.0;</span>
+<span class="fc" id="L1086">        double varY = 0.0;</span>
+<span class="fc" id="L1087">        double varZ = 0.0;</span>
+<span class="fc bfc" id="L1088" title="All 2 branches covered.">        for (final T triad : mWindowedSamples) {</span>
+<span class="fc" id="L1089">            final double fx = triad.getValueX();</span>
+<span class="fc" id="L1090">            final double fy = triad.getValueY();</span>
+<span class="fc" id="L1091">            final double fz = triad.getValueZ();</span>
+
+<span class="fc" id="L1093">            final double diffX = fx - avgX;</span>
+<span class="fc" id="L1094">            final double diffY = fy - avgY;</span>
+<span class="fc" id="L1095">            final double diffZ = fz - avgZ;</span>
+
+<span class="fc" id="L1097">            final double diffX2 = diffX * diffX;</span>
+<span class="fc" id="L1098">            final double diffY2 = diffY * diffY;</span>
+<span class="fc" id="L1099">            final double diffZ2 = diffZ * diffZ;</span>
+
+<span class="fc" id="L1101">            varX += diffX2;</span>
+<span class="fc" id="L1102">            varY += diffY2;</span>
+<span class="fc" id="L1103">            varZ += diffZ2;</span>
+<span class="fc" id="L1104">        }</span>
+
+<span class="fc" id="L1106">        final int nMinusOne = n - 1;</span>
+
+<span class="fc" id="L1108">        varX /= nMinusOne;</span>
+<span class="fc" id="L1109">        varY /= nMinusOne;</span>
+<span class="fc" id="L1110">        varZ /= nMinusOne;</span>
+
+<span class="fc" id="L1112">        mAvgX = avgX;</span>
+<span class="fc" id="L1113">        mAvgY = avgY;</span>
+<span class="fc" id="L1114">        mAvgZ = avgZ;</span>
+
+<span class="fc" id="L1116">        mVarianceX = varX;</span>
+<span class="fc" id="L1117">        mVarianceY = varY;</span>
+<span class="fc" id="L1118">        mVarianceZ = varZ;</span>
+
+<span class="fc" id="L1120">        return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
