@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccelerometerMeasurementsGenerator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.calibration.generators</a> &gt; <span class="el_source">AccelerometerMeasurementsGenerator.java</span></div><h1>AccelerometerMeasurementsGenerator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (C) 2020 Alberto Irurueta Carro (alberto@irurueta.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.irurueta.navigation.inertial.calibration.generators;
+
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.inertial.BodyKinematics;
+import com.irurueta.navigation.inertial.calibration.StandardDeviationBodyKinematics;
+import com.irurueta.navigation.inertial.calibration.intervals.AccelerationTriadStaticIntervalDetector;
+
+/**
+ * Generates measurements for the calibration of accelerometers by alternating
+ * static and dynamic intervals where device is kept static or moved.
+ * Generated measurements must be used with accelerometer calibrators based
+ * on the knowledge of gravity norm (or Earth position) when the device orientation
+ * is unknown.
+ * Such calibrators are the following ones:
+ * - {@link com.irurueta.navigation.inertial.calibration.accelerometer.KnownGravityNormAccelerometerCalibrator}
+ * - {@link com.irurueta.navigation.inertial.calibration.accelerometer.KnownPositionAccelerometerCalibrator}
+ * - {@link com.irurueta.navigation.inertial.calibration.accelerometer.KnownBiasAndGravityNormAccelerometerCalibrator}
+ * - {@link com.irurueta.navigation.inertial.calibration.accelerometer.KnownBiasAndPositionAccelerometerCalibrator}
+ * - {@link com.irurueta.navigation.inertial.calibration.accelerometer.RobustKnownGravityNormAccelerometerCalibrator}
+ * and all its implementations.
+ * - {@link com.irurueta.navigation.inertial.calibration.accelerometer.RobustKnownPositionAccelerometerCalibrator}
+ * and all its implementations.
+ * - {@link com.irurueta.navigation.inertial.calibration.accelerometer.RobustKnownBiasAndGravityNormAccelerometerCalibrator}
+ * and all its implementations.
+ * - {@link com.irurueta.navigation.inertial.calibration.accelerometer.RobustKnownBiasAndPositionAccelerometerCalibrator}
+ * and all its implementations.
+ */
+public class AccelerometerMeasurementsGenerator extends
+        MeasurementsGenerator&lt;StandardDeviationBodyKinematics,
+                AccelerometerMeasurementsGenerator,
+                AccelerometerMeasurementsGeneratorListener, BodyKinematics&gt; {
+
+    /**
+     * Constructor.
+     */
+    public AccelerometerMeasurementsGenerator() {
+<span class="fc" id="L53">        super();</span>
+<span class="fc" id="L54">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param listener listener to handle events raised by this generator.
+     */
+    public AccelerometerMeasurementsGenerator(
+            final AccelerometerMeasurementsGeneratorListener listener) {
+<span class="fc" id="L63">        super(listener);</span>
+<span class="fc" id="L64">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param staticIntervalDetector a static interval detector for accelerometer samples.
+     * @throws LockedException if provided detector is busy.
+     */
+    protected AccelerometerMeasurementsGenerator(
+            final AccelerationTriadStaticIntervalDetector staticIntervalDetector)
+            throws LockedException {
+<span class="fc" id="L75">        super(staticIntervalDetector);</span>
+<span class="fc" id="L76">    }</span>
+
+    /**
+     * Constructor.
+     *
+     * @param staticIntervalDetector a static interval detector for accelerometer samples.
+     * @param listener               listener to handle events raised by this generator.
+     * @throws LockedException if provided detector is busy.
+     */
+    protected AccelerometerMeasurementsGenerator(
+            final AccelerationTriadStaticIntervalDetector staticIntervalDetector,
+            final AccelerometerMeasurementsGeneratorListener listener)
+            throws LockedException {
+<span class="fc" id="L89">        super(staticIntervalDetector, listener);</span>
+<span class="fc" id="L90">    }</span>
+
+    /**
+     * Post process provided input sample.
+     *
+     * @param sample an input sample.
+     */
+    @Override
+    protected void postProcess(BodyKinematics sample) {
+        // no action required for accelerometer calibration
+<span class="fc" id="L100">    }</span>
+
+    /**
+     * Gets corresponding acceleration triad from provided input sample.
+     * This method must store the result into {@link #mTriad}.
+     *
+     * @param sample input sample.
+     */
+    @Override
+    protected void getAccelerationTriadFromInputSample(
+            final BodyKinematics sample) {
+<span class="fc" id="L111">        sample.getSpecificForceTriad(mTriad);</span>
+<span class="fc" id="L112">    }</span>
+
+    /**
+     * Handles a static-to-dynamic interval change.
+     *
+     * @param accumulatedAvgX   average x-coordinate of measurements during last
+     *                          static period expressed in meters per squared
+     *                          second (m/s^2).
+     * @param accumulatedAvgY   average y-coordinate of specific force during last
+     *                          static period expressed in meters per squared
+     *                          second (m/s^2).
+     * @param accumulatedAvgZ   average z-coordinate of specific force during last
+     *                          static period expressed in meters per squared
+     *                          second (m/s^2).
+     * @param accumulatedStdX   standard deviation of x-coordinate of measurements
+     *                          during last static period expressed in meters per
+     *                          squared second (m/s^2).
+     * @param accumulatedStdY   standard deviation of y-coordinate of measurements
+     *                          during last static period expressed in meters per
+     *                          squared second (m/s^2).
+     * @param accumulatedStdZ   standard deviation of z-coordinate of measurements
+     *                          during last static period expressed in meters per
+     *                          squared second (m/s^2).
+     */
+    @Override
+    protected void handleStaticToDynamicChange(
+            final double accumulatedAvgX,
+            final double accumulatedAvgY,
+            final double accumulatedAvgZ,
+            final double accumulatedStdX,
+            final double accumulatedStdY,
+            final double accumulatedStdZ) {
+        // if last static interval must not be skipped, keep accumulated average
+        // specific force during last static interval and generate new measurement
+        // NOTE: generated body kinematics instances will have zero angular rate
+        // since it is not needed for accelerometer calibration
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        if (!isStaticIntervalSkipped()) {</span>
+
+<span class="fc" id="L150">            final BodyKinematics kinematics = new BodyKinematics();</span>
+<span class="fc" id="L151">            kinematics.setSpecificForceCoordinates(</span>
+                    accumulatedAvgX, accumulatedAvgY, accumulatedAvgZ);
+
+<span class="fc" id="L154">            final StandardDeviationBodyKinematics measurement = new StandardDeviationBodyKinematics();</span>
+<span class="fc" id="L155">            measurement.setKinematics(kinematics);</span>
+
+<span class="fc" id="L157">            final double avgStd = (accumulatedStdX + accumulatedStdY + accumulatedStdZ) / 3.0;</span>
+<span class="fc" id="L158">            measurement.setSpecificForceStandardDeviation(avgStd);</span>
+
+<span class="pc bpc" id="L160" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L161">                mListener.onGeneratedMeasurement(this, measurement);</span>
+            }
+        }
+<span class="fc" id="L164">    }</span>
+
+    /**
+     * Handles a dynamic-to-static interval change.
+     */
+    @Override
+    protected void handleDynamicToStaticChange() {
+        // no action needed.
+<span class="fc" id="L172">    }</span>
+
+    /**
+     * Handles an initialization completion.
+     */
+    @Override
+    protected void handleInitializationCompleted() {
+        // no action needed.
+<span class="fc" id="L180">    }</span>
+
+    /**
+     * Handles an error during initialization.
+     */
+    @Override
+    protected void handleInitializationFailed() {
+        // no action needed.
+<span class="fc" id="L188">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

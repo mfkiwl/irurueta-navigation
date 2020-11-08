@@ -38,6 +38,8 @@ import com.irurueta.units.TimeUnit;
  * Because body location and orientation is not known, estimated average values
  * cannot be used to determine biases. Only norm of noise estimations
  * (variance or standard deviation) can be safely used.
+ * Notice that this estimator uses a biased variance estimator, which for a large
+ * number of samples converges to the unbiased variance estimator.
  *
  * @param &lt;U&gt; a measurement unit type.
  * @param &lt;M&gt; a measurement type.
@@ -60,7 +62,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * Time interval expressed in seconds (s) between consecutive accelerometer
      * samples.
      */
-<span class="fc" id="L63">    private double mTimeInterval = DEFAULT_TIME_INTERVAL_SECONDS;</span>
+<span class="fc" id="L65">    private double mTimeInterval = DEFAULT_TIME_INTERVAL_SECONDS;</span>
 
     /**
      * Listener to handle events raised by this estimator.
@@ -119,7 +121,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
     /**
      * Number of processed timestamp samples plus one.
      */
-<span class="fc" id="L122">    private int mNumberOfProcessedSamplesPlusOne = 1;</span>
+<span class="fc" id="L124">    private int mNumberOfProcessedSamplesPlusOne = 1;</span>
 
     /**
      * Indicates that estimator is running.
@@ -129,17 +131,17 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
     /**
      * Constructor.
      */
-<span class="fc" id="L132">    public AccumulatedTriadNoiseEstimator() {</span>
-<span class="fc" id="L133">    }</span>
+<span class="fc" id="L134">    public AccumulatedTriadNoiseEstimator() {</span>
+<span class="fc" id="L135">    }</span>
 
     /**
      * Constructor.
      *
      * @param listener listener to handle events raised by this estimator.
      */
-<span class="fc" id="L140">    public AccumulatedTriadNoiseEstimator(final L listener) {</span>
-<span class="fc" id="L141">        mListener = listener;</span>
-<span class="fc" id="L142">    }</span>
+<span class="fc" id="L142">    public AccumulatedTriadNoiseEstimator(final L listener) {</span>
+<span class="fc" id="L143">        mListener = listener;</span>
+<span class="fc" id="L144">    }</span>
 
     /**
      * Gets time interval between accelerometer triad samples expressed in
@@ -148,7 +150,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return time interval between accelerometer triad samples.
      */
     public double getTimeInterval() {
-<span class="fc" id="L151">        return mTimeInterval;</span>
+<span class="fc" id="L153">        return mTimeInterval;</span>
     }
 
     /**
@@ -160,16 +162,16 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @throws LockedException          if estimator is currently running.
      */
     public void setTimeInterval(final double timeInterval) throws LockedException {
-<span class="fc bfc" id="L163" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L164">            throw new LockedException();</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L166">            throw new LockedException();</span>
         }
 
-<span class="fc bfc" id="L167" title="All 2 branches covered.">        if (timeInterval &lt; 0.0) {</span>
-<span class="fc" id="L168">            throw new IllegalArgumentException();</span>
+<span class="fc bfc" id="L169" title="All 2 branches covered.">        if (timeInterval &lt; 0.0) {</span>
+<span class="fc" id="L170">            throw new IllegalArgumentException();</span>
         }
 
-<span class="fc" id="L171">        mTimeInterval = timeInterval;</span>
-<span class="fc" id="L172">    }</span>
+<span class="fc" id="L173">        mTimeInterval = timeInterval;</span>
+<span class="fc" id="L174">    }</span>
 
     /**
      * Gets time interval between accelerometer triad samples.
@@ -177,7 +179,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return time interval between accelerometer triad samples.
      */
     public Time getTimeIntervalAsTime() {
-<span class="fc" id="L180">        return new Time(mTimeInterval, TimeUnit.SECOND);</span>
+<span class="fc" id="L182">        return new Time(mTimeInterval, TimeUnit.SECOND);</span>
     }
 
     /**
@@ -186,9 +188,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @param result instance where time interval will be stored.
      */
     public void getTimeIntervalAsTime(final Time result) {
-<span class="fc" id="L189">        result.setValue(mTimeInterval);</span>
-<span class="fc" id="L190">        result.setUnit(TimeUnit.SECOND);</span>
-<span class="fc" id="L191">    }</span>
+<span class="fc" id="L191">        result.setValue(mTimeInterval);</span>
+<span class="fc" id="L192">        result.setUnit(TimeUnit.SECOND);</span>
+<span class="fc" id="L193">    }</span>
 
     /**
      * Sets time interval between accelerometer triad samples.
@@ -197,9 +199,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @throws LockedException if estimator is currently running.
      */
     public void setTimeInterval(final Time timeInterval) throws LockedException {
-<span class="fc" id="L200">        setTimeInterval(TimeConverter.convert(timeInterval.getValue().doubleValue(),</span>
-<span class="fc" id="L201">                timeInterval.getUnit(), TimeUnit.SECOND));</span>
-<span class="fc" id="L202">    }</span>
+<span class="fc" id="L202">        setTimeInterval(TimeConverter.convert(timeInterval.getValue().doubleValue(),</span>
+<span class="fc" id="L203">                timeInterval.getUnit(), TimeUnit.SECOND));</span>
+<span class="fc" id="L204">    }</span>
 
     /**
      * Gets listener to handle events raised by this estimator.
@@ -207,7 +209,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return listener to handle events raised by this estimator.
      */
     public L getListener() {
-<span class="fc" id="L210">        return mListener;</span>
+<span class="fc" id="L212">        return mListener;</span>
     }
 
     /**
@@ -217,12 +219,12 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @throws LockedException if this estimator is running.
      */
     public void setListener(final L listener) throws LockedException {
-<span class="fc bfc" id="L220" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L221">            throw new LockedException();</span>
+<span class="fc bfc" id="L222" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L223">            throw new LockedException();</span>
         }
 
-<span class="fc" id="L224">        mListener = listener;</span>
-<span class="fc" id="L225">    }</span>
+<span class="fc" id="L226">        mListener = listener;</span>
+<span class="fc" id="L227">    }</span>
 
     /**
      * Gets last provided triad values or null if not available.
@@ -230,7 +232,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return last provided triad values or null.
      */
     public T getLastTriad() {
-<span class="fc" id="L233">        return mLastTriad;</span>
+<span class="fc" id="L235">        return mLastTriad;</span>
     }
 
     /**
@@ -240,11 +242,11 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return true if result instance was updated, false otherwise.
      */
     public boolean getLastTriad(final T result) {
-<span class="fc bfc" id="L243" title="All 2 branches covered.">        if (mLastTriad != null) {</span>
-<span class="fc" id="L244">            mLastTriad.copyTo(result);</span>
-<span class="fc" id="L245">            return true;</span>
+<span class="fc bfc" id="L245" title="All 2 branches covered.">        if (mLastTriad != null) {</span>
+<span class="fc" id="L246">            mLastTriad.copyTo(result);</span>
+<span class="fc" id="L247">            return true;</span>
         } else {
-<span class="fc" id="L247">            return false;</span>
+<span class="fc" id="L249">            return false;</span>
         }
     }
 
@@ -257,7 +259,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return average of x coordinate of measurement in current window.
      */
     public double getAvgX() {
-<span class="fc" id="L260">        return mAvgX;</span>
+<span class="fc" id="L262">        return mAvgX;</span>
     }
 
     /**
@@ -268,7 +270,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return average of x coordinate of measurement in current window.
      */
     public M getAvgXAsMeasurement() {
-<span class="fc" id="L271">        return createMeasurement(mAvgX, getDefaultUnit());</span>
+<span class="fc" id="L273">        return createMeasurement(mAvgX, getDefaultUnit());</span>
     }
 
     /**
@@ -279,9 +281,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @param result instance where average of x coordinate of measurement will be stored.
      */
     public void getAvgXAsMeasurement(final M result) {
-<span class="fc" id="L282">        result.setValue(mAvgX);</span>
-<span class="fc" id="L283">        result.setUnit(getDefaultUnit());</span>
-<span class="fc" id="L284">    }</span>
+<span class="fc" id="L284">        result.setValue(mAvgX);</span>
+<span class="fc" id="L285">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L286">    }</span>
 
     /**
      * Gets estimated average of y coordinate of measurement expressed in its default
@@ -292,7 +294,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return average of y coordinate of measurement in current window.
      */
     public double getAvgY() {
-<span class="fc" id="L295">        return mAvgY;</span>
+<span class="fc" id="L297">        return mAvgY;</span>
     }
 
     /**
@@ -303,7 +305,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return average of y coordinate of measurement in current window.
      */
     public M getAvgYAsMeasurement() {
-<span class="fc" id="L306">        return createMeasurement(mAvgY, getDefaultUnit());</span>
+<span class="fc" id="L308">        return createMeasurement(mAvgY, getDefaultUnit());</span>
     }
 
     /**
@@ -314,9 +316,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @param result instance where average of y coordinate of measurement will be stored.
      */
     public void getAvgYAsMeasurement(final M result) {
-<span class="fc" id="L317">        result.setValue(mAvgY);</span>
-<span class="fc" id="L318">        result.setUnit(getDefaultUnit());</span>
-<span class="fc" id="L319">    }</span>
+<span class="fc" id="L319">        result.setValue(mAvgY);</span>
+<span class="fc" id="L320">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L321">    }</span>
 
     /**
      * Gets estimated average of z coordinate of measurement expressed in its default
@@ -327,7 +329,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return average of z coordinate of measurement in current window.
      */
     public double getAvgZ() {
-<span class="fc" id="L330">        return mAvgZ;</span>
+<span class="fc" id="L332">        return mAvgZ;</span>
     }
 
     /**
@@ -338,7 +340,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return average of z coordinate of measurement in current window.
      */
     public M getAvgZAsMeasurement() {
-<span class="fc" id="L341">        return createMeasurement(mAvgZ, getDefaultUnit());</span>
+<span class="fc" id="L343">        return createMeasurement(mAvgZ, getDefaultUnit());</span>
     }
 
     /**
@@ -349,9 +351,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @param result instance where average of z coordinate of measurement will be stored.
      */
     public void getAvgZAsMeasurement(final M result) {
-<span class="fc" id="L352">        result.setValue(mAvgZ);</span>
-<span class="fc" id="L353">        result.setUnit(getDefaultUnit());</span>
-<span class="fc" id="L354">    }</span>
+<span class="fc" id="L354">        result.setValue(mAvgZ);</span>
+<span class="fc" id="L355">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L356">    }</span>
 
     /**
      * Gets estimated average as a measurement triad.
@@ -359,7 +361,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return average measurement triad.
      */
     public T getAvgTriad() {
-<span class="fc" id="L362">        return createTriad(mAvgX, mAvgY, mAvgZ, getDefaultUnit());</span>
+<span class="fc" id="L364">        return createTriad(mAvgX, mAvgY, mAvgZ, getDefaultUnit());</span>
     }
 
     /**
@@ -368,8 +370,8 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @param result instance where average values and unit will be stored.
      */
     public void getAvgTriad(final T result) {
-<span class="fc" id="L371">        result.setValueCoordinatesAndUnit(mAvgX, mAvgY, mAvgZ, getDefaultUnit());</span>
-<span class="fc" id="L372">    }</span>
+<span class="fc" id="L373">        result.setValueCoordinatesAndUnit(mAvgX, mAvgY, mAvgZ, getDefaultUnit());</span>
+<span class="fc" id="L374">    }</span>
 
     /**
      * Gets norm of estimated average measurement expressed in its default
@@ -379,7 +381,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return norm of estimated average specific force.
      */
     public double getAvgNorm() {
-<span class="fc" id="L382">        return Math.sqrt(mAvgX * mAvgX + mAvgY * mAvgY + mAvgZ * mAvgZ);</span>
+<span class="fc" id="L384">        return Math.sqrt(mAvgX * mAvgX + mAvgY * mAvgY + mAvgZ * mAvgZ);</span>
     }
 
     /**
@@ -388,7 +390,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return norm of estimated average measurement.
      */
     public M getAvgNormAsMeasurement() {
-<span class="fc" id="L391">        return createMeasurement(getAvgNorm(), getDefaultUnit());</span>
+<span class="fc" id="L393">        return createMeasurement(getAvgNorm(), getDefaultUnit());</span>
     }
 
     /**
@@ -397,9 +399,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @param result instance where norm of estimated average measurement will be stored.
      */
     public void getAvgNormAsMeasurement(final M result) {
-<span class="fc" id="L400">        result.setValue(getAvgNorm());</span>
-<span class="fc" id="L401">        result.setUnit(getDefaultUnit());</span>
-<span class="fc" id="L402">    }</span>
+<span class="fc" id="L402">        result.setValue(getAvgNorm());</span>
+<span class="fc" id="L403">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L404">    }</span>
 
     /**
      * Gets estimated variance of x coordinate of measurement within current window
@@ -410,7 +412,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * window.
      */
     public double getVarianceX() {
-<span class="fc" id="L413">        return mVarianceX;</span>
+<span class="fc" id="L415">        return mVarianceX;</span>
     }
 
     /**
@@ -422,7 +424,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * window.
      */
     public double getVarianceY() {
-<span class="fc" id="L425">        return mVarianceY;</span>
+<span class="fc" id="L427">        return mVarianceY;</span>
     }
 
     /**
@@ -434,7 +436,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * window.
      */
     public double getVarianceZ() {
-<span class="fc" id="L437">        return mVarianceZ;</span>
+<span class="fc" id="L439">        return mVarianceZ;</span>
     }
 
     /**
@@ -446,7 +448,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * current window.
      */
     public double getStandardDeviationX() {
-<span class="fc" id="L449">        return Math.sqrt(mVarianceX);</span>
+<span class="fc" id="L451">        return Math.sqrt(mVarianceX);</span>
     }
 
     /**
@@ -456,7 +458,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return estimated standard deviation of x coordinate of measurement.
      */
     public M getStandardDeviationXAsMeasurement() {
-<span class="fc" id="L459">        return createMeasurement(getStandardDeviationX(), getDefaultUnit());</span>
+<span class="fc" id="L461">        return createMeasurement(getStandardDeviationX(), getDefaultUnit());</span>
     }
 
     /**
@@ -467,9 +469,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      *               measurement will be stored.
      */
     public void getStandardDeviationXAsMeasurement(final M result) {
-<span class="fc" id="L470">        result.setValue(getStandardDeviationX());</span>
-<span class="fc" id="L471">        result.setUnit(getDefaultUnit());</span>
-<span class="fc" id="L472">    }</span>
+<span class="fc" id="L472">        result.setValue(getStandardDeviationX());</span>
+<span class="fc" id="L473">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L474">    }</span>
 
     /**
      * Gets estimated standard deviation of y coordinate of measurement within current
@@ -480,7 +482,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * current window.
      */
     public double getStandardDeviationY() {
-<span class="fc" id="L483">        return Math.sqrt(mVarianceY);</span>
+<span class="fc" id="L485">        return Math.sqrt(mVarianceY);</span>
     }
 
     /**
@@ -490,7 +492,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return estimated standard deviation of y coordinate of measurement.
      */
     public M getStandardDeviationYAsMeasurement() {
-<span class="fc" id="L493">        return createMeasurement(getStandardDeviationY(), getDefaultUnit());</span>
+<span class="fc" id="L495">        return createMeasurement(getStandardDeviationY(), getDefaultUnit());</span>
     }
 
     /**
@@ -501,9 +503,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      *               measurement will be stored.
      */
     public void getStandardDeviationYAsMeasurement(final M result) {
-<span class="fc" id="L504">        result.setValue(getStandardDeviationY());</span>
-<span class="fc" id="L505">        result.setUnit(getDefaultUnit());</span>
-<span class="fc" id="L506">    }</span>
+<span class="fc" id="L506">        result.setValue(getStandardDeviationY());</span>
+<span class="fc" id="L507">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L508">    }</span>
 
     /**
      * Gets estimated standard deviation of z coordinate of measurement within current
@@ -514,7 +516,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * current window.
      */
     public double getStandardDeviationZ() {
-<span class="fc" id="L517">        return Math.sqrt(mVarianceZ);</span>
+<span class="fc" id="L519">        return Math.sqrt(mVarianceZ);</span>
     }
 
     /**
@@ -524,7 +526,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return estimated standard deviation of z coordinate of measurement.
      */
     public M getStandardDeviationZAsMeasurement() {
-<span class="fc" id="L527">        return createMeasurement(getStandardDeviationZ(), getDefaultUnit());</span>
+<span class="fc" id="L529">        return createMeasurement(getStandardDeviationZ(), getDefaultUnit());</span>
     }
 
     /**
@@ -535,9 +537,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      *               measurement will be stored.
      */
     public void getStandardDeviationZAsMeasurement(final M result) {
-<span class="fc" id="L538">        result.setValue(getStandardDeviationZ());</span>
-<span class="fc" id="L539">        result.setUnit(getDefaultUnit());</span>
-<span class="fc" id="L540">    }</span>
+<span class="fc" id="L540">        result.setValue(getStandardDeviationZ());</span>
+<span class="fc" id="L541">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L542">    }</span>
 
     /**
      * Gets estimated standard deviation of measurements.
@@ -545,11 +547,11 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return estimated standard deviation triad of measurements.
      */
     public T getStandardDeviationTriad() {
-<span class="fc" id="L548">        return createTriad(</span>
-<span class="fc" id="L549">                getStandardDeviationX(),</span>
-<span class="fc" id="L550">                getStandardDeviationY(),</span>
-<span class="fc" id="L551">                getStandardDeviationZ(),</span>
-<span class="fc" id="L552">                getDefaultUnit());</span>
+<span class="fc" id="L550">        return createTriad(</span>
+<span class="fc" id="L551">                getStandardDeviationX(),</span>
+<span class="fc" id="L552">                getStandardDeviationY(),</span>
+<span class="fc" id="L553">                getStandardDeviationZ(),</span>
+<span class="fc" id="L554">                getDefaultUnit());</span>
     }
 
     /**
@@ -559,12 +561,12 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      *               measurement will be stored.
      */
     public void getStandardDeviationTriad(final T result) {
-<span class="fc" id="L562">        result.setValueCoordinatesAndUnit(</span>
-<span class="fc" id="L563">                getStandardDeviationX(),</span>
-<span class="fc" id="L564">                getStandardDeviationY(),</span>
-<span class="fc" id="L565">                getStandardDeviationZ(),</span>
-<span class="fc" id="L566">                getDefaultUnit());</span>
-<span class="fc" id="L567">    }</span>
+<span class="fc" id="L564">        result.setValueCoordinatesAndUnit(</span>
+<span class="fc" id="L565">                getStandardDeviationX(),</span>
+<span class="fc" id="L566">                getStandardDeviationY(),</span>
+<span class="fc" id="L567">                getStandardDeviationZ(),</span>
+<span class="fc" id="L568">                getDefaultUnit());</span>
+<span class="fc" id="L569">    }</span>
 
     /**
      * Gets norm of estimated standard deviation of measurement
@@ -574,10 +576,10 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return norm of estimated standard deviation of measurement.
      */
     public double getStandardDeviationNorm() {
-<span class="fc" id="L577">        final double fx = getStandardDeviationX();</span>
-<span class="fc" id="L578">        final double fy = getStandardDeviationY();</span>
-<span class="fc" id="L579">        final double fz = getStandardDeviationZ();</span>
-<span class="fc" id="L580">        return Math.sqrt(fx * fx + fy * fy + fz * fz);</span>
+<span class="fc" id="L579">        final double fx = getStandardDeviationX();</span>
+<span class="fc" id="L580">        final double fy = getStandardDeviationY();</span>
+<span class="fc" id="L581">        final double fz = getStandardDeviationZ();</span>
+<span class="fc" id="L582">        return Math.sqrt(fx * fx + fy * fy + fz * fz);</span>
     }
 
     /**
@@ -586,7 +588,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return norm of estimated standard deviation of measurement.
      */
     public M getStandardDeviationNormAsMeasurement() {
-<span class="fc" id="L589">        return createMeasurement(getStandardDeviationNorm(), getDefaultUnit());</span>
+<span class="fc" id="L591">        return createMeasurement(getStandardDeviationNorm(), getDefaultUnit());</span>
     }
 
     /**
@@ -596,9 +598,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      */
     public void getStandardDeviationNormAsMeasurement(
             final M result) {
-<span class="fc" id="L599">        result.setValue(getStandardDeviationNorm());</span>
-<span class="fc" id="L600">        result.setUnit(getDefaultUnit());</span>
-<span class="fc" id="L601">    }</span>
+<span class="fc" id="L601">        result.setValue(getStandardDeviationNorm());</span>
+<span class="fc" id="L602">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L603">    }</span>
 
     /**
      * Gets average of estimated standard deviation coordinates of measurement
@@ -608,10 +610,10 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return average of estimated standard deviation coordinates.
      */
     public double getAverageStandardDeviation() {
-<span class="fc" id="L611">        final double fx = getStandardDeviationX();</span>
-<span class="fc" id="L612">        final double fy = getStandardDeviationY();</span>
-<span class="fc" id="L613">        final double fz = getStandardDeviationZ();</span>
-<span class="fc" id="L614">        return (fx + fy + fz) / 3.0;</span>
+<span class="fc" id="L613">        final double fx = getStandardDeviationX();</span>
+<span class="fc" id="L614">        final double fy = getStandardDeviationY();</span>
+<span class="fc" id="L615">        final double fz = getStandardDeviationZ();</span>
+<span class="fc" id="L616">        return (fx + fy + fz) / 3.0;</span>
     }
 
     /**
@@ -621,7 +623,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return average of estimated standard deviation coordinates.
      */
     public M getAverageStandardDeviationAsMeasurement() {
-<span class="fc" id="L624">        return createMeasurement(getAverageStandardDeviation(), getDefaultUnit());</span>
+<span class="fc" id="L626">        return createMeasurement(getAverageStandardDeviation(), getDefaultUnit());</span>
     }
 
     /**
@@ -631,9 +633,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      *               will be stored.
      */
     public void getAverageStandardDeviationAsMeasurement(final M result) {
-<span class="fc" id="L634">        result.setValue(getAverageStandardDeviation());</span>
-<span class="fc" id="L635">        result.setUnit(getDefaultUnit());</span>
-<span class="fc" id="L636">    }</span>
+<span class="fc" id="L636">        result.setValue(getAverageStandardDeviation());</span>
+<span class="fc" id="L637">        result.setUnit(getDefaultUnit());</span>
+<span class="fc" id="L638">    }</span>
 
     /**
      * Gets measurement noise PSD (Power Spectral Density) on x axis expressed
@@ -643,7 +645,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return measurement noise PSD on x axis.
      */
     public double getPsdX() {
-<span class="fc" id="L646">        return mVarianceX * mTimeInterval;</span>
+<span class="fc" id="L648">        return mVarianceX * mTimeInterval;</span>
     }
 
     /**
@@ -654,7 +656,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return measurement noise PSD on y axis.
      */
     public double getPsdY() {
-<span class="fc" id="L657">        return mVarianceY * mTimeInterval;</span>
+<span class="fc" id="L659">        return mVarianceY * mTimeInterval;</span>
     }
 
     /**
@@ -665,7 +667,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return measurement noise PSD on z axis.
      */
     public double getPsdZ() {
-<span class="fc" id="L668">        return mVarianceZ * mTimeInterval;</span>
+<span class="fc" id="L670">        return mVarianceZ * mTimeInterval;</span>
     }
 
     /**
@@ -676,7 +678,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return measurement noise root PSD on x axis.
      */
     public double getRootPsdX() {
-<span class="fc" id="L679">        return Math.sqrt(getPsdX());</span>
+<span class="fc" id="L681">        return Math.sqrt(getPsdX());</span>
     }
 
     /**
@@ -687,7 +689,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return measurement noise root PSD on y axis.
      */
     public double getRootPsdY() {
-<span class="fc" id="L690">        return Math.sqrt(getPsdY());</span>
+<span class="fc" id="L692">        return Math.sqrt(getPsdY());</span>
     }
 
     /**
@@ -698,7 +700,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return measurement noise root PSD on z axis.
      */
     public double getRootPsdZ() {
-<span class="fc" id="L701">        return Math.sqrt(getPsdZ());</span>
+<span class="fc" id="L703">        return Math.sqrt(getPsdZ());</span>
     }
 
     /**
@@ -709,7 +711,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return average measurement noise PSD.
      */
     public double getAvgNoisePsd() {
-<span class="fc" id="L712">        return (getPsdX() + getPsdY() + getPsdZ()) / 3.0;</span>
+<span class="fc" id="L714">        return (getPsdX() + getPsdY() + getPsdZ()) / 3.0;</span>
     }
 
     /**
@@ -720,7 +722,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return norm of measurement noise root PSD.
      */
     public double getNoiseRootPsdNorm() {
-<span class="fc" id="L723">        return Math.sqrt(getPsdX() + getPsdY() + getPsdZ());</span>
+<span class="fc" id="L725">        return Math.sqrt(getPsdX() + getPsdY() + getPsdZ());</span>
     }
 
     /**
@@ -729,7 +731,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return number of samples that have been processed so far.
      */
     public int getNumberOfProcessedSamples() {
-<span class="fc" id="L732">        return mNumberOfProcessedSamples;</span>
+<span class="fc" id="L734">        return mNumberOfProcessedSamples;</span>
     }
 
     /**
@@ -738,7 +740,7 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @return true if estimator is running, false otherwise.
      */
     public boolean isRunning() {
-<span class="fc" id="L741">        return mRunning;</span>
+<span class="fc" id="L743">        return mRunning;</span>
     }
 
     /**
@@ -749,11 +751,9 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @param valueX x coordinate of measurement to be added and processed.
      * @param valueY y coordinate of measurement to be added and processed.
      * @param valueZ z coordinate of measurement to be added and processed.
-     * @return true if provided measurement instance has been processed, false if it has
-     * been ignored.
      * @throws LockedException if estimator is currently running.
      */
-    public boolean addTriad(
+    public void addTriad(
             final double valueX, final double valueY, final double valueZ)
             throws LockedException {
 
@@ -801,24 +801,19 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
         }
 
 <span class="fc" id="L803">        mRunning = false;</span>
-
-<span class="fc" id="L805">        return true;</span>
-    }
+<span class="fc" id="L804">    }</span>
 
     /**
      * Adds a triad of measurement samples.
      *
      * @param triad measurement triad to be added and processed.
-     * @return true if provided measurement instance has been processed, false if it has
-     * been ignored.
      * @throws LockedException if estimator is currently running.
      */
-    public boolean addTriad(final T triad) throws LockedException {
-<span class="fc" id="L817">        return addTriad(</span>
-<span class="fc" id="L818">                convertToDefaultUnit(triad.getValueX(), triad.getUnit()),</span>
-<span class="fc" id="L819">                convertToDefaultUnit(triad.getValueY(), triad.getUnit()),</span>
-<span class="fc" id="L820">                convertToDefaultUnit(triad.getValueZ(), triad.getUnit()));</span>
-    }
+    public void addTriad(final T triad) throws LockedException {
+<span class="fc" id="L813">        addTriad(convertToDefaultUnit(triad.getValueX(), triad.getUnit()),</span>
+<span class="fc" id="L814">                convertToDefaultUnit(triad.getValueY(), triad.getUnit()),</span>
+<span class="fc" id="L815">                convertToDefaultUnit(triad.getValueZ(), triad.getUnit()));</span>
+<span class="fc" id="L816">    }</span>
 
     /**
      * Adds a triad of measurement samples.
@@ -826,17 +821,14 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @param valueX x coordinate of measurement to be added and processed.
      * @param valueY y coordinate of measurement to be added and processed.
      * @param valueZ z coordinate of measurement to be added and processed.
-     * @return true if provided measurement instance has been processed, false if it has
-     * been ignored.
      * @throws LockedException if estimator is currently running.
      */
-    public boolean addTriad(final M valueX, final M valueY, final M valueZ)
+    public void addTriad(final M valueX, final M valueY, final M valueZ)
             throws LockedException {
-<span class="fc" id="L835">        return addTriad(</span>
-<span class="fc" id="L836">                convertToDefaultUnit(valueX.getValue().doubleValue(), valueX.getUnit()),</span>
-<span class="fc" id="L837">                convertToDefaultUnit(valueY.getValue().doubleValue(), valueY.getUnit()),</span>
-<span class="fc" id="L838">                convertToDefaultUnit(valueZ.getValue().doubleValue(), valueZ.getUnit()));</span>
-    }
+<span class="fc" id="L828">        addTriad(convertToDefaultUnit(valueX.getValue().doubleValue(), valueX.getUnit()),</span>
+<span class="fc" id="L829">                convertToDefaultUnit(valueY.getValue().doubleValue(), valueY.getUnit()),</span>
+<span class="fc" id="L830">                convertToDefaultUnit(valueZ.getValue().doubleValue(), valueZ.getUnit()));</span>
+<span class="fc" id="L831">    }</span>
 
     /**
      * Resets current estimator.
@@ -845,33 +837,33 @@ public abstract class AccumulatedTriadNoiseEstimator&lt;U extends Enum&lt;?&gt;,
      * @throws LockedException if estimator is currently running.
      */
     public boolean reset() throws LockedException {
-<span class="fc bfc" id="L848" title="All 2 branches covered.">        if (mRunning) {</span>
-<span class="fc" id="L849">            throw new LockedException();</span>
+<span class="fc bfc" id="L840" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L841">            throw new LockedException();</span>
         }
 
-<span class="fc bfc" id="L852" title="All 2 branches covered.">        if (mNumberOfProcessedSamples == 0) {</span>
-<span class="fc" id="L853">            return false;</span>
+<span class="fc bfc" id="L844" title="All 2 branches covered.">        if (mNumberOfProcessedSamples == 0) {</span>
+<span class="fc" id="L845">            return false;</span>
         }
 
-<span class="fc" id="L856">        mRunning = true;</span>
-<span class="fc" id="L857">        mLastTriad = null;</span>
-<span class="fc" id="L858">        mAvgX = 0.0;</span>
-<span class="fc" id="L859">        mAvgY = 0.0;</span>
-<span class="fc" id="L860">        mAvgZ = 0.0;</span>
-<span class="fc" id="L861">        mVarianceX = 0.0;</span>
-<span class="fc" id="L862">        mVarianceY = 0.0;</span>
-<span class="fc" id="L863">        mVarianceZ = 0.0;</span>
-<span class="fc" id="L864">        mNumberOfProcessedSamples = 0;</span>
-<span class="fc" id="L865">        mNumberOfProcessedSamplesPlusOne = 1;</span>
+<span class="fc" id="L848">        mRunning = true;</span>
+<span class="fc" id="L849">        mLastTriad = null;</span>
+<span class="fc" id="L850">        mAvgX = 0.0;</span>
+<span class="fc" id="L851">        mAvgY = 0.0;</span>
+<span class="fc" id="L852">        mAvgZ = 0.0;</span>
+<span class="fc" id="L853">        mVarianceX = 0.0;</span>
+<span class="fc" id="L854">        mVarianceY = 0.0;</span>
+<span class="fc" id="L855">        mVarianceZ = 0.0;</span>
+<span class="fc" id="L856">        mNumberOfProcessedSamples = 0;</span>
+<span class="fc" id="L857">        mNumberOfProcessedSamplesPlusOne = 1;</span>
 
-<span class="fc bfc" id="L867" title="All 2 branches covered.">        if (mListener != null) {</span>
+<span class="fc bfc" id="L859" title="All 2 branches covered.">        if (mListener != null) {</span>
             //noinspection unchecked
-<span class="fc" id="L869">            mListener.onReset((E) this);</span>
+<span class="fc" id="L861">            mListener.onReset((E) this);</span>
         }
 
-<span class="fc" id="L872">        mRunning = false;</span>
+<span class="fc" id="L864">        mRunning = false;</span>
 
-<span class="fc" id="L874">        return true;</span>
+<span class="fc" id="L866">        return true;</span>
     }
 
     /**
