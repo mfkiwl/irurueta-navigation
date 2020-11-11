@@ -1,0 +1,724 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccelerometerAndGyroscopeMeasurementsGenerator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">com.irurueta:irurueta-navigation</a> &gt; <a href="index.source.html" class="el_package">com.irurueta.navigation.inertial.calibration.generators</a> &gt; <span class="el_source">AccelerometerAndGyroscopeMeasurementsGenerator.java</span></div><h1>AccelerometerAndGyroscopeMeasurementsGenerator.java</h1><pre class="source lang-java linenums">package com.irurueta.navigation.inertial.calibration.generators;
+
+import com.irurueta.navigation.LockedException;
+import com.irurueta.navigation.inertial.calibration.AngularSpeedTriad;
+import com.irurueta.navigation.inertial.calibration.BodyKinematicsSequence;
+import com.irurueta.navigation.inertial.calibration.StandardDeviationBodyKinematics;
+import com.irurueta.navigation.inertial.calibration.StandardDeviationTimedBodyKinematics;
+import com.irurueta.navigation.inertial.calibration.TimedBodyKinematics;
+import com.irurueta.navigation.inertial.calibration.intervals.TriadStaticIntervalDetector;
+import com.irurueta.units.Acceleration;
+import com.irurueta.units.AngularSpeed;
+
+public class AccelerometerAndGyroscopeMeasurementsGenerator {
+
+    /**
+     * Listener to handle generated events.
+     */
+    private AccelerometerAndGyroscopeMeasurementsGeneratorListener mListener;
+
+    /**
+     * Listener for internal accelerometer measurements generator.
+     */
+<span class="fc" id="L23">    private final AccelerometerMeasurementsGeneratorListener mAccelerometerListener =</span>
+<span class="fc" id="L24">            new AccelerometerMeasurementsGeneratorListener() {</span>
+        @Override
+        public void onInitializationStarted(
+                final AccelerometerMeasurementsGenerator generator) {
+            // no action required
+<span class="fc" id="L29">        }</span>
+
+        @Override
+        public void onInitializationCompleted(
+                final AccelerometerMeasurementsGenerator generator,
+                final double baseNoiseLevel) {
+            // no action required
+<span class="fc" id="L36">        }</span>
+
+        @Override
+        public void onError(
+                final AccelerometerMeasurementsGenerator generator,
+                final TriadStaticIntervalDetector.ErrorReason reason) {
+<span class="pc bpc" id="L42" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L43">                mListener.onError(</span>
+                        AccelerometerAndGyroscopeMeasurementsGenerator.this,
+                        reason);
+            }
+<span class="fc" id="L47">        }</span>
+
+        @Override
+        public void onStaticIntervalDetected(
+                final AccelerometerMeasurementsGenerator generator) {
+            // no action required
+<span class="fc" id="L53">        }</span>
+
+        @Override
+        public void onDynamicIntervalDetected(
+                final AccelerometerMeasurementsGenerator generator) {
+            // no action required
+<span class="fc" id="L59">        }</span>
+
+        @Override
+        public void onStaticIntervalSkipped(
+                final AccelerometerMeasurementsGenerator generator) {
+            // no action required
+<span class="fc" id="L65">        }</span>
+
+        @Override
+        public void onDynamicIntervalSkipped(
+                final AccelerometerMeasurementsGenerator generator) {
+            // no action required
+<span class="fc" id="L71">        }</span>
+
+        @Override
+        public void onGeneratedMeasurement(
+                final AccelerometerMeasurementsGenerator generator,
+                final StandardDeviationBodyKinematics measurement) {
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L78">                mListener.onGeneratedAccelerometerMeasurement(</span>
+                        AccelerometerAndGyroscopeMeasurementsGenerator.this,
+                        measurement);
+            }
+<span class="fc" id="L82">        }</span>
+
+        @Override
+        public void onReset(
+                final AccelerometerMeasurementsGenerator generator) {
+            // no action required
+<span class="fc" id="L88">        }</span>
+    };
+
+    /**
+     * Listener for internal gyroscope measurements generator.
+     */
+<span class="fc" id="L94">    private final GyroscopeMeasurementGeneratorListener mGyroscopeListener =</span>
+<span class="fc" id="L95">            new GyroscopeMeasurementGeneratorListener() {</span>
+        @Override
+        public void onInitializationStarted(
+                final GyroscopeMeasurementGenerator generator) {
+<span class="pc bpc" id="L99" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L100">                mListener.onInitializationStarted(</span>
+                        AccelerometerAndGyroscopeMeasurementsGenerator.this);
+            }
+<span class="fc" id="L103">        }</span>
+
+        @Override
+        public void onInitializationCompleted(
+                final GyroscopeMeasurementGenerator generator,
+                final double baseNoiseLevel) {
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L110">                mListener.onInitializationCompleted(</span>
+                        AccelerometerAndGyroscopeMeasurementsGenerator.this,
+                        baseNoiseLevel);
+            }
+<span class="fc" id="L114">        }</span>
+
+        @Override
+        public void onError(
+                final GyroscopeMeasurementGenerator generator,
+                final TriadStaticIntervalDetector.ErrorReason reason) {
+            // no action required
+<span class="fc" id="L121">        }</span>
+
+        @Override
+        public void onStaticIntervalDetected(
+                final GyroscopeMeasurementGenerator generator) {
+<span class="pc bpc" id="L126" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L127">                mListener.onStaticIntervalDetected(</span>
+                        AccelerometerAndGyroscopeMeasurementsGenerator.this);
+            }
+<span class="fc" id="L130">        }</span>
+
+        @Override
+        public void onDynamicIntervalDetected(
+                final GyroscopeMeasurementGenerator generator) {
+<span class="pc bpc" id="L135" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L136">                mListener.onDynamicIntervalDetected(</span>
+                        AccelerometerAndGyroscopeMeasurementsGenerator.this);
+            }
+<span class="fc" id="L139">        }</span>
+
+        @Override
+        public void onStaticIntervalSkipped(
+                final GyroscopeMeasurementGenerator generator) {
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L145">                mListener.onStaticIntervalSkipped(</span>
+                        AccelerometerAndGyroscopeMeasurementsGenerator.this);
+            }
+<span class="fc" id="L148">        }</span>
+
+        @Override
+        public void onDynamicIntervalSkipped(
+                final GyroscopeMeasurementGenerator generator) {
+<span class="pc bpc" id="L153" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L154">                mListener.onDynamicIntervalSkipped(</span>
+                        AccelerometerAndGyroscopeMeasurementsGenerator.this);
+            }
+<span class="fc" id="L157">        }</span>
+
+        @Override
+        public void onGeneratedMeasurement(
+                final GyroscopeMeasurementGenerator generator,
+                final BodyKinematicsSequence&lt;StandardDeviationTimedBodyKinematics&gt; measurement) {
+<span class="pc bpc" id="L163" title="1 of 2 branches missed.">            if (mListener != null) {</span>
+<span class="fc" id="L164">                mListener.onGeneratedGyroscopeMeasurement(</span>
+                        AccelerometerAndGyroscopeMeasurementsGenerator.this,
+                        measurement);
+            }
+<span class="fc" id="L168">        }</span>
+
+        @Override
+        public void onReset(
+                final GyroscopeMeasurementGenerator generator) {
+            // no action required
+<span class="fc" id="L174">        }</span>
+    };
+
+    /**
+     * Internal accelerometer measurements generator.
+     */
+<span class="fc" id="L180">    private final AccelerometerMeasurementsGenerator mAccelerometerMeasurementsGenerator =</span>
+            new AccelerometerMeasurementsGenerator(mAccelerometerListener);
+
+    /**
+     * Internal gyroscope measurements generator.
+     */
+<span class="fc" id="L186">    private final GyroscopeMeasurementGenerator mGyroscopeMeasurementGenerator =</span>
+            new GyroscopeMeasurementGenerator(mGyroscopeListener);
+
+    /**
+     * Indicates whether generator is running or not.
+     */
+    private boolean mRunning;
+
+    /**
+     * Constructor.
+     */
+<span class="fc" id="L197">    public AccelerometerAndGyroscopeMeasurementsGenerator() {</span>
+<span class="fc" id="L198">    }</span>
+
+    /**
+     * Constructor.
+     * @param listener listener to handle events raised by this generator.
+     */
+    public AccelerometerAndGyroscopeMeasurementsGenerator(
+            final AccelerometerAndGyroscopeMeasurementsGeneratorListener listener) {
+<span class="fc" id="L206">        this();</span>
+<span class="fc" id="L207">        mListener = listener;</span>
+<span class="fc" id="L208">    }</span>
+
+    /**
+     * Gets minimum number of samples required in a static interval to be taken into account.
+     * Smaller static intervals will be discarded.
+     *
+     * @return minimum number of samples required in a static interval to be taken into account.
+     */
+    public int getMinStaticSamples() {
+<span class="fc" id="L217">        return mAccelerometerMeasurementsGenerator.getMinStaticSamples();</span>
+    }
+
+    /**
+     * Sets minimum number of samples required in a static interval to be taken into account.
+     * Smaller static intervals will be discarded.
+     *
+     * @param minStaticSamples minimum number of samples required in a static interval to be
+     *                         taken into account.
+     * @throws LockedException          if generator is busy.
+     * @throws IllegalArgumentException if provided value is less than 2.
+     */
+    public void setMinStaticSamples(final int minStaticSamples) throws LockedException {
+<span class="fc bfc" id="L230" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L231">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L234">        mAccelerometerMeasurementsGenerator.setMinStaticSamples(minStaticSamples);</span>
+<span class="fc" id="L235">        mGyroscopeMeasurementGenerator.setMinStaticSamples(minStaticSamples);</span>
+<span class="fc" id="L236">    }</span>
+
+    /**
+     * Gets maximum number of samples allowed in dynamic intervals.
+     *
+     * @return maximum number of samples allowed in dynamic intervals.
+     */
+    public int getMaxDynamicSamples() {
+<span class="fc" id="L244">        return mAccelerometerMeasurementsGenerator.getMaxDynamicSamples();</span>
+    }
+
+    /**
+     * Sets maximum number of samples allowed in dynamic intervals.
+     *
+     * @param maxDynamicSamples maximum number of samples allowed in dynamic intervals.
+     * @throws LockedException          if generator is busy.
+     * @throws IllegalArgumentException if provided value is less than 2.
+     */
+    public void setMaxDynamicSamples(final int maxDynamicSamples) throws LockedException {
+<span class="fc bfc" id="L255" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L256">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L259">        mAccelerometerMeasurementsGenerator.setMaxDynamicSamples(maxDynamicSamples);</span>
+<span class="fc" id="L260">        mGyroscopeMeasurementGenerator.setMaxDynamicSamples(maxDynamicSamples);</span>
+<span class="fc" id="L261">    }</span>
+
+    /**
+     * Gets listener to handle generated events.
+     *
+     * @return listener to handle generated events.
+     */
+    public AccelerometerAndGyroscopeMeasurementsGeneratorListener getListener() {
+<span class="fc" id="L269">        return mListener;</span>
+    }
+
+    /**
+     * Sets listener to handle generated events.
+     *
+     * @param listener listener to handle generated evets.
+     * @throws LockedException if generator is busy.
+     */
+    public void setListener(final AccelerometerAndGyroscopeMeasurementsGeneratorListener listener)
+            throws LockedException {
+<span class="fc bfc" id="L280" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L281">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L284">        mListener = listener;</span>
+<span class="fc" id="L285">    }</span>
+
+    /**
+     * Gets length of number of samples to keep within the window being processed
+     * to determine instantaneous accelerometer noise level.
+     *
+     * @return length of number of samples to keep within the window.
+     */
+    public int getWindowSize() {
+<span class="fc" id="L294">        return mAccelerometerMeasurementsGenerator.getWindowSize();</span>
+    }
+
+    /**
+     * Sets length of number of samples to keep within the window being processed
+     * to determine instantaneous accelerometer noise level.
+     * Window size must always be larger than allowed minimum value, which is 2 and
+     * must have an odd value.
+     *
+     * @param windowSize length of number of samples to keep within the window.
+     * @throws LockedException          if detector is busy processing a previous sample.
+     * @throws IllegalArgumentException if provided value is not valid.
+     */
+    public void setWindowSize(final int windowSize) throws LockedException {
+<span class="fc bfc" id="L308" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L309">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L312">        mAccelerometerMeasurementsGenerator.setWindowSize(windowSize);</span>
+<span class="fc" id="L313">        mGyroscopeMeasurementGenerator.setWindowSize(windowSize);</span>
+<span class="fc" id="L314">    }</span>
+
+    /**
+     * Gets number of samples to be processed initially while keeping the sensor static in order
+     * to find the base noise level when device is static.
+     *
+     * @return number of samples to be processed initially.
+     */
+    public int getInitialStaticSamples() {
+<span class="fc" id="L323">        return mAccelerometerMeasurementsGenerator.getInitialStaticSamples();</span>
+    }
+
+    /**
+     * Sets number of samples to be processed initially while keeping the sensor static in order
+     * to find the base noise level when device is static.
+     *
+     * @param initialStaticSamples number of samples to be processed initially.
+     * @throws LockedException          if detector is busy.
+     * @throws IllegalArgumentException if provided value is less than
+     *                                  {@link TriadStaticIntervalDetector#MINIMUM_INITIAL_STATIC_SAMPLES}
+     */
+    public void setInitialStaticSamples(final int initialStaticSamples)
+            throws LockedException {
+<span class="fc bfc" id="L337" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L338">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L341">        mAccelerometerMeasurementsGenerator.setInitialStaticSamples(initialStaticSamples);</span>
+<span class="fc" id="L342">        mGyroscopeMeasurementGenerator.setInitialStaticSamples(initialStaticSamples);</span>
+<span class="fc" id="L343">    }</span>
+
+    /**
+     * Gets factor to be applied to detected base noise level in order to
+     * determine threshold for static/dynamic period changes. This factor is
+     * unit-less.
+     *
+     * @return factor to be applied to detected base noise level.
+     */
+    public double getThresholdFactor() {
+<span class="fc" id="L353">        return mAccelerometerMeasurementsGenerator.getThresholdFactor();</span>
+    }
+
+    /**
+     * Sets factor to be applied to detected base noise level in order to
+     * determine threshold for static/dynamic period changes. This factor is
+     * unit-less.
+     *
+     * @param thresholdFactor factor to be applied to detected base noise level.
+     * @throws LockedException          if detector is busy.
+     * @throws IllegalArgumentException if provided value is zero or negative.
+     */
+    public void setThresholdFactor(final double thresholdFactor)
+            throws LockedException {
+<span class="fc bfc" id="L367" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L368">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L371">        mAccelerometerMeasurementsGenerator.setThresholdFactor(thresholdFactor);</span>
+<span class="fc" id="L372">        mGyroscopeMeasurementGenerator.setThresholdFactor(thresholdFactor);</span>
+<span class="fc" id="L373">    }</span>
+
+    /**
+     * Gets factor to determine that a sudden movement has occurred during
+     * initialization if instantaneous noise level exceeds accumulated noise
+     * level by this factor amount.
+     * This factor is unit-less.
+     *
+     * @return factor to determine that a sudden movement has occurred.
+     */
+    public double getInstantaneousNoiseLevelFactor() {
+<span class="fc" id="L384">        return mAccelerometerMeasurementsGenerator.getInstantaneousNoiseLevelFactor();</span>
+    }
+
+    /**
+     * Sets factor to determine that a sudden movement has occurred during
+     * initialization if instantaneous noise level exceeds accumulated noise
+     * level by this factor amount.
+     * This factor is unit-less.
+     *
+     * @param instantaneousNoiseLevelFactor factor to determine that a sudden
+     *                                      movement has occurred during
+     *                                      initialization.
+     * @throws LockedException          if detector is busy.
+     * @throws IllegalArgumentException if provided value is zero or negative.
+     */
+    public void setInstantaneousNoiseLevelFactor(
+            final double instantaneousNoiseLevelFactor) throws LockedException {
+<span class="fc bfc" id="L401" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L402">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L405">        mAccelerometerMeasurementsGenerator.setInstantaneousNoiseLevelFactor(</span>
+                instantaneousNoiseLevelFactor);
+<span class="fc" id="L407">        mGyroscopeMeasurementGenerator.setInstantaneousNoiseLevelFactor(</span>
+                instantaneousNoiseLevelFactor);
+<span class="fc" id="L409">    }</span>
+
+    /**
+     * Gets overall absolute threshold to determine whether there has been
+     * excessive motion during the whole initialization phase.
+     * Failure will be detected if estimated base noise level exceeds this
+     * threshold when initialization completes.
+     * This threshold is expressed in meters per squared second (m/s^2).
+     *
+     * @return overall absolute threshold to determine whether there has
+     * been excessive motion.
+     */
+    public double getBaseNoiseLevelAbsoluteThreshold() {
+<span class="fc" id="L422">        return mAccelerometerMeasurementsGenerator.getBaseNoiseLevelAbsoluteThreshold();</span>
+    }
+
+    /**
+     * Sets overall absolute threshold to determine whether there has been
+     * excessive motion during the whole initialization phase.
+     * Failure will be detected if estimated base noise level exceeds this
+     * threshold when initialization completes.
+     * This threshold is expressed in meters per squared second (m/s^2).
+     *
+     * @param baseNoiseLevelAbsoluteThreshold overall absolute threshold to
+     *                                        determine whether there has been
+     *                                        excessive motion.
+     * @throws LockedException          if detector is busy.
+     * @throws IllegalArgumentException if provided value is zero or negative.
+     */
+    public void setBaseNoiseLevelAbsoluteThreshold(
+            final double baseNoiseLevelAbsoluteThreshold) throws LockedException {
+<span class="fc bfc" id="L440" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L441">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L444">        mAccelerometerMeasurementsGenerator.setBaseNoiseLevelAbsoluteThreshold(</span>
+                baseNoiseLevelAbsoluteThreshold);
+<span class="fc" id="L446">        mGyroscopeMeasurementGenerator.setBaseNoiseLevelAbsoluteThreshold(</span>
+                baseNoiseLevelAbsoluteThreshold);
+<span class="fc" id="L448">    }</span>
+
+    /**
+     * Gets overall absolute threshold to determine whether there has been
+     * excessive motion during the whole initialization phase.
+     * Failure will be detected if estimated base noise level exceeds this
+     * threshold when initialization completes.
+     *
+     * @return overall absolute threshold to determine whether there has been
+     * excessive motion.
+     */
+    public Acceleration getBaseNoiseLevelAbsoluteThresholdAsMeasurement() {
+<span class="fc" id="L460">        return mAccelerometerMeasurementsGenerator.getBaseNoiseLevelAbsoluteThresholdAsMeasurement();</span>
+    }
+
+    /**
+     * Gets overall absolute threshold to determine whether there has been
+     * excessive motion during the whole initialization phase.
+     * Failure will be detected if estimated base noise level exceeds this
+     * threshold when initialization completes.
+     *
+     * @param result instance where result will be stored.
+     */
+    public void getBaseNoiseLevelAbsoluteThresholdAsMeasurement(
+            final Acceleration result) {
+<span class="fc" id="L473">        mAccelerometerMeasurementsGenerator.getBaseNoiseLevelAbsoluteThresholdAsMeasurement(</span>
+                result);
+<span class="fc" id="L475">    }</span>
+
+    /**
+     * Sets overall absolute threshold to determine whether there has been
+     * excessive motion during the whole initialization phase.
+     * Failure will be detected if estimated base noise level exceeds this
+     * threshold when initialization completes.
+     *
+     * @param baseNoiseLevelAbsoluteThreshold overall absolute threshold to
+     *                                        determine whether there has been
+     *                                        excessive motion.
+     * @throws LockedException          if detector is busy.
+     * @throws IllegalArgumentException if provided value is zero or negative.
+     */
+    public void setBaseNoiseLevelAbsoluteThreshold(
+            final Acceleration baseNoiseLevelAbsoluteThreshold) throws LockedException {
+<span class="fc bfc" id="L491" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L492">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L495">        mAccelerometerMeasurementsGenerator.setBaseNoiseLevelAbsoluteThreshold(</span>
+                baseNoiseLevelAbsoluteThreshold);
+<span class="fc" id="L497">        mGyroscopeMeasurementGenerator.setBaseNoiseLevelAbsoluteThreshold(</span>
+                baseNoiseLevelAbsoluteThreshold);
+<span class="fc" id="L499">    }</span>
+
+    /**
+     * Gets internal status of this generator.
+     *
+     * @return internal status of this generator.
+     */
+    public TriadStaticIntervalDetector.Status getStatus() {
+<span class="fc" id="L507">        return mAccelerometerMeasurementsGenerator.getStatus();</span>
+    }
+
+    /**
+     * Gets accelerometer base noise level that has been detected during
+     * initialization expressed in meters per squared second (m/s^2).
+     * This is equal to the standard deviation of the accelerometer measurements
+     * during initialization phase.
+     *
+     * @return accelerometer base noise level.
+     */
+    public double getAccelerometerBaseNoiseLevel() {
+<span class="fc" id="L519">        return mAccelerometerMeasurementsGenerator.getBaseNoiseLevel();</span>
+    }
+
+    /**
+     * Gets accelerometer base noise level that has been detected during
+     * initialization.
+     * This is equal to the standard deviation of the accelerometer measurements
+     * during initialization phase.
+     *
+     * @return measurement base noise level.
+     */
+    public Acceleration getAccelerometerBaseNoiseLevelAsMeasurement() {
+<span class="fc" id="L531">        return mAccelerometerMeasurementsGenerator.getBaseNoiseLevelAsMeasurement();</span>
+    }
+
+    /**
+     * Gets accelerometer base noise level that has been detected during
+     * initialization.
+     *
+     * @param result instance where result will be stored.
+     */
+    public void getAccelerometerBaseNoiseLevelAsMeasurement(final Acceleration result) {
+<span class="fc" id="L541">        mAccelerometerMeasurementsGenerator.getBaseNoiseLevelAsMeasurement(result);</span>
+<span class="fc" id="L542">    }</span>
+
+    /**
+     * Gets threshold to determine static/dynamic period changes expressed in
+     * meters per squared second (m/s^2).
+     *
+     * @return threshold to determine static/dynamic period changes.
+     */
+    public double getThreshold() {
+<span class="fc" id="L551">        return mAccelerometerMeasurementsGenerator.getThreshold();</span>
+    }
+
+    /**
+     * Gets threshold to determine static/dynamic period changes.
+     *
+     * @return threshold to determine static/dynamic period changes.
+     */
+    public Acceleration getThresholdAsMeasurement() {
+<span class="fc" id="L560">        return mAccelerometerMeasurementsGenerator.getThresholdAsMeasurement();</span>
+    }
+
+    /**
+     * Gets threshold to determine static/dynamic period changes.
+     *
+     * @param result instance where result will be stored.
+     */
+    public void getThresholdAsMeasurement(final Acceleration result) {
+<span class="fc" id="L569">        mAccelerometerMeasurementsGenerator.getThresholdAsMeasurement(result);</span>
+<span class="fc" id="L570">    }</span>
+
+    /**
+     * Gets number of samples that have been processed in a static period so far.
+     *
+     * @return number of samples that have been processed in a static period so far.
+     */
+    public int getProcessedStaticSamples() {
+<span class="fc" id="L578">        return mAccelerometerMeasurementsGenerator.getProcessedStaticSamples();</span>
+    }
+
+    /**
+     * Gets number of samples that have been processed in a dynamic period so far.
+     *
+     * @return number of samples that have been processed in a dynamic period so far.
+     */
+    public int getProcessedDynamicSamples() {
+<span class="fc" id="L587">        return mAccelerometerMeasurementsGenerator.getProcessedDynamicSamples();</span>
+    }
+
+    /**
+     * Indicates whether last static interval must be skipped.
+     *
+     * @return true if last static interval must be skipped.
+     */
+    public boolean isStaticIntervalSkipped() {
+<span class="fc" id="L596">        return mAccelerometerMeasurementsGenerator.isStaticIntervalSkipped();</span>
+    }
+
+    /**
+     * Indicates whether last dynamic interval must be skipped.
+     *
+     * @return true if last dynamic interval must be skipped.
+     */
+    public boolean isDynamicIntervalSkipped() {
+<span class="fc" id="L605">        return mAccelerometerMeasurementsGenerator.isDynamicIntervalSkipped();</span>
+    }
+
+    /**
+     * Indicates whether generator is running or not.
+     *
+     * @return true if generator is running, false otherwise.
+     */
+    public boolean isRunning() {
+<span class="fc" id="L614">        return mRunning;</span>
+    }
+
+    /**
+     * Processes a sample of data.
+     *
+     * @param sample sample of data to be processed.
+     * @return true if provided samples has been processed, false if provided triad has been skipped because
+     * generator previously failed. If generator previously failed, it will need to be reset before
+     * processing additional samples.
+     * @throws LockedException if generator is busy processing a previous sample.
+     */
+    public boolean process(final TimedBodyKinematics sample) throws LockedException {
+<span class="fc bfc" id="L627" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L628">            throw new LockedException();</span>
+        }
+
+        try {
+<span class="fc" id="L632">            mRunning = true;</span>
+<span class="fc bfc" id="L633" title="All 2 branches covered.">            return mAccelerometerMeasurementsGenerator.process(sample.getKinematics())</span>
+<span class="pc bpc" id="L634" title="1 of 2 branches missed.">                    &amp;&amp; mGyroscopeMeasurementGenerator.process(sample);</span>
+        } finally {
+<span class="fc" id="L636">            mRunning = false;</span>
+        }
+    }
+
+    /**
+     * Resets this generator.
+     *
+     * @throws LockedException if generator is busy.
+     */
+    public void reset() throws LockedException {
+<span class="fc bfc" id="L646" title="All 2 branches covered.">        if (mRunning) {</span>
+<span class="fc" id="L647">            throw new LockedException();</span>
+        }
+
+<span class="fc" id="L650">        mAccelerometerMeasurementsGenerator.reset();</span>
+<span class="fc" id="L651">        mGyroscopeMeasurementGenerator.reset();</span>
+
+<span class="pc bpc" id="L653" title="1 of 2 branches missed.">        if (mListener != null) {</span>
+<span class="fc" id="L654">            mListener.onReset(this);</span>
+        }
+<span class="fc" id="L656">    }</span>
+
+    /**
+     * Gets estimated average angular rate during initialization phase.
+     *
+     * @return estimated average angular rate during initialization phase.
+     */
+    public AngularSpeedTriad getInitialAvgAngularSpeedTriad() {
+<span class="fc" id="L664">        return mGyroscopeMeasurementGenerator.getInitialAvgAngularSpeedTriad();</span>
+    }
+
+    /**
+     * Gets estimated average angular rate during initialization phase.
+     *
+     * @param result instance where result will be stored.
+     */
+    public void getInitialAvgAngularSpeedTriad(final AngularSpeedTriad result) {
+<span class="fc" id="L673">        mGyroscopeMeasurementGenerator.getInitialAvgAngularSpeedTriad(result);</span>
+<span class="fc" id="L674">    }</span>
+
+    /**
+     * Gets estimated standard deviation of angular rate during initialization phase.
+     *
+     * @return estimated standard deviation of angular rate during initialization phase.
+     */
+    public AngularSpeedTriad getInitialAngularSpeedTriadStandardDeviation() {
+<span class="fc" id="L682">        return mGyroscopeMeasurementGenerator.getInitialAngularSpeedTriadStandardDeviation();</span>
+    }
+
+    /**
+     * Gets estimated standard deviation of angular rate during initialization phase.
+     *
+     * @param result instance where result will be stored.
+     */
+    public void getInitialAngularSpeedTriadStandardDeviation(final AngularSpeedTriad result) {
+<span class="fc" id="L691">        mGyroscopeMeasurementGenerator.getInitialAngularSpeedTriadStandardDeviation(result);</span>
+<span class="fc" id="L692">    }</span>
+
+    /**
+     * Gets norm of estimated standard deviation of angular rate during initialization phase
+     * expressed in radians per second (rad/s).
+     *
+     * @return norm of estimated standard deviation of angular rate during initialization phase.
+     */
+    public double getInitialAngularSpeedTriadStandardDeviationNorm() {
+<span class="fc" id="L701">        return mGyroscopeMeasurementGenerator.getInitialAngularSpeedTriadStandardDeviationNorm();</span>
+    }
+
+    /**
+     * Gets norm of estimated standard deviation of angular rate during initialization phase.
+     *
+     * @return norm of estimated standard deviation of angular rate during initialization phase.
+     */
+    public AngularSpeed getInitialAngularSpeedTriadStandardDeviationNormAsMeasurement() {
+<span class="fc" id="L710">        return mGyroscopeMeasurementGenerator.getInitialAngularSpeedTriadStandardDeviationNormAsMeasurement();</span>
+    }
+
+    /**
+     * Gets norm of estimated standard deviation of angular rate during initialization phase.
+     *
+     * @param result instance where result will be stored.
+     */
+    public void getInitialAngularSpeedTriadStandardDeviationNormAsMeasurement(
+            final AngularSpeed result) {
+<span class="fc" id="L720">        mGyroscopeMeasurementGenerator.getInitialAngularSpeedTriadStandardDeviationNormAsMeasurement(</span>
+                result);
+<span class="fc" id="L722">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
